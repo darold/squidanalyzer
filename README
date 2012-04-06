@@ -1,5 +1,5 @@
 NAME
-    SquidAnalyzer v4.1 - Squid access log report generation tool
+    SquidAnalyzer v4.2 - Squid access log report generation tool
 
 DESCRIPTION
     SquidAnalyzer parse native access log format of the Squid proxy and

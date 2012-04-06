@@ -23,7 +23,7 @@ my $result = GetOptions (
 	"r|rebuild!"           => \$rebuild,
 );  
 
-# Allow backward compatibility with release < 4.1
+# Allow backward compatibility with release < 4.0
 $configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
 if (($#ARGV < 0) && -e $DEFAULT_CONFFILE) {
 	$configfile = $DEFAULT_CONFFILE;
