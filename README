@@ -236,6 +236,11 @@ CONFIGURATION
         if the body tag. Default is defined internally if this directive is
         not set to a valid file.
 
+    SiblingHit
+        Adds peer cache hit (CD_SIBLING_HIT) to be taken has local cache
+        hit. Enabled by default, you must disabled it if you don't want to
+        report peer cache hit onto your stats.
+
 AUTHOR
     Gilles DAROLD <gilles@darold.net>
 

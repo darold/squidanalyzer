@@ -383,6 +383,11 @@ Custom Footer. Must be a path to a text file containing \s-1HTML\s0 code that
 will be placed at the bottom of each page just before the end if the
 body tag. Default is defined internally if this directive is not set
 to a valid file.
+.IP "SiblingHit" 4
+.IX Item "SiblingHit"
+Adds peer cache hit (\s-1CD_SIBLING_HIT\s0) to be taken has local cache hit.
+Enabled by default, you must disabled it if you don't want to report
+peer cache hit onto your stats.
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Gilles \s-1DAROLD\s0 <gilles@darold.net>

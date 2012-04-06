@@ -200,8 +200,8 @@ sub parseFile
 				$self->{begin_time} = $time;
 				print STDERR "START TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($time)), "\n" if (!$self->{QuietMode});
 			}
-			# Only store (HIT|UNMODIFIED)/MISS status
-			if ($code =~ m#(HIT|UNMODIFIED)/#) {
+			# Only store (HIT|UNMODIFIED)/MISS status and peer CD_SIBLING_HIT/...
+			if ( ($code =~ m#(HIT|UNMODIFIED)/#) || ($self->{SiblingHit} && ($line =~ / CD_SIBLING_HIT/)) ) {
 				$code = 'HIT';
 			} elsif ($code =~ m#MISS|MODIFIED/#) {
 				$code = 'MISS';
@@ -321,6 +321,7 @@ sub _init
 	$self->{HeaderFile} = $options{HeaderFile} || '';
 	$self->{FooterFile} = $options{FooterFile} || '';
 	$self->{AnonymizeLogin} = $options{AnonymizeLogin} || 0;
+	$self->{SiblingHit} = $options{SiblingHit} || 1;
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
