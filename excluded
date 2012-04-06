@@ -1,0 +1,10 @@
+#------------------------------------------------------------------------------
+# File used to defined which client ip address, network regex address and/or
+# auth login to exclude from report. Typically if your boss or you don't
+# want to appears in the statistic report add your ip address or login to
+# this file. One by line. See example bellow:
+#------------------------------------------------------------------------------
+#192.168.1.2
+#myloginstr
+#^10\.169\.1\.
+#guestlogin\d+

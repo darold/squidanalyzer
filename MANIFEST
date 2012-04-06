@@ -1,0 +1,22 @@
+Changes
+MANIFEST
+Makefile.PL
+README
+INSTALL
+SquidAnalyzer.pm
+excluded
+network-aliases
+squid-analyzer
+squidanalyzer.conf
+user-aliases
+lang/en_US.txt
+lang/fr_FR.txt
+lang/pt_BR.txt
+lang/en_US_footer.txt
+lang/fr_FR_footer.txt
+lang/pt_BR_footer.txt
+lang/en_US_header.txt
+lang/fr_FR_header.txt
+lang/pt_BR_header.txt
+sorttable.js
+META.yml                                 Module meta-data (added by MakeMaker)

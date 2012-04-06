@@ -1,0 +1,16 @@
+body {font-family:arial,helvetica,verdana;font-size:10pt;background-color: beige;}
+table {margin: 1px; align: center; width: 100%; white-space: nowrap}
+td {font-family:arial,helvetica,verdana;font-size:10pt;color:black;background-color: beige;}
+th {font-family:arial,helvetica,verdana;font-weight:bold;font-size:12pt;color:white; background-color: green;}
+a { text-decoration: none; font-family:arial,helvetica,verdana;font-weight:bold;font-size:12pt;color: #888888}
+a:hover { text-decoration: none; font-family:arial,helvetica,verdana;font-weight:bold;font-size:12pt;color: black}
+#logo a {font-family:arial,helvetica,verdana;font-weight:bold;font-size:24pt;color:green;text-decoration: none;}
+#calendar th {color: white; background-color: green;}
+#calendar table {width: 200px; position: right;}
+#menu table {position: right; width: auto;}
+#menu th {background-color: beige;}
+#stata table {position: center; width: auto;}
+#stata td {border-bottom: thin solid red; text-align: center; width: 100px}
+#statb table {position: center; width: auto;}
+#statb td {border-bottom: thin solid red; text-align: center; width: 100px}
+#uplink th {background-color: beige;}

@@ -1,0 +1,92 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Author: Gilles Darold
+#------------------------------------------------------------------------------
+01				Jan
+02				Feb
+03				Mar
+04				Apr
+05				May
+06				Jun
+07				Jul
+08				Aug
+09				Sep
+10				Oct
+11				Nov
+12				Dec
+Requests			Requests
+Bytes				Bytes
+Megabytes			Mega bytes
+Total				Total
+Years				Years
+Months				Months
+Days				Days
+Hit				Hit
+Miss				Miss
+Cost				Cost
+Users				Users
+Sites				Sites
+Domains				Domains
+Requests_graph			Requests
+Megabytes_graph			Mega bytes
+Months_graph			Months
+Days_graph			Days
+Hit_graph			Hit
+Miss_graph			Miss
+Total_graph			Total
+Domains_graph			Domains
+Users_help			Total number of different users for this period
+Sites_help			Total number of different visited sites for this period
+Domains_help			Total number of different second level visited domain for this period
+Hit_help			Objects found in cache
+Miss_help			Objects not found in cache
+Cost_help			1 Mega byte =
+Generation			Report generated on
+Main_cache_title		Cache Statistics
+Cache_title			Cache Statistics on
+Stat_label			Stat
+Mime_link			Mime Types
+Network_link			Networks
+User_link			Users
+Top_url_link			Top Urls
+Top_domain_link			Top Domains
+Back_link			Back
+Graph_cache_hit_title		%s Requests statistics on
+Graph_cache_byte_title		%s Mega Bytes statistics on
+Hourly				Hourly
+Hours				Hours
+Daily				Daily
+Days				Days
+Monthly				Monthly
+Months				Months
+Mime_title			Mime Type Statistics on
+Mime_number			Number of mime type
+Network_title			Network Statistics on
+Network_number			Number of network
+Duration			Duration
+Time				Time
+Largest				Largest
+Url				Url
+User_title			User Statistics on
+User_number			Number of user
+Url_Hits_title			Top %d Url hits on
+Url_Bytes_title			Top %d Url bytes on
+Url_Duration_title		Top %d Url duration on
+Url_number			Number of Url
+Domain_Hits_title		Top %d Domain hits on
+Domain_Bytes_title		Top %d Domain bytes on
+Domain_Duration_title		Top %d Domain duration on
+Domain_number			Number of domain
+Domain_graph_hits_title		Domain Hits Statistics on
+Domain_graph_bytes_title	Domain Bytes Statistiques on
+First_time			First hit
+Last_time			Last hit

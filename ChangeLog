@@ -1,0 +1,120 @@
+Revision history for SquidAnalyzer
+
+4.2 - Sun Jan 22 16:52:27 CET 2012
+
+	- Fix network alias issue broken in last release, now data files will
+	  store the network alias instead of the default class C network. Thank
+	  to Fabrice Prigent for the report.
+	- Add support to multiple regex pattern to match networks aliases. See
+	  network-aliases file for more information.
+	- User aliases are now directly changed into data files instead of html
+	  file like before.
+	- Add support to multiple regex pattern to match users aliases. See
+	  users-aliases file for more inforamtion.
+	- Add AnonymizeLogin configuration directives to allow full anomymization
+	  of all users/ip.  Thanks to Fabrice Prigent for the request.
+	- Add support to squidmime logformat, original request and reply header
+	  are simply omitted. Squid and squidmime native format are still the
+	  only log format supported.
+
+UPGRADE: If you use network and/or user aliases, even if I try to preserved backward
+compatibility, you may want to start with new data files as these informations are
+now replaced directly into the data file instead of the HTML files. Changes only
+concern file SquidAnalyzer.pm so you can just override it. There's also a new
+configuration directive 'AnonymizeLogin' so you may copy/paste his definition in
+default squidanalyzer.conf file.
+
+4.1 - Tue Jan 17 19:58:35 CET 2012
+
+	- Fix data file parser issue with largest_file_size or largest_file_url
+	  are empty. Thanks to David Walser for the report.
+	- Add line number when reporting bad format into a data file.
+	- Add missing DESTDIR variable into the allowed commande line arguments.
+	  Thanks to David Walser for the report.
+	- Fix error when header file are missing as they are no more used now.
+	  Thanks to David Walser for the report.
+	- Remove salogo.png from install script, it is now replaced by file
+	  logo-squidanalyzer.png. Thanks to David Walser for the report.
+	- Install of README, INSTALL and Changelog is now disabled by default,
+	  you must set DOCDIR parameter to install those files in the desired
+	  directory. Thanks to David Walser for the request.
+
+4.0 - Wed Dec 28 02:06:22 CET 2011
+
+	- Fix regex search failure on fake domain. Thanks to Michel Reischl for
+	  the report.
+	- Add support to squid log with client dnsname instead of ip address.
+	  Thanks to Matthew Jurgens for the patch.
+	- Add options --logfile (-l) and --configfile (-c) to squid-analyzer
+	  command line argument.  Thanks to Matthew Jurgens for the patch.
+	- Add the first and last time an url is viewed by a user on day and hour
+	  views. Thanks to Franco Mazz for the feature request.
+	- Allow column sorting using the Javascript sorttable library
+	  available at http://www.kryogenix.org/code/browser/sorttable/.
+	  Thanks to Matthew Jurgens for the patch.
+	- Renamed file Changes as ChangeLog.
+	- Makefile.PL is now able to do a full install by creating directories
+	  and moving files.
+	- Allow parsing of compressed log file. SquidAnalyzer will automaticaly
+	  use zcat when the logfile extention ends with .gz
+	- The cost column now is not shown when the cost price is 0.
+	- Change CSS style of links.
+	- Complete rewrite of report menu and calendar sot that they appears on
+	  all HTML page.
+	- Change License from Artistic to GPL v3.
+	- Remove HeaderFile, replaced by squidanalyzer.css file.
+	- Add --rebuild option to allow rebuilding of all html and graph output
+	  from data files. This should be done after upgrading.
+	- Add ..._REFRESH_UNMODIFIED into cache HIT statistics.
+
+UPGRADE: Even if backward compatibility is preserved on data files, the HTML and
+graph have changed, so after re-installing SquidAnalyzer you may want to run
+squid-analyzer with the --rebuild command line option to regenerate those files.
+So run the following commands:
+
+	tar xzf SquidAnalyzer-4.0.tar.gz
+	cd SquidAnalyzer-4.0/
+	perl Makefile.PL HTMLDIR=/var/www/squidanalyzer
+	make && make install
+	/usr/local/bin/squid-analyzer --rebuild
+
+should the normal procedure to upgrade. Change the path to the HTML output if
+required.
+
+3.1 - Mon Aug  6 12:48:14 CEST 2007
+
+	- Fix illegal division by zero errors.
+	- Remove extra spaces in username
+
+3.0 Fri May  7 12:31:01 CEST 2004
+
+	- Many thanks to Alexandre Sieira for all good ideas and reports !
+	- Add localization support.
+	- Add date formatting option for localisation.
+	- Add French translation.
+	- Add Portugal/brazilan translation.
+	- Add custom HTML header an footer support.
+
+2.1 Tue May  4 16:35:08 CEST 2004
+
+	- Fix Url escaping problem on users pages
+	- Add translation (En + Fr)
+
+2.0 Wed Oct 15 11:40:03 CEST 2003
+
+	- This is a complete rewrite of SquidAnalyzer.
+	- Add configuration file.
+	- Add Top n of url and second level domain.
+	- Add alias for client ip address and/or login. 
+	- Add exclusion from report of certain client ip
+	  addresses, network addresses and/or auth login. 
+	- Many bug fix.
+
+1.1 Wed Feb 28 12:21:30 CET 2001
+
+	- Fix problem with access.log file has zero size.
+	- Skip log line with field lenght != 8
+ 
+1.0 Wed Jan 24 13:47:14 CET 2001
+
+	- original version

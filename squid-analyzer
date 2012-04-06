@@ -1,0 +1,71 @@
+#!/usr/bin/perl
+#
+# Perl frontend to SquidAnalyzer.pm.
+#
+use strict;
+use SquidAnalyzer;
+use Getopt::Long;
+
+$| = 1;
+
+my $DEFAULT_CONFFILE = '/etc/squidanalyzer/squidanalyzer.conf';
+
+my $logfile = '';
+my $configfile = '';
+my $help = '';
+my $rebuild = '';
+
+# get the command line parameters
+my $result = GetOptions (
+	"l|logfile=s"          => \$logfile,
+	"c|configfile=s"       => \$configfile,
+	"h|help"               => \$help,
+	"r|rebuild!"           => \$rebuild,
+);  
+
+# Allow backward compatibility with release < 4.1
+$configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
+if (($#ARGV < 0) && -e $DEFAULT_CONFFILE) {
+	$configfile = $DEFAULT_CONFFILE;
+}
+
+if (!$configfile || $help) {
+	&usage;
+	exit;
+}
+
+# Instanciate SquidAnalyzer.pm perl module
+my $sa = new SquidAnalyzer($configfile, $logfile);
+
+# Run parsing
+$sa->parseFile();
+
+# Recover month and year statistics from day stats
+if ($rebuild) {
+	$sa->{history_time} = '';
+}
+
+# Generate graphics and html
+$sa->buildHTML();
+
+exit(0);
+
+
+sub usage
+{
+	print qq{
+Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+
+    -l | --logfile filename    : path to the Squid logfile to parse.
+				 By default: /var/log/squid/access.log
+    -c | --configfile filename : path to the SquidAnalyzer configuration file.
+				 By default: /etc/squidanalyzer.conf
+    -r | --rebuild             : use this option to rebuild all html and graphs
+				 output from all data files.
+    -h | --help                : show this message and exit.
+
+};
+
+	exit 0;
+}
+

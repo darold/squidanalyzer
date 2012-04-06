@@ -1,0 +1,128 @@
+NAME
+    SquidAnalyzer v4.1 - Squid access log report generation tool
+
+REQUIREMENT
+    perl 5.005_03 or higher and the following Perl modules:
+
+            GD
+            GD::Graph
+            GD::TextUtil
+            GD::Graph::bars3d;
+
+    See GD and GD::Graph requirements for other needed libraries.
+
+    If they are not yet include in your OS distribution you can always find
+    them at http://search.cpan.org/
+
+    If you have Internet access from your server, you can execute the
+    following command to install GD::Graph::bars3d and all its dependencies.
+
+            perl -MCPAN -e 'install GD::Graph::bars3d'
+
+    Images output format is PNG so libgd must be compiled with libpng.
+
+INSTALLATION
+  Generic install
+    If you want the package to be intalled into the Perl distribution just
+    do the following:
+
+        perl Makefile.PL
+        make
+        make install
+
+    Follow the instruction given at the end of install. With this default
+    install everything configurable will be installed under
+    /etc/squidanalyzer. The Perl library SquidAnalyzer.pm will be installed
+    under your site_perl directory and the squid-analyzer Perl script will
+    be copied under /usr/local/bin.
+
+    The default output directory for html reports will be
+    /var/www/squidanalyzer/.
+
+  Custom install
+    You can create your fully customized SquidAnalyzer installation by using
+    the Makefile.PL Perl script. Here is a sample:
+
+            perl Makefile.PL \
+                    LOGFILE=/var/log/squid3/access.log \
+                    BINDIR=/usr/bin \
+                    CONFDIR=/etc \
+                    HTMLDIR=/var/www/squidreport \
+                    BASEURL=/squidreport \
+                    MANDIR=/usr/man/man3 \
+                    DOCDIR=/usr/share/doc/squidanalyzer
+
+    If you want to build a distro package, there are two other options that
+    you may use. The QUIET option is to tell to Makefile.PL to not show the
+    default post install README. The DESTDIR is to create and install all
+    files in a package build base directory. For example for Fedora RPM,
+    thing may look like that:
+
+            # Make Perl and SendmailAnalyzer distrib files
+            %{__perl} Makefile.PL \
+                INSTALLDIRS=vendor \
+                QUIET=1 \
+                LOGFILE=/var/log/squid/access.log \
+                BINDIR=%{_bindir} \
+                CONFDIR=%{_sysconfdir} \
+                BASEDIR=%{_localstatedir}/lib/%{uname} \
+                HTMLDIR=%{webdir} \
+                MANDIR=%{_mandir}/man3 \
+                DOCDIR=%{_docdir}/%{uname}-%{version} \
+                DESTDIR=%{buildroot} < /dev/null
+
+    See spec file in packaging/RPM for full RPM build script.
+
+  Local install
+    You can also have a custom installation. Just copy the SquidAnalyzer.pm
+    and the squid-analyzer perl script into a directory, copy and modify the
+    configuration file and run the script from here with the -c option.
+
+    Then copy files sorttable.js, squidanalyzer.css and
+    logo-squidanalyzer.png into the output directory.
+
+  Post installation
+    1. Modify your httpd.conf to allow access to HTML output like follow:
+
+            Alias /squidreport /var/www/squidanalyzer
+            <Directory /var/www/squidanalyzer>
+                Options -Indexes FollowSymLinks MultiViews
+                AllowOverride None
+                Order deny,allow
+                Deny from all
+                Allow from 127.0.0.1
+            </Directory>
+
+    2. If necessary, give additional host access to SquidAnalyzer in
+    httpd.conf. Restart and ensure that httpd is running.
+
+    3. Browse to http://my.host.dom/squidreport/ to ensure that things are
+    working properly.
+
+    4. Setup a cronjob to run squid-analyzer daily or more often:
+
+         # SquidAnalyzer log reporting daily
+         0 2 * * * /usr/local/bin/squid-analyzer > /dev/null 2>&1
+
+    or run it manually. For more information, see README file.
+
+    You can use network name instead of network ip addresses by using the
+    network-aliases file. Also if you don't have authentication enable and
+    want to replace client ip addresses by some know user or computer you
+    can use the user-aliases file to do so.
+
+    See the file squidanalyzer.conf to customized your output statistics and
+    match your network and file system configuration.
+
+CONFIGURATION
+    See README file.
+
+AUTHOR
+    Gilles DAROLD <gilles@darold.net>
+
+COPYRIGHT
+    Copyright (c) 2001-2012 Gilles DAROLD
+
+    This package is free software and published under the GPL v3 or above
+    license.
+
