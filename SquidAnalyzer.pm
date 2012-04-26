@@ -4,7 +4,7 @@ package SquidAnalyzer;
 # Name     : SquidAnalyzer.pm
 # Language : Perl 5
 # OS       : All
-# Copyright: Copyright (c) 2001-2011 Gilles Darold - All rights reserved.
+# Copyright: Copyright (c) 2001-2012 Gilles Darold - All rights reserved.
 # Licence  : This program is free software; you can redistribute it
 #            and/or modify it under the same terms as Perl itself.
 # Author   : Gilles Darold, gilles _AT_ darold _DOT_ net
@@ -23,8 +23,8 @@ BEGIN {
 	use GD::Graph::pie3d;
 
 	# Set all internal variable
-	$VERSION = '4.2';
-	$COPYRIGHT = 'Copyright (c) 2001-2011 Gilles Darold - All rights reserved.';
+	$VERSION = '4.3';
+	$COPYRIGHT = 'Copyright (c) 2001-2012 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
 	@ISA = qw(Exporter);

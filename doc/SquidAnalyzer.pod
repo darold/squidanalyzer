@@ -1,6 +1,6 @@
 =head1 NAME
 
-SquidAnalyzer v4.2 - Squid access log report generation tool
+SquidAnalyzer v4.3 - Squid access log report generation tool
 
 
 =head1 DESCRIPTION

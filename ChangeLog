@@ -1,5 +1,18 @@
 Revision history for SquidAnalyzer
 
+4.3 - Thu Apr 26 20:00:59 CEST 2012
+
+	- Fix broken statistics when an access log file run over multiple
+	  years. Thanks to Jugurtha Massinissa for the report.
+	- Prevent buildHtml to create directories on month/day without log.
+	- Sort year's view per decreasing years.
+	- Peer CD_SIBLING_HIT status will now be taken as local cache hit with
+	  a new configuration directive (SiblingHit) to disable this feature.
+	  Default is enable. Documentation and configuration file has been
+	  updated - Thanks to Nathanael BONIN for the feature request.
+	- Add spec file for RPM packaging - Thanks to David Walser for the
+	  patch.
+
 4.2 - Sun Jan 22 16:52:27 CET 2012
 
 	- Fix network alias issue broken in last release, now data files will

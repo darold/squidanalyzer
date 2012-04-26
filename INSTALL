@@ -1,5 +1,5 @@
 NAME
-    SquidAnalyzer v4.2 - Squid access log report generation tool
+    SquidAnalyzer v4.3 - Squid access log report generation tool
 
 REQUIREMENT
     perl 5.005_03 or higher and the following Perl modules:
