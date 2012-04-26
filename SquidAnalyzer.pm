@@ -292,6 +292,46 @@ sub parseFile
 
 }
 
+sub _clear_stats
+{
+	my $self = shift;
+
+	# Hashes to store user statistics
+	$self->{stat_user_hour} = ();
+	$self->{stat_user_day} = ();
+	$self->{stat_user_month} = ();
+	$self->{stat_usermax_hour} = ();
+	$self->{stat_usermax_day} = ();
+	$self->{stat_usermax_month} = ();
+	$self->{stat_user_url_hour} = ();
+	$self->{stat_user_url_day} = ();
+	$self->{stat_user_url_month} = ();
+
+	# Hashes to store network statistics
+	$self->{stat_network_hour} = ();
+	$self->{stat_network_day} = ();
+	$self->{stat_network_month} = ();
+	$self->{stat_netmax_hour} = ();
+	$self->{stat_netmax_day} = ();
+	$self->{stat_netmax_month} = ();
+
+	# Hashes to store user / network statistics
+	$self->{stat_netuser_hour} = ();
+	$self->{stat_netuser_day} = ();
+	$self->{stat_netuser_month} = ();
+
+	# Hashes to store cache status (hit/miss)
+	$self->{stat_code_hour} = ();
+	$self->{stat_code_day} = ();
+	$self->{stat_code_month} = ();
+
+	# Hashes to store mime type
+	$self->{stat_mime_type_hour} = ();
+	$self->{stat_mime_type_day} = ();
+	$self->{stat_mime_type_month} = ();
+
+}
+
 sub _init
 {
 	my ($self, $conf_file, $log_file) = @_;
@@ -391,39 +431,8 @@ sub _init
 	$self->{Currency} = $options{Currency} || '&euro;';
 	$self->{TopNumber} = $options{TopNumber} || 10;
 
-	# Hashes to store user statistics
-	$self->{stat_user_hour} = ();
-	$self->{stat_user_day} = ();
-	$self->{stat_user_month} = ();
-	$self->{stat_usermax_hour} = ();
-	$self->{stat_usermax_day} = ();
-	$self->{stat_usermax_month} = ();
-	$self->{stat_user_url_hour} = ();
-	$self->{stat_user_url_day} = ();
-	$self->{stat_user_url_month} = ();
-
-	# Hash to store network statistics
-	$self->{stat_network_hour} = ();
-	$self->{stat_network_day} = ();
-	$self->{stat_network_month} = ();
-	$self->{stat_netmax_hour} = ();
-	$self->{stat_netmax_day} = ();
-	$self->{stat_netmax_month} = ();
-
-	# Hash to store user / network statistics
-	$self->{stat_netuser_hour} = ();
-	$self->{stat_netuser_day} = ();
-	$self->{stat_netuser_month} = ();
-
-	# Hash to store cache status (hit/miss)
-	$self->{stat_code_hour} = ();
-	$self->{stat_code_day} = ();
-	$self->{stat_code_month} = ();
-
-	# Hast to store mime type
-	$self->{stat_mime_type_hour} = ();
-	$self->{stat_mime_type_day} = ();
-	$self->{stat_mime_type_month} = ();
+	# Init statistics storage hashes
+	$self->_clear_stats();
 
 	# Used to store the first and last date parsed
         $self->{last_year} = 0;
@@ -538,9 +547,25 @@ sub _parseData
 	}
 
 	# Store data when day change to save memory
-	if ($self->{tmp_saving} && ($self->{tmp_saving} ne "$date")) {
-		$self->{tmp_saving} =~ /^(\d{4})(\d{2})(\d{2})$/;
-		$self->_save_data("$1", "$2", "$3");
+	if ($self->{tmp_saving} =~ /^(\d{4})(\d{2})(\d{2})$/) {
+		# If the day has changed then we want to save stats of the previous one
+		if ($self->{last_day} && ($3 ne $self->{last_day})) {
+			$self->_save_data("$1", "$2", "$3");
+			$self->{first_day} = '';
+		}
+		# If the month has changed then we want to save stats of the previous one
+		if ($self->{last_month} && ($2 ne $self->{last_month})) {
+			$self->_save_data("$1", "$2");
+			$self->{first_month} = '';
+		}
+		# If the year has changed then we want to save stats of the previous one
+		if ($self->{last_year} && ($1 ne $self->{last_year})) {
+			$self->_save_data("$1");
+			$self->{first_year} = '';
+			# Stats can be cleared
+			print STDERR "Clearing complete statistics storage hashes for year $1.\n" if (!$self->{QuietMode});
+			$self->_clear_stats();
+		}
 	}
 
 	$self->{first_year} ||= $self->{last_year};
@@ -1155,21 +1180,21 @@ sub gen_html_output
 	}
 	my $stat_date = $self->set_date($year, $month, $day);
 
-	print STDERR "\tUser statistics...\n" if (!$self->{QuietMode});
+	print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
 	my $nuser = $self->_print_user_stat($dir, $year, $month, $day);
-	print STDERR "\tMime type statistics...\n" if (!$self->{QuietMode});
+	print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
 	$self->_print_mime_stat($dir, $year, $month, $day);
-	print STDERR "\tNetwork statistics...\n" if (!$self->{QuietMode});
+	print STDERR "\tNetwork statistics in $dir...\n" if (!$self->{QuietMode});
 	$self->_print_network_stat($dir, $year, $month, $day);
 	my $nurl = 0;
 	my $ndomain = 0;
 	if ($self->{UrlReport}) {
-		print STDERR "\tTop URL statistics...\n" if (!$self->{QuietMode});
+		print STDERR "\tTop URL statistics in $dir...\n" if (!$self->{QuietMode});
 		$nurl = $self->_print_top_url_stat($dir, $year, $month, $day);
-		print STDERR "\tTop domain statistics...\n" if (!$self->{QuietMode});
+		print STDERR "\tTop domain statistics in $dir...\n" if (!$self->{QuietMode});
 		$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day);
 	}
-	print STDERR "\tCache statistics...\n" if (!$self->{QuietMode});
+	print STDERR "\tCache statistics in $dir...\n" if (!$self->{QuietMode});
 	$self->_print_cache_stat($dir, $year, $month, $day, $nuser, $nurl, $ndomain);
 
 	return ($nuser, $nurl, $ndomain);
