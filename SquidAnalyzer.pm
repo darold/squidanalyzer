@@ -273,6 +273,7 @@ sub parseFile
 		}
 		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
 			$date =~ /^(\d{4})(\d{2})$/;
+			next if (($2 < 1) || ($2 > 12));
 			$self->_save_data("$1", "$2");
 		}
 
@@ -280,7 +281,7 @@ sub parseFile
 		if (!$self->{QuietMode}) {
 			print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
 		}
-		for my $year ("$self->{first_year}" .. "$self->{last_year}") {
+		for my $year ($self->{first_year} .. $self->{last_year}) {
 			$self->_save_data($year);
 		}
 	}
@@ -2748,7 +2749,7 @@ sub _gen_summary
 	print $out qq{
 </tr>
 };
-	foreach my $year (keys %code_stat) {
+	foreach my $year (sort {$b <=> $a} keys %code_stat) {
 		my $comma_bytes = &format_bytes($total_bytes{$year});
 		my $hit_bytes = &format_bytes($code_stat{$year}{HIT}{bytes});
 		my $miss_bytes = &format_bytes($code_stat{$year}{MISS}{bytes});
