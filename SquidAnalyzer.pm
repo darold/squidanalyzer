@@ -274,7 +274,9 @@ sub parseFile
 		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
 			$date =~ /^(\d{4})(\d{2})$/;
 			next if (($2 < 1) || ($2 > 12));
-			$self->_save_data("$1", "$2");
+			if (-d "$self->{Output}/$1/$2") {
+				$self->_save_data("$1", "$2");
+			}
 		}
 
 		# Compute year statistics
@@ -282,7 +284,9 @@ sub parseFile
 			print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
 		}
 		for my $year ($self->{first_year} .. $self->{last_year}) {
-			$self->_save_data($year);
+			if (-d "$self->{Output}/$year") {
+				$self->_save_data($year);
+			}
 		}
 	}
 
@@ -1110,17 +1114,17 @@ sub buildHTML
 	opendir(DIR, $outdir) || die "Error: can't opendir $outdir: $!";
 	my @years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
 	closedir DIR;
-	foreach my $y (@years) {
+	foreach my $y (sort {$a <=> $b} @years) {
 		next if ($y < $old_year);
 		opendir(DIR, "$outdir/$y") || die "Error: can't opendir $outdir/$y: $!";
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		closedir DIR;
-		foreach my $m (@months) {
+		foreach my $m (sort {$a <=> $b} @months) {
 			next if ($m < $old_month);
 			opendir(DIR, "$outdir/$y/$m") || die "Error: can't opendir $outdir/$y/$m: $!";
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
 			closedir DIR;
-			foreach my $d (@days) {
+			foreach my $d (sort {$a <=> $b} @days) {
 				next if ($d < $old_day);
 				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
 				$self->gen_html_output($outdir, $y, $m, $d);
