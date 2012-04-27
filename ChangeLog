@@ -12,7 +12,7 @@ Revision history for SquidAnalyzer
 	  updated - Thanks to Nathanael BONIN for the feature request.
 	- Add spec file for RPM packaging - Thanks to David Walser for the
 	  patch.
-	- Fix path and comment to translation file in squidclamav.conf. Thanks
+	- Fix path and comment to translation file in squidanalyzer.conf. Thanks
 	  to Jugurtha Massinissa for the report.
 
 4.2 - Sun Jan 22 16:52:27 CET 2012
