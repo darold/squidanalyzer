@@ -1,6 +1,6 @@
 Revision history for SquidAnalyzer
 
-4.3 - Thu Apr 26 20:00:59 CEST 2012
+4.3 - Fri Apr 27 21:47:12 CEST 2012
 
 	- Fix broken statistics when an access log file run over multiple
 	  years. Thanks to Jugurtha Massinissa for the report.
@@ -12,6 +12,8 @@ Revision history for SquidAnalyzer
 	  updated - Thanks to Nathanael BONIN for the feature request.
 	- Add spec file for RPM packaging - Thanks to David Walser for the
 	  patch.
+	- Fix path and comment to translation file in squidclamav.conf. Thanks
+	  to Jugurtha Massinissa for the report.
 
 4.2 - Sun Jan 22 16:52:27 CET 2012
 
