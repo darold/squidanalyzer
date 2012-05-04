@@ -1,0 +1,92 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Author: Klaus Tachtler
+#------------------------------------------------------------------------------
+01				Jan
+02				Feb
+03				Mar
+04				Apr
+05				Mai
+06				Jun
+07				Jul
+08				Aug
+09				Sep
+10				Okt
+11				Nov
+12				Dez
+Requests			Anfragen
+Bytes				Bytes
+Megabytes			Megabytes
+Total				Gesamt
+Years				Jahre
+Months				Monate
+Days				Tage
+Hit				Cachespeicher
+Miss				Internet
+Cost				Kosten
+Users				Benutzer
+Sites				Seiten
+Domains				Domains
+Requests_graph			Anfragen
+Megabytes_graph			Megabytes
+Months_graph			Monate
+Days_graph			Tage
+Hit_graph			Cachespeicher
+Miss_graph			Internet
+Total_graph			Gesamt
+Domains_graph			Domains
+Users_help			Anzahl verschiedene Benutzer in diesem Zeitraum
+Sites_help			Anzahl verschiedene besuchte Seiten in diesem Zeitraum
+Domains_help			Anzahl verschiedene besuchte Subdomains in diesem Zeitraum
+Hit_help			Objekte die im Cachespeicher gefunden wurden
+Miss_help			Objekte die im Cachespeicher nicht gefunden wurden
+Cost_help			1 Mega Byte =
+Generation			Report erstellt am
+Main_cache_title		Cachespeicher Statistik
+Cache_title			Cachespeicher Statistik
+Stat_label			Statistik
+Mime_link			Mime Typen
+Network_link			Netzwerke
+User_link			Benutzer
+Top_url_link			Top Urls
+Top_domain_link			Top Domains
+Back_link			Zur&uuml;ck
+Graph_cache_hit_title		%s Zugriffstatistik
+Graph_cache_byte_title		%s Megabytes Statistik
+Hourly				Stuendliche
+Hours				Stunden
+Daily				Taegliche
+Days				Tage
+Monthly				Monatliche
+Months				Monate
+Mime_title			Mime Typen Statistik
+Mime_number			Anzahl verschiedener Mime Typen
+Network_title			Netzwerk Statistik
+Network_number			Anzahl an Netzwerken
+Duration			Dauer
+Time				Zeit
+Largest				Groesste
+Url				Url
+User_title			Benutzer Statistik
+User_number			Anzahl der Benutzer
+Url_Hits_title			Top %d Url Treffer
+Url_Bytes_title			Top %d Url Bytes
+Url_Duration_title		Top %d Url Dauer
+Url_number			Anzahl der Url
+Domain_Hits_title		Top %d Domain Treffer
+Domain_Bytes_title		Top %d Domain Bytes
+Domain_Duration_title		Top %d Domain Dauer
+Domain_number			Anzahl der Domains
+Domain_graph_hits_title		Domain Treffer Statistik
+Domain_graph_bytes_title	Domain Bytes Statistik
+First_time			Erster Treffer
+Last_time			Letzter Treffer
