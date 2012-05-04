@@ -10,6 +10,7 @@ URL:		http://%{name}.darold.net/
 Source:		http://prdownloads.sourceforge.net/squid-report/SquidAnalyzer-%{version}.tar.gz
 Requires:	squid
 BuildRequires:	perl
+BuildArch:	noarch
 
 %description
 Squid proxy native log analyzer and reports generator with full
@@ -36,6 +37,8 @@ perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR
 rm -rf %{buildroot}
 
 %makeinstall_std
+install -d %{buildroot}%{_sysconfdir}/cron.daily
+echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron.daily/0%{name}
 
 
 %files
@@ -49,6 +52,7 @@ rm -rf %{buildroot}
 %config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/excluded
 %config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/network-aliases
 %config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/user-aliases
+%config(noreplace) %attr(0754,root,squid) %{_sysconfdir}/cron.daily/0%{name}
 %attr(0755,root,squid) %dir %{_sysconfdir}/%{name}/lang
 %{_sysconfdir}/%{name}/lang/*
 %attr(0755,root,squid) %dir %{contentdir}/html/%{name}
@@ -58,4 +62,3 @@ rm -rf %{buildroot}
 
 %clean
 rm -rf %{buildroot}
-
