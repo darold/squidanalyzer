@@ -1,5 +1,5 @@
 NAME
-    SquidAnalyzer v4.3 - Squid access log report generation tool
+    SquidAnalyzer v4.4 - Squid access log report generation tool
 
 DESCRIPTION
     SquidAnalyzer parse native access log format of the Squid proxy and
@@ -215,9 +215,23 @@ CONFIGURATION
         Default is top 10.
 
     Exclude exclusion_file
-        Used to set client ip addresses, network addresses and/or auth login
-        name to exclude from report. Format of the file is a login or an ip
-        address by line.
+        Used to set client ip addresses, network addresses, auth login or
+        uri to exclude from report.
+
+        You can define one by line exclusion by specifying first the type of
+        the exclusion (USER, CLIENT or URI) and a space separated list of
+        valid regex.
+
+        See example bellow:
+
+                CLIENT         192\.168\.1\.2 
+                CLIENT         10\.169\.1\.\d+ 192\.168\.10\..*
+                USER           myloginstr
+                USER           guestlogin\d+ guestdemo
+                URI            http:\/\/myinternetdomain.dom.*
+                URI            .*\.webmail\.com\/.*\/login\.php.*
+
+        you can have multiple line of the same exclusion type.
 
     Lang language_file
         Used to set the translation file to be used. Value must be set to a

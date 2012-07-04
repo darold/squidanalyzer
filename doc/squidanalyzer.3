@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2012-04-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2012-07-05" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -363,9 +363,24 @@ Used to set the number of top url and second level domain to show.
 Default is top 10.
 .IP "Exclude exclusion_file" 4
 .IX Item "Exclude exclusion_file"
-Used to set client ip addresses, network addresses and/or auth login
-name to exclude from report. Format of the file is a login or an ip
-address by line.
+Used to set client ip addresses, network addresses, auth login or
+uri to exclude from report.
+.Sp
+You can define one by line exclusion by specifying first the type of the
+exclusion (\s-1USER\s0, \s-1CLIENT\s0 or \s-1URI\s0) and a space separated list of valid regex.
+.Sp
+See example bellow:
+.Sp
+.Vb 6
+\&        CLIENT         192\e.168\e.1\e.2 
+\&        CLIENT         10\e.169\e.1\e.\ed+ 192\e.168\e.10\e..*
+\&        USER           myloginstr
+\&        USER           guestlogin\ed+ guestdemo
+\&        URI            http:\e/\e/myinternetdomain.dom.*
+\&        URI            .*\e.webmail\e.com\e/.*\e/login\e.php.*
+.Ve
+.Sp
+you can have multiple line of the same exclusion type.
 .IP "Lang language_file" 4
 .IX Item "Lang language_file"
 Used to set the translation file to be used. Value must be set to

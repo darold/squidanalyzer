@@ -223,12 +223,46 @@ sub parseFile
 					$id = $login;
 				}
 				next if (!$id || !$bytes);
-				# Skip exclusion of client
-				next if (grep(/^($client_ip|$login)$/, @{$self->{Exclude}}));
-				# Skip exclusion of network if client is not a dns name
-				if ($client_ip =~ /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.)/) {
-					my $netex = quotemeta($1 . '0');
-					next if (grep(/^$netex$/, @{$self->{Exclude}}));
+				# check for client/user exclusion in old syntax
+				my $found = 0;
+				if (exists $self->{Exclude}{all}) {
+					foreach my $e (@{$self->{Exclude}{all}}) {
+						if ( ($client_ip =~ m#^$e$#i) || ($login =~ m#^$e$#i)) {
+							$found = 1;
+							last;
+						}
+					} 
+					next if ($found);
+				}
+				# check for user exclusion
+				if (exists $self->{Exclude}{users}) {
+					foreach my $e (@{$self->{Exclude}{users}}) {
+						if ($login =~ m#^$e$#i) {
+							$found = 1;
+							last;
+						}
+					} 
+					next if ($found);
+				}
+				# check for client exclusion
+				if (exists $self->{Exclude}{clients}) {
+					foreach my $e (@{$self->{Exclude}{clients}}) {
+						if ($client_ip =~ m#^$e$#i) {
+							$found = 1;
+							last;
+						}
+					} 
+					next if ($found);
+				}
+				# check for URL exclusion
+				if (exists $self->{Exclude}{uris}) {
+					foreach my $e (@{$self->{Exclude}{uris}}) {
+						if ($url =~ m#^$e$#i) {
+							$found = 1;
+							last;
+						}
+					}
+					next if ($found);
 				}
 				# Anonymize all users
 				if ($self->{AnonymizeLogin} && ($client_ip ne $id)) {
@@ -425,7 +459,7 @@ sub _init
 	}
 	$self->{NetworkAlias} = &parse_network_aliases($options{NetworkAlias} || '');
 	$self->{UserAlias} = &parse_user_aliases($options{UserAlias} || '');
-	$self->{Exclude} = &parse_user_exclusion($options{Exclude} || '');
+	%{$self->{Exclude}} = &parse_exclusion($options{Exclude} || '');
 
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
@@ -2910,22 +2944,31 @@ sub parse_user_aliases
 	return \%alias;
 }
 
-sub parse_user_exclusion
+sub parse_exclusion
 {
 	my ($file) = @_;
 
 	return if (!$file || !-f $file);
 
-	my @exclusion = ();
-	open(EXCLUDED, $file) or die "ERROR: can't open client exclusion file $file, $!\n";
+	my %exclusion = ();
+	open(EXCLUDED, $file) or die "ERROR: can't open exclusion file $file, $!\n";
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
-		push(@exclusion, $l);
+		if ($l =~ m#^USER[\s\t]+(.*)#) {
+			push(@{$exclusion{users}}, split(m#[\s\t]+#, $1));
+		} elsif ($l =~ m#^CLIENT[\s\t]+(.*)#) {
+			push(@{$exclusion{clients}}, split(m#[\s\t]+#, $1));
+		} elsif ($l =~ m#^URI[\s\t]+(.*)#) {
+			push(@{$exclusion{uris}}, split(m#[\s\t]+#, $1));
+		} else {
+			# backward compatibility
+			push(@{$exclusion{all}}, $l);
+		}
 	}
 	close(EXCLUDED);
 
-	return \@exclusion;
+	return %exclusion;
 }
 
 # User URL-encode
