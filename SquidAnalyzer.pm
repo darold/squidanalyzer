@@ -15,7 +15,7 @@ use strict;             # make things properly
 
 BEGIN {
 	use Exporter();
-	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG);
+	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG);
 	use POSIX;
 	use GD;
 	use GD::Graph;
@@ -35,6 +35,7 @@ BEGIN {
 }
 
 $ZCAT_PROG = "/bin/zcat";
+$BZCAT_PROG = "/bin/bzcat";
 
 # Default translation srings
 my %Translate = (
@@ -149,11 +150,14 @@ sub parseFile
 
 	# Open logfile
 	my $logfile = new IO::File;
-	if ($self->{LogFile} !~ /\.gz/) {
-		$logfile->open($self->{LogFile}) || die "ERROR: Unable to open Squid access.log file $self->{LogFile}. $!\n";
-	} else {
+	if ($self->{LogFile} =~ /\.gz/) {
 		# Open a pipe to zcat program for compressed log
 		$logfile->open("$ZCAT_PROG $self->{LogFile} |") || die "ERROR: cannot read from pipe to $ZCAT_PROG $self->{LogFile}. $!\n";
+	} elsif ($self->{LogFile} =~ /\.bz2/) {
+		# Open a pipe to zcat program for compressed log
+		$logfile->open("$BZCAT_PROG $self->{LogFile} |") || die "ERROR: cannot read from pipe to $BZCAT_PROG $self->{LogFile}. $!\n";
+	} else {
+		$logfile->open($self->{LogFile}) || die "ERROR: Unable to open Squid access.log file $self->{LogFile}. $!\n";
 	}
 
 	my $line = '';
