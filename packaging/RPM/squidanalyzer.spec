@@ -2,7 +2,7 @@
 
 Summary:	Squid proxy log analyzer and report generator
 Name:		squidanalyzer
-Version:	4.3
+Version:	4.4
 Release:	%mkrel 1
 License:	GPLv3
 Group:		Monitoring

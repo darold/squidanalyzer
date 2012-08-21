@@ -23,7 +23,7 @@ BEGIN {
 	use GD::Graph::pie3d;
 
 	# Set all internal variable
-	$VERSION = '4.3';
+	$VERSION = '4.4';
 	$COPYRIGHT = 'Copyright (c) 2001-2012 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
