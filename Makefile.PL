@@ -61,21 +61,16 @@ print INST qq{
 if [ ! -d "$DESTDIR$MANDIR" ]; then
 	mkdir -p $DESTDIR$MANDIR
 fi
-
-if [ -e "$DESTDIR$CONFDIR/squidanalyzer.conf" ]; then
-        echo "File squidanalyzer.conf already exists. The new one will be copied as squidanalyzer.conf.new"
-	install -m 644 squidanalyzer.conf $DESTDIR$CONFDIR/squidanalyzer.conf.new
-else
-	install -m 644 squidanalyzer.conf $DESTDIR$CONFDIR/
-fi
+# Copy files that must not be overriden 
+install -m 644 squidanalyzer.conf $DESTDIR$CONFDIR/squidanalyzer.conf.orig
+install -m 644 network-aliases $DESTDIR$CONFDIR/network-aliases.orig
+install -m 644 user-aliases $DESTDIR$CONFDIR/user-aliases.orig
+install -m 644 excluded $DESTDIR$CONFDIR/excluded.orig
 install -m 755 squid-analyzer $DESTDIR$BINDIR/
 install -m 644 sorttable.js $DESTDIR$HTMLDIR/
 install -m 644 logo-squidanalyzer.png $DESTDIR$HTMLDIR/
 install -m 644 squidanalyzer.css $DESTDIR$HTMLDIR/
 install -m 644 lang/* $DESTDIR$CONFDIR/lang/
-install -m 644 network-aliases $DESTDIR$CONFDIR/
-install -m 644 user-aliases $DESTDIR$CONFDIR/
-install -m 644 excluded $DESTDIR$CONFDIR/
 pod2man doc/SquidAnalyzer.pod doc/squidanalyzer.3
 install -m 644 doc/squidanalyzer.3 $DESTDIR$MANDIR/squidanalyzer.3
 pod2text doc/SquidAnalyzer.pod README
