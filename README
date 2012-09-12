@@ -13,13 +13,6 @@ DESCRIPTION
     This analyzer is incremental so it should be run in a daily cron. Take
     care if you have rotate log enable to run it before rotation is done.
 
-    The HTML output need a huge size for large number of user. Here on my
-    pentium III 500 MHz with 15Mb of free memory, for 600 users and an
-    access.log of 72 Mb it takes 20 minutes to run and generate 70 Mb of
-    HTML output by month. If you have an older system than this and want to
-    save space and time, you can disable url details feature that logs and
-    reports statistics for every URL and domain.
-
 REQUIREMENT
     perl 5.005_03 or higher and the following Perl modules:
 
