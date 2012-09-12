@@ -1092,7 +1092,7 @@ sub _print_header
 {
 	my ($self, $fileout, $str, $cal) = @_;
 
-	my $now = strftime("%c", localtime);
+	my $now = strftime("%a %b %e %H:%M:%S %Y", localtime);
 
 	print $$fileout qq{
 <!DOCTYPE html
