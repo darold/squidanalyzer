@@ -758,7 +758,9 @@ sub _save_stat
 	$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
 		or die "ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n";
 	foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
-		$dat_file_user->print("$id hits_$type="); 
+		my $name = $id;
+		$name =~ s/\s+//g;
+		$dat_file_user->print("$name hits_$type="); 
 		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
 			$dat_file_user->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{hits} . ",");
 		}
@@ -896,7 +898,7 @@ sub _read_stat
 		my $i = 1;
 		while (my $l = <$dat_file_user>) {
 			chomp($l);
-			if ($l =~ s/^([^\s]+)\shits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
 				my $id = $1;
 				my $hits = $2 || '';
 				my $bytes = $3 || '';
@@ -937,13 +939,13 @@ sub _read_stat
 			my $i = 1;
 			while (my $l = <$dat_file_user_url>) {
 				chomp($l);
-				if ($l =~ s/^([^\s]+)\shits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
+				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
 					$self->{"stat_user_url_$type"}{$1}{"$7"}{hits} += $2;
 					$self->{"stat_user_url_$type"}{$1}{"$7"}{bytes} += $3;
 					$self->{"stat_user_url_$type"}{$1}{"$7"}{duration} += $4;
 					$self->{"stat_user_url_$type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$type"}{$1}{"$7"}{firsthit});
 					$self->{"stat_user_url_$type"}{$1}{"$7"}{lasthit} = $6;
-				} elsif ($l =~ s/^([^\s]+)\shits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
+				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
 					$self->{"stat_user_url_$type"}{$1}{"$5"}{hits} += $2;
 					$self->{"stat_user_url_$type"}{$1}{"$5"}{bytes} += $3;
 					$self->{"stat_user_url_$type"}{$1}{"$5"}{duration} += $4;
@@ -1042,7 +1044,7 @@ sub _read_stat
 		my $i = 1;
 		while (my $l = <$dat_file_code>) {
 			chomp($l);
-			if ($l =~ s/^([^\s]+)\shits_$type=([^;]+);bytes_$type=([^;]+)$//) {
+			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
 				my $code = $1;
 				my $hits = $2 || '';
 				my $bytes = $3 || '';
@@ -1072,7 +1074,7 @@ sub _read_stat
 		my $i = 1;
 		while (my $l = <$dat_file_mime_type>) {
 			chomp($l);
-			if ($l =~ s/^([^\s]+)\shits=(\d+);bytes=(\d+)//) {
+			if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
 				my $mime = $1;
 				$self->{"stat_mime_type_$type"}{$mime}{hits} += $2;
 				$self->{"stat_mime_type_$type"}{$mime}{bytes} += $3;
