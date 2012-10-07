@@ -2939,6 +2939,7 @@ sub parse_user_aliases
 		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
 		my @data = split(/[\t]+/, $l, 2);
+		$data[0] =~ s/\s+/_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
 			push(@{$alias{$data[0]}}, split(/[\s,;\t]/, $data[1]));
 		} else {
