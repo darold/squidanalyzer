@@ -3000,10 +3000,11 @@ sub set_date
         $date_format =~ s/\%y/$year/i;
         $date_format =~ s/\%m/$month/i;
         $date_format =~ s/\%d/$day/i;
+        $date_format =~ s/\%M/$Translate{$month}/i;
 
-        $date_format =~ s/\D{2,3}//;
-        $date_format =~ s/^\D+//;
-        $date_format =~ s/\D+$//;
+	$date_format =~ s/([^\p{Letter}\p{Digit}]){2,3}/$1/;
+	$date_format =~ s/^[^\p{Letter}\p{Digit}]+//;
+	$date_format =~ s/[^\p{Letter}\p{Digit}]+$//;
 
         return $date_format;
 }
