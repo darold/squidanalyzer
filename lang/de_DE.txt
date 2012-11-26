@@ -90,3 +90,5 @@ Domain_graph_hits_title		Domain Treffer Statistik
 Domain_graph_bytes_title	Domain Bytes Statistik
 First_time			Erster Treffer
 Last_time			Letzter Treffer
+First_visit			Erster Besuch
+Last_visit			Letzter Besuch
