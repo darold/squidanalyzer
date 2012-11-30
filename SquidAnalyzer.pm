@@ -1699,8 +1699,8 @@ sub _print_network_stat
 		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($network_stat{$net}{bytes}/1000000) * $self->{CostPrice});
 		my $show = $net;
-		if ($net =~ /^\d+\.\d+\.\d+/) {
-			$show .= ".0";
+		if ($net =~ /^(\d+\.\d+\.\d+)/) {
+			$show = "$1.0";
 			foreach my $n (keys %{$self->{NetworkAlias}}) {
 				if ($show =~ /$self->{NetworkAlias}->{$n}/) {
 					$show = $n;
