@@ -70,6 +70,7 @@ install -m 755 squid-analyzer $DESTDIR$BINDIR/
 install -m 644 sorttable.js $DESTDIR$HTMLDIR/
 install -m 644 logo-squidanalyzer.png $DESTDIR$HTMLDIR/
 install -m 644 squidanalyzer.css $DESTDIR$HTMLDIR/
+install -m 644 flotr2.js $DESTDIR$HTMLDIR/
 install -m 644 lang/* $DESTDIR$CONFDIR/lang/
 pod2man doc/SquidAnalyzer.pod doc/squidanalyzer.3
 install -m 644 doc/squidanalyzer.3 $DESTDIR$MANDIR/squidanalyzer.3

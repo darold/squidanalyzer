@@ -17,10 +17,7 @@ BEGIN {
 	use Exporter();
 	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG);
 	use POSIX;
-	use GD;
-	use GD::Graph;
-	use GD::Graph::bars3d;
-	use GD::Graph::pie3d;
+	use IO::File;
 
 	# Set all internal variable
 	$VERSION = '4.4';
@@ -405,6 +402,7 @@ sub _init
 	$self->{FooterFile} = $options{FooterFile} || '';
 	$self->{AnonymizeLogin} = $options{AnonymizeLogin} || 0;
 	$self->{SiblingHit} = $options{SiblingHit} || 1;
+	$self->{ImgFormat} = $options{ImgFormat} || 'png';
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
@@ -1113,6 +1111,38 @@ sub _print_header
 <link rel="stylesheet" type="text/css" href="$self->{WebUrl}squidanalyzer.css" media="screen" />
 <!-- javascript to sort table -->
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
+<script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
+<style>
+#code_requests, #code_bytes, #network_hits, #network_bytes, #user_hits, #user_bytes, #domain_hits, #domain_bytes {
+	width : 600px;
+	height: 300px;
+	background:#F3F2ED;
+	border:4px double white;
+	padding:0 10px;
+	margin:30px 0 30px 0;
+	border-radius:10px;
+	-moz-border-radius:10px;
+	-webkit-border-radius:10px;
+	box-shadow:3px 3px 6px 2px #A9A9A9;
+	-moz-box-shadow:3px 3px 6px 2px #A9A9A9;
+	-webkit-box-shadow:3px 3px 6px #A9A9A9;
+}
+</style>
+<script type="text/javascript">
+ /* <![CDATA[ */
+function toggle(idButton, idDiv, label) {
+	if(document.getElementById(idDiv)) {
+		if(document.getElementById(idDiv).style.display == 'none') {
+			document.getElementById(idDiv).style.display = 'block';
+			document.getElementById(idButton).value = 'Hide '+label;
+		} else {
+			document.getElementById(idDiv).style.display = 'none';
+			document.getElementById(idButton).value = 'Show '+label;
+		}
+	}
+}
+/* ]]> */
+</script>
 </head>
 <body text="black" bgcolor="white">
 <a name="atop"></a>
@@ -1314,7 +1344,90 @@ sub _print_cache_stat
 	my $miss_bytes = &format_bytes($code_stat{MISS}{bytes});
 	my $colspn = 5;
 	$colspn = 6 if ($self->{CostPrice});
-	print $out qq{<table><tr><td><img src="code_request.png"></td><td><img src="code_bytes.png"></td></tr></table>};
+
+	my $last = '23';
+	my $first = '00';
+	my $title = $Translate{'Hourly'} || 'Hourly';
+	my $unit = $Translate{'Hours'} || 'Hours';
+	if ($type eq 'day') {
+		$last = '31';
+		$first = '01';
+		$title = $Translate{'Daily'} || 'Daily';
+		$unit = $Translate{'Days'} || 'Days';
+	} elsif ($type eq 'month') {
+		$last = '12';
+		$first = '01';
+		$title = $Translate{'Monthly'} || 'Monthly';
+		$unit = $Translate{'Months'} || 'Months';
+	}
+	my @hit = ();
+	my @miss = ();
+	my @total = ();
+	for ("$first" .. "$last") {
+		my $tot = 0;
+		if (exists $detail_code_stat{HIT}{$_}{request}) {
+			push(@hit, "[ $_, $detail_code_stat{HIT}{$_}{request} ]");
+			$tot += $detail_code_stat{HIT}{$_}{request};
+		} else {
+			push(@hit, "[ $_, 0 ]");
+		}
+		if (exists $detail_code_stat{MISS}{$_}{request}) {
+			push(@miss, "[ $_, $detail_code_stat{MISS}{$_}{request} ]");
+			$tot += $detail_code_stat{MISS}{$_}{request};
+		} else {
+			push(@miss, "[ $_, 0 ]");
+		}
+		push(@total, "[ $_, $tot ]");
+		delete $detail_code_stat{HIT}{$_}{request};
+		delete $detail_code_stat{MISS}{$_}{request};
+	}
+
+	my $t1 = $Translate{'Graph_cache_hit_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	my $xlabel = $unit || '';
+	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+	my $code_requests = $self->flotr2_bargraph(1, 'code_requests', $type, $t1, $xlabel, $ylabel,
+				join(',', @total), $Translate{'Total_graph'},
+				join(',', @hit), $Translate{'Hit_graph'},
+				join(',', @miss), $Translate{'Miss_graph'} );
+	@hit = ();
+	@miss = ();
+	@total = ();
+	print $out qq{<table><tr><td>$code_requests</td>};
+	$code_requests = '';
+
+	for ("$first" .. "$last") {
+		my $tot = 0;
+		if (exists $detail_code_stat{HIT}{$_}{bytes}) {
+			push(@hit, "[ $_, " . int($detail_code_stat{HIT}{$_}{bytes}/1000000) . " ]");
+			$tot += $detail_code_stat{HIT}{$_}{bytes};
+		} else {
+			push(@hit, "[ $_, 0 ]");
+		}
+		if (exists $detail_code_stat{MISS}{$_}{bytes}) {
+			push(@miss, "[ $_, " . int($detail_code_stat{MISS}{$_}{bytes}/1000000) . " ]");
+			$tot += $detail_code_stat{MISS}{$_}{bytes};
+		} else {
+			push(@miss, "[ $_, 0 ]");
+		}
+		push(@total, "[ $_, " . int($tot/1000000) . " ]");
+	}
+	%detail_code_stat = ();
+	$t1 = $Translate{'Graph_cache_byte_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+	my $code_bytes = $self->flotr2_bargraph(2, 'code_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @total), $Translate{'Total_graph'},
+				join(',', @hit), $Translate{'Hit_graph'},
+				join(',', @miss), $Translate{'Miss_graph'} );
+	@hit = ();
+	@miss = ();
+	@total = ();
+
+	print $out qq{<td>$code_bytes</td></tr></table>};
+	$code_bytes = '';
 	print $out qq{
 <div id="stata">
 <table>
@@ -1374,101 +1487,6 @@ sub _print_cache_stat
 	%code_stat = ();
 	$self->_print_footer(\$out);
 	$out->close();
-
-	my $last = '23';
-	my $first = '00';
-	my $title = $Translate{'Hourly'} || 'Hourly';
-	my $unit = $Translate{'Hours'} || 'Hours';
-	if ($type eq 'day') {
-		$last = '31';
-		$first = '01';
-		$title = $Translate{'Daily'} || 'Daily';
-		$unit = $Translate{'Days'} || 'Days';
-	} elsif ($type eq 'month') {
-		$last = '12';
-		$first = '01';
-		$title = $Translate{'Monthly'} || 'Monthly';
-		$unit = $Translate{'Months'} || 'Months';
-	}
-	my @labels = ();
-	my @hit = ();
-	my @miss = ();
-	my @total = ();
-	for ("$first" .. "$last") {
-		push(@labels, "$_");
-		my $tot = 0;
-		if (exists $detail_code_stat{HIT}{$_}{request}) {
-			push(@hit, $detail_code_stat{HIT}{$_}{request});
-			$tot += $detail_code_stat{HIT}{$_}{request};
-		} else {
-			push(@hit, 0);
-		}
-		if (exists $detail_code_stat{MISS}{$_}{request}) {
-			push(@miss, $detail_code_stat{MISS}{$_}{request});
-			$tot += $detail_code_stat{MISS}{$_}{request};
-		} else {
-			push(@miss, 0);
-		}
-		push(@total, $tot);
-		delete $detail_code_stat{HIT}{$_}{request};
-		delete $detail_code_stat{MISS}{$_}{request};
-	}
-	if ($type eq 'month') {
-		@labels = (
-			$Translate{'01'}, $Translate{'02'}, $Translate{'03'}, $Translate{'04'},
-			$Translate{'05'}, $Translate{'06'}, $Translate{'07'}, $Translate{'08'},
-			$Translate{'09'}, $Translate{'10'}, $Translate{'11'}, $Translate{'12'}
-		);
-	}
-	my @legends = ($Translate{'Hit_graph'}, $Translate{'Miss_graph'}, $Translate{'Total_graph'});
-	my @data = (
-	    [@labels],
-	    [@hit],
-	    [@miss],
-	    [@total]
-	);
-	my $t1 = $Translate{'Graph_cache_hit_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/code_request.png") or die "Error: can't create file $outdir/code_request.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-	close(IMG);
-
-	@hit = ();
-	@miss = ();
-	@total = ();
-	for ("$first" .. "$last") {
-		my $tot = 0;
-		if (exists $detail_code_stat{HIT}{$_}{bytes}) {
-			push(@hit, int($detail_code_stat{HIT}{$_}{bytes}/1000000));
-			$tot += $detail_code_stat{HIT}{$_}{bytes};
-		} else {
-			push(@hit, 0);
-		}
-		if (exists $detail_code_stat{MISS}{$_}{bytes}) {
-			push(@miss, int($detail_code_stat{MISS}{$_}{bytes}/1000000));
-			$tot += $detail_code_stat{MISS}{$_}{bytes};
-		} else {
-			push(@miss, 0);
-		}
-		push(@total, int($tot/1000000));
-	}
-	%detail_code_stat = ();
-	@data = (
-	    [@labels],
-	    [@hit],
-	    [@miss],
-	    [@total]
-	);
-	$t1 = $Translate{'Graph_cache_byte_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/code_bytes.png") or die "Error: can't create file $outdir/code_bytes.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-	close(IMG);
-
 }
 
 
@@ -1646,7 +1664,62 @@ sub _print_network_stat
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$self->_print_header(\$out, $self->{menu}, $cal);
 	print $out $self->_print_title($Translate{'Network_title'}, $stat_date);
-	print $out qq{<table><tr><td><img src="network_hits.png"></td><td><img src="network_bytes.png"></td></tr></table>};
+
+	my $last = '23';
+	my $first = '00';
+	my $title = $Translate{'Hourly'} || 'Hourly';
+	my $unit = $Translate{'Hours'} || 'Hours';
+	if ($type eq 'day') {
+		$last = '31';
+		$first = '01';
+		$title = $Translate{'Daily'} || 'Daily';
+		$unit = $Translate{'Days'} || 'Days';
+	} elsif ($type eq 'month') {
+		$last = '12';
+		$first = '01';
+		$title = $Translate{'Monthly'} || 'Monthly';
+		$unit = $Translate{'Months'} || 'Months';
+	}
+
+	my @hits = ();
+	my @bytes = ();
+	for ("$first" .. "$last") {
+		if (exists $total_net_detail{$_}{hits}) {
+			push(@hits, "[ $_, $total_net_detail{$_}{hits} ]");
+		} else {
+			push(@hits, "[ $_, 0 ]");
+		}
+		if (exists $total_net_detail{$_}{bytes}) {
+			push(@bytes, "[ $_, " . int($total_net_detail{$_}{bytes}/1000000) . " ]");
+		} else {
+			push(@bytes, "[ $_, 0 ]");
+		}
+	}
+	%total_net_detail = ();
+
+	my $t1 = $Translate{'Graph_cache_hit_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	my $xlabel = $unit || '';
+	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+	my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
+				join(',', @hits), $Translate{'Hit_graph'} );
+	@hits = ();
+	print $out qq{<table><tr><td>$network_hits</td>};
+	$network_hits = '';
+
+
+	$t1 = $Translate{'Graph_cache_byte_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$xlabel = $unit || '';
+	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+	my $network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @bytes), $Translate{'Bytes'} );
+	@bytes = ();
+
+	print $out qq{<td>$network_bytes</td></tr></table>};
+	$network_bytes = '';
 	print $out "<b>$Translate{'Network_number'}:</b> $nnet<br>\n";
 	print $out qq{
 <div id="stata">
@@ -1673,21 +1746,6 @@ sub _print_network_stat
 };
 	if (!-d "$outdir/networks") {
 		mkdir("$outdir/networks", 0755) || return;
-	}
-	my $last = '23';
-	my $first = '00';
-	my $title = $Translate{'Hourly'} || 'Hourly';
-	my $unit = $Translate{'Hours'} || 'Hours';
-	if ($type eq 'day') {
-		$last = '31';
-		$first = '01';
-		$title = $Translate{'Daily'} || 'Daily';
-		$unit = $Translate{'Days'} || 'Days';
-	} elsif ($type eq 'month') {
-		$last = '12';
-		$first = '01';
-		$title = $Translate{'Monthly'} || 'Monthly';
-		$unit = $Translate{'Months'} || 'Months';
 	}
 	foreach my $net (sort { $network_stat{$b}{"$self->{OrderNetwork}"} <=> $network_stat{$a}{"$self->{OrderNetwork}"} } keys %network_stat) {
 		my $h_percent = '0.0';
@@ -1732,7 +1790,45 @@ sub _print_network_stat
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
 		$self->_print_header(\$outnet, $self->{menu2}, $cal);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date);
-		print $outnet qq{<table><tr><td><img src="network_hits.png"></td><td><img src="network_bytes.png"></td></tr></table>};
+
+		@hits = ();
+		@bytes = ();
+		for ("$first" .. "$last") {
+			if (exists $detail_network_stat{$net}{$_}{hits}) {
+				push(@hits, "[ $_, " . $detail_network_stat{$net}{$_}{hits} . " ]");
+			} else {
+				push(@hits, "[ $_, 0 ]");
+			}
+			if (exists $detail_network_stat{$net}{$_}{bytes}) {
+				push(@bytes, "[ $_, " . int($detail_network_stat{$net}{$_}{bytes}/1000000) . " ]");
+			} else {
+				push(@bytes, "[ $_, 0 ]");
+			}
+		}
+		delete $detail_network_stat{$net};
+
+		$t1 = $Translate{'Graph_cache_hit_title'};
+		$t1 =~ s/\%s/$title $show/;
+		$t1 = "$t1 $stat_date";
+		$xlabel = $unit || '';
+		$ylabel = $Translate{'Requests_graph'} || 'Requests';
+		$network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
+					join(',', @hits), $Translate{'Hit_graph'} );
+		@hits = ();
+		print $outnet qq{<table><tr><td>$network_hits</td>};
+		$network_hits = '';
+
+		$t1 = $Translate{'Graph_cache_byte_title'};
+		$t1 =~ s/\%s/$title/;
+		$t1 = "$t1 $stat_date";
+		$xlabel = $unit || '';
+		$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+		$network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
+					join(',', @bytes), $Translate{'Bytes'} );
+		@bytes = ();
+
+		print $outnet qq{<td>$network_bytes</td></tr></table>};
+		$network_bytes = '';
 		my $retuser = $self->_print_netuser_stat($outdir, \$outnet, $net);
 		print $out qq{
 <td>$retuser</td>
@@ -1751,58 +1847,6 @@ sub _print_network_stat
 };
 		$self->_print_footer(\$outnet);
 		$outnet->close();
-
-		my @labels = ();
-		my @hits = ();
-		my @bytes = ();
-		for ("$first" .. "$last") {
-			push(@labels, "$_");
-			if (exists $detail_network_stat{$net}{$_}{hits}) {
-				push(@hits, $detail_network_stat{$net}{$_}{hits});
-			} else {
-				push(@hits, 0);
-			}
-			if (exists $detail_network_stat{$net}{$_}{bytes}) {
-				push(@bytes, int($detail_network_stat{$net}{$_}{bytes}/1000000));
-			} else {
-				push(@bytes, 0);
-			}
-		}
-		delete $detail_network_stat{$net};
-		if ($type eq 'month') {
-			@labels = (
-				$Translate{'01'}, $Translate{'02'}, $Translate{'03'}, $Translate{'04'},
-				$Translate{'05'}, $Translate{'06'}, $Translate{'07'}, $Translate{'08'},
-				$Translate{'09'}, $Translate{'10'}, $Translate{'11'}, $Translate{'12'}
-			);
-		}
-
-		my @legends = ();
-		my @data = (
-		    [@labels],
-		    [@hits]
-		);
-		my $t1 = $Translate{'Graph_cache_hit_title'};
-		$t1 =~ s/\%s/$title $show/;
-		local (*IMG) = undef;
-		open(IMG, ">$outdir/networks/$net/network_hits.png") or die "Error: can't create file $outdir/networks/$net/network_hits.png, $!\n";
-		binmode IMG;
-		print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-		close(IMG);
-
-		@legends = ();
-		@data = (
-		    [@labels],
-		    [@bytes]
-		);
-		$t1 = $Translate{'Graph_cache_byte_title'};
-		$t1 =~ s/\%s/$title $show/;
-		local (*IMG) = undef;
-		open(IMG, ">$outdir/networks/$net/network_bytes.png") or die "Error: can't create file $outdir/networks/$net/network_bytes.png, $!\n";
-		binmode IMG;
-		print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-		close(IMG);
-		delete $network_stat{$net};
 	}
 	print $out "</table>\n</div>\n";
 
@@ -1817,58 +1861,6 @@ sub _print_network_stat
 };
 	$self->_print_footer(\$out);
 	$out->close();
-
-	my @labels = ();
-	my @hits = ();
-	my @bytes = ();
-	for ("$first" .. "$last") {
-		push(@labels, "$_");
-		if (exists $total_net_detail{$_}{hits}) {
-			push(@hits, $total_net_detail{$_}{hits});
-		} else {
-			push(@hits, 0);
-		}
-		if (exists $total_net_detail{$_}{bytes}) {
-			push(@bytes, int($total_net_detail{$_}{bytes}/1000000));
-		} else {
-			push(@bytes, 0);
-		}
-	}
-	%total_net_detail = ();
-	if ($type eq 'month') {
-		@labels = (
-			$Translate{'01'}, $Translate{'02'}, $Translate{'03'}, $Translate{'04'},
-			$Translate{'05'}, $Translate{'06'}, $Translate{'07'}, $Translate{'08'},
-			$Translate{'09'}, $Translate{'10'}, $Translate{'11'}, $Translate{'12'}
-		);
-	}
-
-	my @legends = ();
-	my @data = (
-	    [@labels],
-	    [@hits]
-	);
-	my $t1 = $Translate{'Graph_cache_hit_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/network_hits.png") or die "Error: can't create file $outdir/network_hits.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-	close(IMG);
-
-	@legends = ();
-	@data = (
-	    [@labels],
-	    [@bytes]
-	);
-	$t1 = $Translate{'Graph_cache_byte_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/network_bytes.png") or die "Error: can't create file $outdir/network_bytes.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-	close(IMG);
-
 }
 
 sub _print_user_stat
@@ -1937,8 +1929,63 @@ sub _print_user_stat
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$self->_print_header(\$out, $self->{menu}, $cal);
+
+	my $last = '23';
+	my $first = '00';
+	my $title = $Translate{'Hourly'} || 'Hourly';
+	my $unit = $Translate{'Hours'} || 'Hours';
+	if ($type eq 'day') {
+		$last = '31';
+		$first = '01';
+		$title = $Translate{'Daily'} || 'Daily';
+		$unit = $Translate{'Days'} || 'Days';
+	} elsif ($type eq 'month') {
+		$last = '12';
+		$first = '01';
+		$title = $Translate{'Monthly'} || 'Monthly';
+		$unit = $Translate{'Months'} || 'Months';
+	}
+
+	my @hits = ();
+	my @bytes = ();
+	for ("$first" .. "$last") {
+		if (exists $total_user_detail{$_}{hits}) {
+			push(@hits, "[ $_, $total_user_detail{$_}{hits} ]");
+		} else {
+			push(@hits, "[ $_, 0 ]");
+		}
+		if (exists $total_user_detail{$_}{bytes}) {
+			push(@bytes, "[ $_, " . int($total_user_detail{$_}{bytes}/1000000) . " ]");
+		} else {
+			push(@bytes, "[ $_, 0 ]");
+		}
+	}
+	%total_user_detail = ();
+
 	print $out $self->_print_title($Translate{'User_title'}, $stat_date);
-	print $out qq{<table><tr><td><img src="user_hits.png"></td><td><img src="user_bytes.png"></td></tr></table>};
+
+	my $t1 = $Translate{'Graph_cache_hit_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	my $xlabel = $unit || '';
+	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+	my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
+				join(',', @hits), $Translate{'Hit_graph'});
+	@hits = ();
+	print $out qq{<table><tr><td>$user_hits</td>};
+	$user_hits = '';
+
+	$t1 = $Translate{'Graph_cache_byte_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$xlabel = $unit || '';
+	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+	my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @bytes), $Translate{'Bytes'});
+	@bytes = ();
+	print $out qq{<td>$user_bytes</td></tr></table>};
+	$user_bytes = '';
+
 	print $out "<b>$Translate{'User_number'}:</b> $nuser<br>\n";
 	print $out qq{
 <div id="stata">
@@ -1966,21 +2013,6 @@ sub _print_user_stat
 		mkdir("$outdir/users", 0755) || return;
 	}
 
-	my $last = '23';
-	my $first = '00';
-	my $title = $Translate{'Hourly'} || 'Hourly';
-	my $unit = $Translate{'Hours'} || 'Hours';
-	if ($type eq 'day') {
-		$last = '31';
-		$first = '01';
-		$title = $Translate{'Daily'} || 'Daily';
-		$unit = $Translate{'Days'} || 'Days';
-	} elsif ($type eq 'month') {
-		$last = '12';
-		$first = '01';
-		$title = $Translate{'Monthly'} || 'Monthly';
-		$unit = $Translate{'Months'} || 'Months';
-	}
 	foreach my $usr (sort { $user_stat{$b}{"$self->{OrderUser}"} <=> $user_stat{$a}{"$self->{OrderUser}"} } keys %user_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($user_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
@@ -2035,64 +2067,51 @@ sub _print_user_stat
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
 		$self->_print_header(\$outusr, $self->{menu2}, $cal);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date);
-		print $outusr qq{<table><tr><td><img src="user_hits.png"></td><td><img src="user_bytes.png"></td></tr></table>};
+
+		@hits = ();
+		@bytes = ();
+		for ("$first" .. "$last") {
+			if (exists $detail_user_stat{$usr}{$_}{hits}) {
+				push(@hits, "[ $_, $detail_user_stat{$usr}{$_}{hits} ]");
+			} else {
+				push(@hits, "[ $_, 0 ]");
+			}
+			if (exists $detail_user_stat{$usr}{$_}{bytes}) {
+				push(@bytes, "[ $_, " . int($detail_user_stat{$usr}{$_}{bytes}/1000000) . " ]");
+			} else {
+				push(@bytes, "[ $_, 0 ]");
+			}
+		}
+		delete $detail_user_stat{$usr};
+
+		$t1 = $Translate{'Graph_cache_hit_title'};
+		$t1 =~ s/\%s/$title $show/;
+		$t1 = "$t1 $stat_date";
+		$xlabel = $unit || '';
+		$ylabel = $Translate{'Requests_graph'} || 'Requests';
+		$user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
+					join(',', @hits), $Translate{'Hit_graph'});
+		@hits = ();
+		print $outusr qq{<table><tr><td>$user_hits</td>};
+		$user_hits = '';
+
+		$t1 = $Translate{'Graph_cache_byte_title'};
+		$t1 =~ s/\%s/$title $show/;
+		$t1 = "$t1 $stat_date";
+		my $xlabel = $unit || '';
+		my $ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+		my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
+					join(',', @bytes), $Translate{'Bytes'});
+		@bytes = ();
+		print $outusr qq{<td>$user_bytes</td></tr></table>};
+		$user_bytes = '';
+
+		delete $user_stat{$usr};
 		if ($self->{UrlReport}) {
 			$self->_print_user_detail(\$outusr, $outdir, $usr);
 		}
 		$self->_print_footer(\$outusr);
 		$outusr->close();
-
-		my @labels = ();
-		my @hits = ();
-		my @bytes = ();
-		for ("$first" .. "$last") {
-			push(@labels, "$_");
-			if (exists $detail_user_stat{$usr}{$_}{hits}) {
-				push(@hits, $detail_user_stat{$usr}{$_}{hits});
-			} else {
-				push(@hits, 0);
-			}
-			if (exists $detail_user_stat{$usr}{$_}{bytes}) {
-				push(@bytes, int($detail_user_stat{$usr}{$_}{bytes}/1000000));
-			} else {
-				push(@bytes, 0);
-			}
-		}
-		delete $detail_user_stat{$usr};
-		if ($type eq 'month') {
-			@labels = (
-				$Translate{'01'}, $Translate{'02'}, $Translate{'03'}, $Translate{'04'},
-				$Translate{'05'}, $Translate{'06'}, $Translate{'07'}, $Translate{'08'},
-				$Translate{'09'}, $Translate{'10'}, $Translate{'11'}, $Translate{'12'}
-			);
-		}
-
-		my @legends = ();
-		my @data = (
-		    [@labels],
-		    [@hits]
-		);
-		my $t1 = $Translate{'Graph_cache_hit_title'};
-		$t1 =~ s/\%s/$title $show/;
-		local (*IMG) = undef;
-		open(IMG, ">$outdir/users/$url/user_hits.png") or die "Error: can't create file $outdir/users/$url/user_hits.png, $!\n";
-		binmode IMG;
-		print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-		close(IMG);
-
-		@legends = ();
-		@data = (
-		    [@labels],
-		    [@bytes]
-		);
-		$t1 = $Translate{'Graph_cache_byte_title'};
-		$t1 =~ s/\%s/$title $show/;
-		local (*IMG) = undef;
-		open(IMG, ">$outdir/users/$url/user_bytes.png") or die "Error: can't create file $outdir/users/$url/user_bytes.png, $!\n";
-		binmode IMG;
-		print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-		close(IMG);
-		delete $user_stat{$usr};
 	}
 	print $out qq{
 </table>
@@ -2110,60 +2129,6 @@ sub _print_user_stat
 };
 	$self->_print_footer(\$out);
 	$out->close();
-
-	my @labels = ();
-	my @hits = ();
-	my @bytes = ();
-	for ("$first" .. "$last") {
-		push(@labels, "$_");
-		if (exists $total_user_detail{$_}{hits}) {
-			push(@hits, $total_user_detail{$_}{hits});
-		} else {
-			push(@hits, 0);
-		}
-		if (exists $total_user_detail{$_}{bytes}) {
-			push(@bytes, int($total_user_detail{$_}{bytes}/1000000));
-		} else {
-			push(@bytes, 0);
-		}
-	}
-	%total_user_detail = ();
-	if ($type eq 'month') {
-		@labels = (
-			$Translate{'01'}, $Translate{'02'},
-			$Translate{'03'}, $Translate{'04'},
-			$Translate{'05'}, $Translate{'06'},
-			$Translate{'07'}, $Translate{'08'},
-			$Translate{'09'}, $Translate{'10'},
-			$Translate{'11'}, $Translate{'12'}
-		);
-	}
-
-	my @legends = ();
-	my @data = (
-	    [@labels],
-	    [@hits]
-	);
-	my $t1 = $Translate{'Graph_cache_hit_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/user_hits.png") or die "Error: can't create file $outdir/user_hits.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-	close(IMG);
-
-	@legends = ();
-	@data = (
-	    [@labels],
-	    [@bytes]
-	);
-	$t1 = $Translate{'Graph_cache_byte_title'};
-	$t1 =~ s/\%s/$title/;
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/user_bytes.png") or die "Error: can't create file $outdir/user_bytes.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$t1 $stat_date",'x_label' => $unit, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-	close(IMG);
 
 	return $nuser;
 }
@@ -2614,10 +2579,28 @@ sub _print_top_domain_stat
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Domain_${tpe}_title"};
 		$t1 =~ s/\%d/$self->{TopNumber}/;
+
 		if ($tpe eq 'Hits') {
 			print $out $self->_print_title($t1, $stat_date);
 			print $out "<b>$Translate{'Domain_number'}:</b> $nurl<br>\n";
-			print $out qq{<table><tr><td><img src="domain_hits.png"></td><td><img src="domain_bytes.png"></td></tr></table>};
+
+			my %data = ();
+			foreach my $dom (keys %perdomain) {
+				$data{$dom} = $perdomain{$dom}{hits};
+			}
+			my $title = "$Translate{'Domain_graph_hits_title'} $stat_date";
+			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, $Translate{'Requests_graph'} || 'Requests', %data);
+			print $out qq{<table><tr><td>$domain_hits</td>};
+			$domain_hits = '';
+			%data = ();
+			foreach my $dom (keys %perdomain) {
+				$data{$dom} = int($perdomain{$dom}{bytes}/1000000);
+			}
+			$title = "$Translate{'Domain_graph_bytes_title'} $stat_date";
+			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}, %data);
+			print $out qq{<td>$domain_bytes</td></tr></table>};
+			$domain_bytes = '';
+			%data = ();
 		} else {
 			print $out "<h3>$t1 $stat_date <div id=\"uplink\"><a href=\"#atop\">[ $Translate{'Up_link'} ]</a></div></h3>\n";
 		}
@@ -2712,40 +2695,6 @@ sub _print_top_domain_stat
 };
 	$self->_print_footer(\$out);
 	$out->close();
-
-	my @labels = ();
-	my @hits = ();
-	my @bytes = ();
-	foreach my $dom (keys %perdomain) {
-		next if ($dom eq 'other');
-		push(@labels, $dom);
-		push(@hits, $perdomain{$dom}{hits});
-		push(@bytes, int($perdomain{$dom}{bytes}/1000000));
-	}
-	push(@labels, 'other');
-	push(@hits, $perdomain{'other'}{hits});
-	push(@bytes, int($perdomain{'other'}{bytes}/1000000));
-	my @legends = ();
-	my @data = (
-	    [@labels],
-	    [@hits]
-	);
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/domain_hits.png") or die "Error: can't create file $outdir/domain_hits.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$Translate{'Domain_graph_hits_title'} $stat_date",'x_label' => $Translate{'Domains_graph'}, 'y_label' => $Translate{'Requests_graph'} || 'Requests'));
-	close(IMG);
-
-	@legends = ();
-	@data = (
-	    [@labels],
-	    [@bytes]
-	);
-	local (*IMG) = undef;
-	open(IMG, ">$outdir/domain_bytes.png") or die "Error: can't create file $outdir/domain_bytes.png, $!\n";
-	binmode IMG;
-	print IMG &gen_graph(\@legends, \@data, ('title' => "$Translate{'Domain_graph_bytes_title'} $stat_date",'x_label' => $Translate{'Domains_graph'}, 'y_label' => $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}));
-	close(IMG);
 
 	return $nurl;
 }
@@ -2896,6 +2845,10 @@ sub parse_config
 		print STDERR "Error: can't find custom footer file $opt{FooterFile}. See option: FooterFile\n";
 		exit 0;
 	}
+	if ($opt{ImgFormat} && !grep(/^$opt{ImgFormat}$/, 'png','jpg')) {
+		print STDERR "Error: unknown image format. See option: ImgFormat\n";
+		exit 0;
+	}
 	return %opt;
 }
 
@@ -3019,44 +2972,6 @@ sub format_bytes
 	return scalar reverse $text;
 }
 
-sub gen_graph
-{
-	my ($legends,$values,%param) = @_;
-
-	my $graph = '';
-	if (!$param{'type'} || ($param{'type'} eq 'area')) {
-		$graph = new GD::Graph::bars3d($param{'width'} || 500, $param{'height'} || 250);
-		$graph->set(
-			x_label         => $param{'x_label'} || '',
-			y_label         => $param{'y_label'} || '',
-			title           => $param{'title'} || '',
-			fgclr           => '#993300',
-			legendclr       => '#993300',
-			dclrs           => [ qw(lorange lgray lbrown lyellow lgreen lblue lpurple lred) ],
-			x_labels_vertical => $param{'vertical'},
-			long_ticks  => 1,
-			shadow_depth => 5,
-			box_axis => 0,
-			show_values     => $param{'show_values'},
-		) or die $graph->error;
-	} elsif ($param{'type'} eq 'pie') {
-		$graph = new GD::Graph::pie3d($param{'width'} || 500, $param{'height'} || 250);
-		$graph->set(
-			title   => $param{'title'} || '',
-			fgclr   => '#993300',
-			dclrs   => [ qw(lorange lgray lbrown lyellow lgreen lblue lpurple lred) ],
-
-		) or die $graph->error;
-
-	}
-
-	$graph->set_text_clr('#993300');
-	$graph->set_legend(@$legends) if ($#{$legends} >= 0);
-
-	my $gd = $graph->plot($values) or die $graph->error;
-	return $gd->png;
-}
-
 sub _print_title
 {
 	my ($self, $title, $stat_date) = @_;
@@ -3116,6 +3031,246 @@ sub anonymize_id
         }
 
         return 'Anon' . $u_id;
+
+}
+
+
+sub flotr2_bargraph
+{
+	my ($self, $buttonid, $divid, $xtype, $title, $xtitle, $ytitle, $data1, $legend1, $data2, $legend2, $data3, $legend3) = @_;
+
+	$data1 = "var d1 = [$data1];" if ($data1);
+	$data2 = "var d2 = [$data2];";
+	$data3 = "var d3 = [$data3];";
+
+	my $xlabel = '';
+	my $numticks = 0;
+	if ($xtype eq 'month') {
+		$xlabel = qq{var months = [ "$Translate{'01'}", "$Translate{'02'}", "$Translate{'03'}", "$Translate{'04'}", "$Translate{'05'}", "$Translate{'06'}", "$Translate{'07'}", "$Translate{'08'}", "$Translate{'09'}", "$Translate{'10'}", "$Translate{'11'}", "$Translate{'12'}" ];
+		return months[(x -1) % 12];
+};
+		$numticks = 12;
+	} elsif ($xtype eq 'day') {
+		$xlabel = qq{var days = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
+		return days[(x - 1) % 31];
+};
+		$numticks = 31;
+	} else  {
+		$xlabel = qq{var hours = [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+		return hours[x % 24];
+};
+		$numticks = 24;
+	}
+	return <<EOF;
+<div id="$divid"></div>
+<script type="text/javascript">
+(function mouse_zoom(container) {
+
+document.writeln('<table align="center"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
+	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
+	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;"></td></tr><tr><td>&nbsp;</td></tr></table>'
+	);
+    $data1
+    $data2
+    $data3
+    var bars = {
+        data: d1,
+        label: "$legend1",
+        bars: {
+            show: true,
+            barWidth: 0.8,
+            shadowSize: 5,
+            lineWidth: 1,
+            fillColor: {
+                colors: ["#76add2", "#fff"],
+                start: "top",
+                end: "bottom"
+            },
+            fillOpacity: 0.8
+        }
+    },
+    lines1 = {
+        data: d2,
+        label: "$legend2",
+        lines: {
+            show: true,
+        }
+    },
+    lines2 = {
+        data: d3,
+        label: "$legend3",
+        lines: {
+            show: true,
+        }
+    };
+    var options = {
+        mouse: {
+            track: true,
+            relative: true
+        },
+        yaxis: {
+            min: 0,
+            autoscaleMargin: 1,
+            mode: "normal",
+            title: "$ytitle",
+        },
+        xaxis: {
+            mode: "normal",
+            noTicks: $numticks,
+            tickFormatter: function(x) {
+                var x = parseInt(x);
+		$xlabel
+            },
+            title: "$xtitle",
+        },
+        title: "$title",
+        legend: {
+            position: "nw",
+            backgroundColor: "#D2E8FF"
+        },
+        HtmlText: false,
+    };
+
+    function drawGraph(opts) {
+        var o = Flotr._.extend(Flotr._.clone(options), opts );
+        return Flotr.draw(
+        	container,
+        	[
+        		bars,
+        		lines1,
+        		lines2
+    		],
+    		o
+    	);
+    }
+
+    var graph = drawGraph();
+    Flotr.EventAdapter.observe(container, "flotr:select", function(area) {
+        f = drawGraph({
+            xaxis: {
+                min: area.x1,
+                max: area.x2
+            },
+            yaxis: {
+                min: area.y1,
+                max: area.y2
+            }
+        });
+    });
+    Flotr.EventAdapter.observe(container, "flotr:click", function() {
+        drawGraph();
+    });
+    document.getElementById('reset$buttonid').onclick = function() {
+      graph.download.restoreCanvas();
+    };
+    document.getElementById('download$buttonid').onclick = function(){
+	if (Flotr.isIE && Flotr.isIE < 9) {
+		alert(
+		"Your browser doesn't allow you to get a bitmap image from the plot, " +
+		"you can only get a VML image that you can use in Microsoft Office.<br />"
+		);
+	}
+      graph.download.saveImage('$self->{ImgFormat}');
+    };
+    document.getElementById('toimage$buttonid').onclick = function() {
+	if (Flotr.isIE && Flotr.isIE < 9) {
+		alert(
+		"Your browser doesn't allow you to get a bitmap image from the plot, " +
+		"you can only get a VML image that you can use in Microsoft Office.<br />"
+		);
+	}
+      graph.download.saveImage('$self->{ImgFormat}', null, null, true);
+    };
+
+})(document.getElementById("$divid"));
+</script>
+EOF
+
+}
+
+
+sub flotr2_piegraph
+{
+	my ($self, $buttonid, $divid, $title, $xlabel, $ylabel, %data) = @_;
+
+	my @datadef = ();
+	my @contdef = ();
+	my $i       = 1;
+	foreach my $k (sort keys %data) {
+		push(@datadef, "var d$i = [ [0,$data{$k}] ];\n");
+		push(@contdef, "{ data: d$i, label: \"$k\" },\n");
+		$i++;
+	}
+	return <<EOF;
+<div id="$divid"></div>
+<script type="text/javascript">
+(function basic_pie(container) {
+
+
+document.writeln('<input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
+	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
+	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;">'
+	);
+
+    @datadef
+    var graph = Flotr.draw(container, [
+    @contdef
+    ], {
+        title: "$title",
+        HtmlText: false,
+        grid: {
+            verticalLines: false,
+            horizontalLines: false,
+	    backgroundColor: '#ffffff',
+	    outline: '',
+        },
+        xaxis: {
+            showLabels: false,
+	    title: "$xlabel"
+        },
+        yaxis: {
+            showLabels: false,
+	    title: "$ylabel"
+        },
+        pie: {
+            show: true,
+	    explode: 6
+        },
+        mouse: {
+            track: true,
+	    trackFormatter: function(obj){ return obj.y },
+        },
+        legend: {
+            position: "sw",
+            backgroundColor: "#D2E8FF"
+        }
+    });
+    document.getElementById('reset$buttonid').onclick = function() {
+      graph.download.restoreCanvas();
+    };
+    document.getElementById('download$buttonid').onclick = function(){
+	if (Flotr.isIE && Flotr.isIE < 9) {
+		alert(
+		"Your browser doesn't allow you to get a bitmap image from the plot, " +
+		"you can only get a VML image that you can use in Microsoft Office.<br />"
+		);
+	}
+      graph.download.saveImage('$self->{ImgFormat}');
+    };
+    document.getElementById('toimage$buttonid').onclick = function() {
+	if (Flotr.isIE && Flotr.isIE < 9) {
+		alert(
+		"Your browser doesn't allow you to get a bitmap image from the plot, " +
+		"you can only get a VML image that you can use in Microsoft Office.<br />"
+		);
+	}
+      graph.download.saveImage('$self->{ImgFormat}', null, null, true);
+    };
+
+
+})(document.getElementById("$divid"));
+</script>
+EOF
 
 }
 
