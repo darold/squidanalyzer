@@ -2868,7 +2868,7 @@ sub parse_config
 	while (my $l = <CONF>) {
 		chomp($l);
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
-		my ($key, $val) = split(/[\s\t]+/, $l);
+		my ($key, $val) = split(/[\s\t]+/, $l, 2);
 		$opt{$key} = $val;
 	}
 	close(CONF);
@@ -2883,8 +2883,8 @@ sub parse_config
 		exit 0;
 	}
 	if (exists $opt{DateFormat}) {
-		if ( ($opt{DateFormat} !~ m#\%y#) || ($opt{DateFormat} !~ m#\%m#) || ($opt{DateFormat} !~ m#\%d#) ) {
-			print STDERR "Error: bad date format, must have \%y, \%m, \%d. See option: DateFormat\n";
+		if ( ($opt{DateFormat} !~ m#\%y#) || (($opt{DateFormat} !~ m#\%m#) && ($opt{DateFormat} !~ m#\%M#) )|| ($opt{DateFormat} !~ m#\%d#) ) {
+			print STDERR "Error: bad date format: $opt{DateFormat}, must have \%y, \%m or \%M, \%d. See DateFormat option.\n";
 			exit 0;
 		}
 	}
