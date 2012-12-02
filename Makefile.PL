@@ -121,10 +121,10 @@ close(INST);
 `chmod 755 install_all.sh`;
 
 # Change path into the default configuration file
-`perl -p -i -e 's#/etc/squidanalyzer#$CONFDIR#' squidanalyzer.conf squid-analyzer`;
-`perl -p -i -e 's#^Output.*#Output	$HTMLDIR#' squidanalyzer.conf`;
-`perl -p -i -e 's#^LogFile.*#LogFile	$LOGFILE#' squidanalyzer.conf`;
-`perl -p -i -e 's#^WebUrl.*#WebUrl	$BASEURL#' squidanalyzer.conf`;
+`perl -p -i -e 's#/etc/squidanalyzer#$CONFDIR#' etc/squidanalyzer.conf squid-analyzer`;
+`perl -p -i -e 's#^Output.*#Output	$HTMLDIR#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^LogFile.*#LogFile	$LOGFILE#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^WebUrl.*#WebUrl	$BASEURL#' etc/squidanalyzer.conf`;
 my $zcat = `which zcat`;
 chomp($zcat);
 `perl -p -i -e 's#^\\\$ZCAT_PROG.*#\\\$ZCAT_PROG = "$zcat";#' SquidAnalyzer.pm`;
