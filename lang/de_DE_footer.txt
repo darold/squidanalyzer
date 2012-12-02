@@ -1,3 +1,0 @@
-<hr>
-Diese Datei wurde von <a href="http://squidanalyzer.darold.net/">SquidAnalyzer %VERSION%</a> erstellt.
-

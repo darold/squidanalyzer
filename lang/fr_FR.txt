@@ -88,5 +88,8 @@ Domain_Duration_title		Domaines Top %d par durée pour
 Domain_number			Nombre de domaines
 Domain_graph_hits_title		Statistiques des requêtes par domaines pour
 Domain_graph_bytes_title	Statistiques des transferts par domaines pour
-First_time			Première visite
-Last_time			Dernière visite
+First_visit			Première visite
+Last_visit			Dernière visite
+Globals_Statistics 		Statistiques Globales
+Legende				Legende
+File_Generated			Fichier généré par

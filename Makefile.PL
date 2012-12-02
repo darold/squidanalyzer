@@ -62,15 +62,21 @@ if [ ! -d "$DESTDIR$MANDIR" ]; then
 	mkdir -p $DESTDIR$MANDIR
 fi
 # Copy files that must not be overriden 
-install -m 644 squidanalyzer.conf $DESTDIR$CONFDIR/squidanalyzer.conf.orig
-install -m 644 network-aliases $DESTDIR$CONFDIR/network-aliases.orig
-install -m 644 user-aliases $DESTDIR$CONFDIR/user-aliases.orig
-install -m 644 excluded $DESTDIR$CONFDIR/excluded.orig
+install -m 644 etc/squidanalyzer.conf $DESTDIR$CONFDIR/squidanalyzer.conf.orig
+install -m 644 etc/network-aliases $DESTDIR$CONFDIR/network-aliases.orig
+install -m 644 etc/user-aliases $DESTDIR$CONFDIR/user-aliases.orig
+install -m 644 etc/excluded $DESTDIR$CONFDIR/excluded.orig
 install -m 755 squid-analyzer $DESTDIR$BINDIR/
-install -m 644 sorttable.js $DESTDIR$HTMLDIR/
-install -m 644 logo-squidanalyzer.png $DESTDIR$HTMLDIR/
-install -m 644 squidanalyzer.css $DESTDIR$HTMLDIR/
-install -m 644 flotr2.js $DESTDIR$HTMLDIR/
+install -m 644 resources/sorttable.js $DESTDIR$HTMLDIR/
+install -m 644 resources/logo-squidanalyzer.png $DESTDIR$HTMLDIR/
+install -m 644 resources/squidanalyzer.css $DESTDIR$HTMLDIR/
+install -m 644 resources/flotr2.js $DESTDIR$HTMLDIR/
+install -m 644 resources/cursor.png $DESTDIR$HTMLDIR/
+install -m 644 resources/domain.png $DESTDIR$HTMLDIR/
+install -m 644 resources/back-arrow.png $DESTDIR$HTMLDIR/
+install -m 644 resources/info.png $DESTDIR$HTMLDIR/
+install -m 644 resources/network.png $DESTDIR$HTMLDIR/
+install -m 644 resources/user.png $DESTDIR$HTMLDIR/
 install -m 644 lang/* $DESTDIR$CONFDIR/lang/
 pod2man doc/SquidAnalyzer.pod doc/squidanalyzer.3
 install -m 644 doc/squidanalyzer.3 $DESTDIR$MANDIR/squidanalyzer.3

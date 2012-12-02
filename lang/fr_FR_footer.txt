@@ -1,3 +1,0 @@
-<hr>
-Ce fichier a été généré par <a href="http://squidanalyzer.darold.net/">SquidAnalyzer %VERSION%</a>
-
