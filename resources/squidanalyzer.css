@@ -1,0 +1,83 @@
+/***********/
+/* General */
+/***********/
+
+html, body { margin:0; padding: 0; height: 100%; font-family: "Trebuchet MS", Verdana, Arial, Helvetica; }
+
+body { font-size: 10pt; background-color: #F1F1F1; min-width: 900px; }
+
+#conteneur { height: auto !important; min-height: 100%; height: 100%; position: relative; }
+
+.line-separator { height:1px; width:450px; background:#717171; border-bottom:1px solid #313030; margin-top:-30px; margin-left: 10px; margin-bottom: 45px; }
+
+pre .descLegende { font-style: italic; }
+
+pre .legendeTitle { font-variant: small-caps; font-weight: bold; font-size: 1.3em; line-height: 18pt; letter-spacing: 2px; }
+
+#alignLeft { float: left; }
+
+#contenu { padding-bottom: 50px; }
+
+#contenu h4 { font-size: 1.8em; font-variant: small-caps; padding-left: 15px; letter-spacing: 2px; }
+
+.displayGraph { border: 0px; }
+
+#stata .headerBlack { color: black; font: bold 14px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; }
+
+#stata table { border-collapse: collapse; width: 90%; margin-left:auto; margin-right:auto; border: 0px; white-space:nowrap; }
+
+#stata th { background: #76add2; font: 14px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; letter-spacing: 2px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; border: 2px solid silver; color: #F1F1F1; }
+
+#stata td { text-align: center; padding-left: 20px; padding-right: 20px; padding-top: 5px; padding-bottom: 5px; border: 2px solid silver; font-style: italic; }
+
+#stata th.nobg { background: none; border-top: 0px; border-left: 0px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; }
+
+#stata td a { font-variant: small-caps; text-decoration: none; color: black; font-weight: bold; font-style: normal; font-size: 15px; }
+
+#stata td a:hover { color: #76add2; }
+
+/**************/
+/*   Header   */
+/**************/
+
+#header { background: black; height: 120px; width: 100%; border-bottom: 3px solid #76add2; }
+#header h1 { margin: 0; color: white; font-size: 3em; font-style: italic; font-variant: small-caps; letter-spacing: 2px; }
+#header h1 img { float: left; margin-top: 5px; margin-right: 20px; padding-left: 20px; }
+#header .sous-titre { color: #76add2; font-style: italic; padding-left: 180px; font-size:0.8em; font-weight: 600; }
+
+/****************/
+/*    Footer    */
+/****************/
+
+#footer { background: black; height: 30px; width: 100%; border-top: 3px solid #76add2; position: absolute; bottom: 0; }
+#footer h4 { margin: 0; color: white; font-size: 0.8em; font-style: italic; text-align: right; padding-top: 8px; padding-right: 5px; }
+#footer h4 a { color: silver; text-decoration: none; font-size: 1.1em; }
+#footer h4 a:hover { color: #76add2; text-decoration: none; font-size: 1.1em; }
+
+/***********************/
+/*        Menu         */
+/***********************/
+
+ul { padding:0; margin:0; list-style-type:none; }
+li { float:right; }
+ul li a { display:block; width:125px; text-decoration:none; text-align:center; padding:5px; color: white; font-variant: small-caps; letter-spacing: 2px; }
+ul li a:hover { color: #76add2; }
+#menu { margin: 0 auto; padding: 0 auto; height: 28px; clear: both; background-color: black; border-bottom: 3px solid #76add2; }
+
+.iconUser { background-image: url("/squidreport/images/user.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconArrow { background-image: url("/squidreport/images/back-arrow.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconDomain { background-image: url("/squidreport/images/domain.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconNetwork { background-image: url("/squidreport/images/network.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconUrl { background-image: url("/squidreport/images/cursor.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconMime { background-image: url("/squidreport/images/info.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+
+/******************************/
+/*         Calendar           */
+/******************************/
+
+#calendar { float: right; border: 0px; margin-top: 10px; margin-right: 10px; font-variant: small-caps; }
+#calendar th { color: #76add2; background-color: black; border: 0px; font-style: italic; }
+#calendar td { color: white; background-color: black; border: 0px; font-style: italic; }
+#calendar table { width: 200px; position: right; background-color: black; color: white; text-align: center; border: 0px; }
+#calendar table a { color: #76add2; }
+#calendar table a:hover { color: silver; }
