@@ -1,18 +1,19 @@
 #------------------------------------------------------------------------------
-# Fichier de traduction des chaines de caract&egrave;res du programme SquidAnalyzer.
-# La premiere colonne correspond aux cl&eacute;s d'acc&egrave;s par le programme aux
-# traductions donn&eacute;es dans la deuxieme colonne. Les cl&eacute;s ne doivent pas &ecirc;tre
-# modifi&eacute;s et la casse doit etre repect&eacute;e. Le s&eacute;parateur de colonne est la
+# Fichier de traduction des chaines de caractères du programme SquidAnalyzer.
+# La premiere colonne correspond aux clés d'accès par le programme aux
+# traductions données dans la deuxieme colonne. Les clés ne doivent pas être
+# modifiés et la casse doit etre repectée. Le séparateur de colonne est la
 # tabulation.
 #
 # Les tags %s et %d dans les chaines de traduction correspondent aux valeurs
-# dynamiques subtitu&eacute;es par le programme. Suivant la langue utilis&eacute;e leur
-# emplacement peut &ecirc;tre modifi&eacute;.
+# dynamiques subtituées par le programme. Suivant la langue utilisée leur
+# emplacement peut être modifié.
 #
 # Auteur: Gilles Darold
 #------------------------------------------------------------------------------
+CharSet				iso-8859-15
 01				Jan
-02				F&eacute;v
+02				Fév
 03				Mar
 04				Avr
 05				Mai
@@ -22,21 +23,21 @@
 09				Sep
 10				Oct
 11				Nov
-12				D&eacute;c
-Requests			Requ&ecirc;tes
+12				Déc
+Requests			Requêtes
 Bytes				Octets
 Megabytes			Mega octets
 Total				Total
-Years				Ann&eacute;es
+Years				Années
 Months				Mois
 Days				Jours
-Hit				Trouv&eacute;s
+Hit				Trouvés
 Miss				Manquants
 Cost				Coût
 Users				Utilisateurs
 Sites				Sites
 Domains				Domaines
-Requests_graph			Requ&ecirc;tes
+Requests_graph			Requêtes
 Megabytes_graph			Mega octets
 Months_graph			Mois
 Days_graph			Jours
@@ -44,23 +45,23 @@ Hit_graph			Trouves
 Miss_graph			Manquants
 Total_graph			Total
 Domains_graph			Domaines
-Users_help			Nombre total d'utilisateurs differents pendant cette p&eacute;riode
-Sites_help			Nombre total de sites differents visit&eacute;s pendant cette p&eacute;riode
-Domains_help			Nombre total de domaines visit&eacute;s pendant cette p&eacute;riode
-Hit_help			Objets trouv&eacute;s dans le cache
-Miss_help			Objets non trouv&eacute;s dans le cache
+Users_help			Nombre total d'utilisateurs differents pendant cette période
+Sites_help			Nombre total de sites differents visités pendant cette période
+Domains_help			Nombre total de domaines visités pendant cette période
+Hit_help			Objets trouvés dans le cache
+Miss_help			Objets non trouvés dans le cache
 Cost_help			1 Mega octet =
-Generation			Rapport g&eacute;n&eacute;r&eacute;
+Generation			Rapport généré
 Main_cache_title		Statistiques du cache
 Cache_title			Statistiques du cache pour
 Stat_label			Stat
 Mime_link			Mime Types
-Network_link			R&eacute;seaux
+Network_link			Réseaux
 User_link			Utilisateurs
 Top_url_link			Top Urls
 Top_domain_link			Top Domaines
 Back_link			Retour
-Graph_cache_hit_title		Statistiques %s des requ&ecirc;tes pour
+Graph_cache_hit_title		Statistiques %s des requêtes pour
 Graph_cache_byte_title		Statistiques %s des transferts pour
 Hourly				par heure
 Hours				Heures
@@ -70,26 +71,26 @@ Monthly				Mensuelles
 Months				Mois
 Mime_title			Statistiques Mimes Types pour
 Mime_number			Nombre de mimes types
-Network_title			Statistiques R&eacute;seaux pour
-Network_number			Nombre de r&eacute;seaux
-Duration			Dur&eacute;e
+Network_title			Statistiques Réseaux pour
+Network_number			Nombre de réseaux
+Duration			Durée
 Time				Temps
 Largest				Plus gros transfert
 Url				Url
 User_title			Statistiques utilisateurs pour
 User_number			Nombre d'utilisateurs
-Url_Hits_title			Url Top %d des requ&ecirc;tes pour
+Url_Hits_title			Url Top %d des requêtes pour
 Url_Bytes_title			Url Top %d des transferts pour
-Url_Duration_title		Url Top %d par dur&eacute;e pour
+Url_Duration_title		Url Top %d par durée pour
 Url_number			Nombre d'Url
-Domain_Hits_title		Domaines Top %d des requ&ecirc;tes pour
+Domain_Hits_title		Domaines Top %d des requêtes pour
 Domain_Bytes_title		Domaines Top %d des transferts pour
-Domain_Duration_title		Domaines Top %d par dur&eacute;e pour
+Domain_Duration_title		Domaines Top %d par durée pour
 Domain_number			Nombre de domaines
-Domain_graph_hits_title		Statistiques des requ&ecirc;tes par domaines pour
+Domain_graph_hits_title		Statistiques des requêtes par domaines pour
 Domain_graph_bytes_title	Statistiques des transferts par domaines pour
-First_visit			Premi&egrave;re visite
-Last_visit			Derni&egrave;re visite
+First_visit			Première visite
+Last_visit			Dernière visite
 Globals_Statistics		Statistiques Globales
 Legende				Legende
-File_Generated			Fichier g&eacute;n&eacute;r&eacute; par
+File_Generated			Fichier généré par

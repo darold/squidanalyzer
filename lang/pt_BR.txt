@@ -12,6 +12,7 @@
 # Author: Alexandre Sieira <alexandre.sieira@ciphersec.com.br>
 # Last change: May 7th, 2004.
 #------------------------------------------------------------------------------
+CharSet				iso-8859-15
 01				Jan
 02				Fev
 03				Mar
