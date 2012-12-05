@@ -36,7 +36,7 @@ $BZCAT_PROG = "/bin/bzcat";
 
 # Default translation srings
 my %Translate = (
-	'Charset' => 'utf-8',
+	'CharSet' => 'utf-8',
 	'01' => 'Jan',
 	'02' => 'Feb',
 	'03' => 'Mar',
@@ -697,6 +697,7 @@ sub _parseData
 		$self->{stat_netuser_day}{$network}{$id}{largest_file_size} = $bytes;
 		$self->{stat_netuser_day}{$network}{$id}{largest_file_url} = $url;
 	}
+
 	$self->{stat_netuser_month}{$network}{$id}{duration} += $elapsed;
 	$self->{stat_netuser_month}{$network}{$id}{bytes} += $bytes;
 	$self->{stat_netuser_month}{$network}{$id}{hits}++;
@@ -1020,12 +1021,12 @@ sub _read_stat
 				$data = $l;
 			}
 			if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-				$self->{"stat_netuser_$type"}{$net}{$id}{hits} += $2;
-				$self->{"stat_netuser_$type"}{$net}{$id}{bytes} += $3;
-				$self->{"stat_netuser_$type"}{$net}{$id}{duration} += $4;
+				$self->{"stat_netuser_$type"}{$net}{$id}{hits} += $1;
+				$self->{"stat_netuser_$type"}{$net}{$id}{bytes} += $2;
+				$self->{"stat_netuser_$type"}{$net}{$id}{duration} += $3;
 				if ($6 > $self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size}) {
-					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size} = $5;
-					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_url} = $6;
+					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size} = $4;
+					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_url} = $5;
 				}
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
@@ -1713,6 +1714,7 @@ sub _print_network_stat
 		mkdir("$outdir/networks", 0755) || return;
 	}
 	foreach my $net (sort { $network_stat{$b}{"$self->{OrderNetwork}"} <=> $network_stat{$a}{"$self->{OrderNetwork}"} } keys %network_stat) {
+
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($network_stat{$net}{hits}/$total_hit) * 100) if ($total_hit);
 		my $b_percent = '0.0';
