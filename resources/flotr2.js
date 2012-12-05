@@ -1,3 +1,15 @@
+function toggle(idButton, idDiv, label) {
+	if(document.getElementById(idDiv)) {
+		if(document.getElementById(idDiv).style.display == 'none') {
+			document.getElementById(idDiv).style.display = 'block';
+			document.getElementById(idButton).value = 'Hide '+label;
+		} else {
+			document.getElementById(idDiv).style.display = 'none';
+			document.getElementById(idButton).value = 'Show '+label;
+		}
+	}
+}
+
 /*!
   * bean.js - copyright Jacob Thornton 2011
   * https://github.com/fat/bean

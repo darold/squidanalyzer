@@ -36,6 +36,7 @@ $BZCAT_PROG = "/bin/bzcat";
 
 # Default translation srings
 my %Translate = (
+	'Charset' => 'utf-8',
 	'01' => 'Jan',
 	'02' => 'Feb',
 	'03' => 'Mar',
@@ -1106,44 +1107,13 @@ sub _print_header
 <meta HTTP-EQUIV="Expires" CONTENT="$now" />
 <meta HTTP-EQUIV="Generator" CONTENT="SquidAnalyzer $VERSION" />
 <meta HTTP-EQUIV="Date" CONTENT="$now" />
-<meta HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8" />
+<meta HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=$Translate{'CharSet'}" />
 <title>SquidAnalyzer $VERSION Report</title>
 <link rel="stylesheet" type="text/css" href="$self->{WebUrl}squidanalyzer.css" media="screen" />
 <!-- javascript to sort table -->
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
 <!-- javascript to draw graphics -->
 <script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
-<style>
-#code_requests, #code_bytes, #network_hits, #network_bytes, #user_hits, #user_bytes, #domain_hits, #domain_bytes {
-	width : 600px;
-	height: 300px;
-	background:#F3F2ED;
-	border:4px double white;
-	padding:0 10px;
-	margin:30px 0 30px 0;
-	border-radius:10px;
-	-moz-border-radius:10px;
-	-webkit-border-radius:10px;
-	box-shadow:3px 3px 6px 2px #A9A9A9;
-	-moz-box-shadow:3px 3px 6px 2px #A9A9A9;
-	-webkit-box-shadow:3px 3px 6px #A9A9A9;
-}
-</style>
-<script type="text/javascript">
- /* <![CDATA[ */
-function toggle(idButton, idDiv, label) {
-	if(document.getElementById(idDiv)) {
-		if(document.getElementById(idDiv).style.display == 'none') {
-			document.getElementById(idDiv).style.display = 'block';
-			document.getElementById(idButton).value = 'Hide '+label;
-		} else {
-			document.getElementById(idDiv).style.display = 'none';
-			document.getElementById(idButton).value = 'Show '+label;
-		}
-	}
-}
-/* ]]> */
-</script>
 </head>
 <body>
 <div id="conteneur">
@@ -1151,7 +1121,7 @@ function toggle(idButton, idDiv, label) {
 	<div id="header">
 		<div id="alignLeft">
 		<h1>
-		<a href="$self->{WebUrl}"><img src="$self->{WebUrl}logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a>
+		<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a>
 		SquidAnalyzer
 		</h1>
 		<p class="sous-titre">
@@ -1424,8 +1394,7 @@ sub _print_cache_stat
 	@total = ();
 
 	print $out qq{
-<div id="stata">
-<table>
+<table class="stata">
 <tr>
 <th colspan="2" class="headerBlack">$Translate{'Requests'}</th>
 <th colspan="2" class="headerBlack">$Translate{'Bytes'}</th>
@@ -1464,24 +1433,23 @@ sub _print_cache_stat
 	print $out qq{
 </tr>
 </table>
-</div>
 
 <table><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
 
 	<h4>$Translate{'Legende'}</h4>
 	<div class="line-separator"></div>
-	<pre>
-	<span class="legendeTitle">$Translate{'Hit'}:</span> <span class="descLegende">$Translate{'Hit_help'}</span>
-	<span class="legendeTitle">$Translate{'Miss'}:</span> <span class="descLegende">$Translate{'Miss_help'}</span>
-	<span class="legendeTitle">$Translate{'Users'}:</span> <span class="descLegende">$Translate{'Users_help'}</span>
-	<span class="legendeTitle">$Translate{'Sites'}:</span> <span class="descLegende">$Translate{'Sites_help'}</span>
-	<span class="legendeTitle">$Translate{'Domains'}:</span> <span class="descLegende">$Translate{'Domains_help'}</span>
+	<div class="displayLegend">
+	<span class="legendeTitle">$Translate{'Hit'}:</span> <span class="descLegende">$Translate{'Hit_help'}</span><br/>
+	<span class="legendeTitle">$Translate{'Miss'}:</span> <span class="descLegende">$Translate{'Miss_help'}</span><br/>
+	<span class="legendeTitle">$Translate{'Users'}:</span> <span class="descLegende">$Translate{'Users_help'}</span><br/>
+	<span class="legendeTitle">$Translate{'Sites'}:</span> <span class="descLegende">$Translate{'Sites_help'}</span><br/>
+	<span class="legendeTitle">$Translate{'Domains'}:</span> <span class="descLegende">$Translate{'Domains_help'}</span><br/>
 };
 	print $out qq{
-	<span class="legendeTitle">$Translate{'Cost'}:</span> <span class="descLegende">$Translate{'Cost_help'} $self->{CostPrice} $self->{Currency}</span>
+	<span class="legendeTitle">$Translate{'Cost'}:</span> <span class="descLegende">$Translate{'Cost_help'} $self->{CostPrice} $self->{Currency}</span><br/>
 } if ($self->{CostPrice});
 	print $out qq{
-</pre>
+</div>
 };
 
 	%code_stat = ();
@@ -1534,8 +1502,7 @@ sub _print_mime_stat
 
 	print $out "<h3>$Translate{'Mime_number'}: $ntype</h3>\n";
 	print $out qq{
-<div id="stata">
-<table class="sortable" cellpadding=1 cellspacing=1 align=center>
+<table class="sortable stata" cellpadding=1 cellspacing=1 align=center>
 <thead>
 <tr>
 <th nowrap>$Translate{'Mime_link'}</th>
@@ -1574,7 +1541,6 @@ sub _print_mime_stat
 	}
 	print $out qq{
 </table>
-</div>
 };
 
 	print $out qq{
@@ -1722,8 +1688,7 @@ sub _print_network_stat
 	$network_bytes = '';
 	print $out "<h3>$Translate{'Network_number'}: $nnet</h3>\n";
 	print $out qq{
-<div id="stata">
-<table class="sortable" cellpadding=1 cellspacing=1 align=center>
+<table class="sortable stata" cellpadding=1 cellspacing=1 align=center">
 <thead>
 <tr>
 <th>$Translate{'Network_link'}</th>
@@ -1848,7 +1813,7 @@ sub _print_network_stat
 		$self->_print_footer(\$outnet);
 		$outnet->close();
 	}
-	print $out "</table>\n</div>\n";
+	print $out "</table>\n";
 
 	print $out qq{
 <div id="uplink">
@@ -1857,7 +1822,6 @@ sub _print_network_stat
 <th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
 </tr>
 </table>
-</div>
 };
 	$self->_print_footer(\$out);
 	$out->close();
@@ -1989,8 +1953,7 @@ sub _print_user_stat
 	$user_bytes = '';
 
 	print $out qq{
-<div id="stata">
-<table class="sortable">
+<table class="sortable stata" >
 <thead>
 <tr align="center">
 <th>$Translate{'Users'}</th>
@@ -2116,7 +2079,6 @@ sub _print_user_stat
 	}
 	print $out qq{
 </table>
-</div>
 };
 
 	print $out qq{
@@ -2173,8 +2135,7 @@ sub _print_netuser_stat
 <b>$Translate{'User_number'}:</b> $nuser<br>
 };
 	print $$out qq{
-<div id="stata">
-<table class="sortable">
+<table class="sortable stata">
 <thead>
 <tr>
 <th>$Translate{'Users'}</th>
@@ -2241,7 +2202,6 @@ sub _print_netuser_stat
 	}
 	print $$out qq{
 </table>
-</div>
 };
 	return $nuser;
 }
@@ -2289,8 +2249,7 @@ sub _print_user_detail
 <b>$Translate{'Url_number'}:</b> $nurl<br>
 };
 	print $$out qq{
-<div id="stata">
-<table class="sortable">
+<table class="sortable stata">
 <thead>
 <tr align="center">
 <th>$Translate{'Url'}</th>
@@ -2337,7 +2296,6 @@ sub _print_user_detail
 	}
 	print $$out qq{
 </table>
-</div>
 };
 
 }
@@ -2404,8 +2362,7 @@ sub _print_top_url_stat
 			print $out "<h4>$t1 $stat_date <div id=\"uplink\"><a href=\"#atop\">[ $Translate{'Up_link'} ]</a></div></h4>\n";
 		}
 		print $out qq{
-<div id="stata">
-<table class="sortable">
+<table class="sortable stata">
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
@@ -2480,7 +2437,7 @@ sub _print_top_url_stat
 			$i++;
 			last if ($i > $self->{TopNumber});
 		}
-		print $out qq{</table></div>};
+		print $out qq{</table>};
 	}
 
 	print $out qq{
@@ -2606,8 +2563,7 @@ sub _print_top_domain_stat
 			print $out "<h4>$t1 $stat_date <div id=\"uplink\"><a href=\"#atop\">[ $Translate{'Up_link'} ]</a></div></h4>\n";
 		}
 		print $out qq{
-<div id="stata">
-<table class="sortable">
+<table class="sortable stata">
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
@@ -2682,7 +2638,7 @@ sub _print_top_domain_stat
 			$i++;
 			last if ($i > $self->{TopNumber});
 		}
-		print $out qq{</table></div>};
+		print $out qq{</table>};
 	}
 
 	print $out qq{
@@ -2745,11 +2701,9 @@ sub _gen_summary
 	my $colspn = 2;
 	$colspn = 3 if ($self->{CostPrice});
 	print $out qq{
-<div id="contenu">
     <h4>$Translate{'Globals_Statistics'}</h4>
     <div class="line-separator"></div>
-	<div id="stata">
-	<table>
+	<table class="stata">
 	<thead>
 	<tr>
 	<th class="nobg"></th>
@@ -2795,16 +2749,14 @@ sub _gen_summary
 	print $out qq{
 	</tbody>
 	</table>
-	</div>
 	<h4>$Translate{'Legende'}</h4>
 	<div class="line-separator"></div>
-	<pre>
-		<span class="legendeTitle">$Translate{'Hit'}</span>: <span class="descLegende">$Translate{'Hit_help'}</span>
-		<span class="legendeTitle">$Translate{'Miss'}</span>: <span class="descLegende">$Translate{'Miss_help'}</span>
+	<div class="displayLegend">
+		<span class="legendeTitle">$Translate{'Hit'}</span>: <span class="descLegende">$Translate{'Hit_help'}</span><br/>
+		<span class="legendeTitle">$Translate{'Miss'}</span>: <span class="descLegende">$Translate{'Miss_help'}</span><br/>
 };
-	print $out qq{<span class="legendeTitle">$Translate{'Cost'}</span>: <span class="descLegende">$Translate{'Cost_help'} $self->{CostPrice} $self->{Currency}</span>} if ($self->{CostPrice});
+	print $out qq{<span class="legendeTitle">$Translate{'Cost'}</span>: <span class="descLegende">$Translate{'Cost_help'} $self->{CostPrice} $self->{Currency}</span><br/>} if ($self->{CostPrice});
 	print $out qq{
-	</pre>
 	</div>
 };
 	$self->_print_footer(\$out);

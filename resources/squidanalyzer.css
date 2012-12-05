@@ -10,9 +10,9 @@ body { font-size: 10pt; background-color: #F1F1F1; min-width: 900px; }
 
 .line-separator { height:1px; width:450px; background:#717171; border-bottom:1px solid #313030; margin-top:-30px; margin-left: 10px; margin-bottom: 45px; }
 
-pre .descLegende { font-style: italic; }
+.descLegende { font-style: italic; }
 
-pre .legendeTitle { font-variant: small-caps; font-weight: bold; font-size: 1.3em; line-height: 18pt; letter-spacing: 2px; }
+.legendeTitle { font-variant: small-caps; font-weight: bold; font-size: 1.3em; line-height: 18pt; letter-spacing: 2px; }
 
 #alignLeft { float: left; }
 
@@ -22,19 +22,42 @@ pre .legendeTitle { font-variant: small-caps; font-weight: bold; font-size: 1.3e
 
 .displayGraph { border: 0px; }
 
-#stata .headerBlack { color: black; font: bold 14px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; }
+table.stata th.headerBlack { color: black; font: bold 12px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; }
 
-#stata table { border-collapse: collapse; width: 90%; margin-left:auto; margin-right:auto; border: 0px; white-space:nowrap; }
+table.stata { border-collapse: collapse; width: 90%; margin-left:auto; margin-right:auto; border: 0px; white-space:nowrap; }
 
-#stata th { background: #76add2; font: 14px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; letter-spacing: 2px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; border: 2px solid silver; color: #F1F1F1; }
+table.stata th { background: #76add2; font: 12px "Trebuchet MS", Verdana, Arial, Helvetica, sans-serif; font-variant: small-caps; letter-spacing: 2px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; border: 2px solid silver; color: #F1F1F1; }
 
-#stata td { text-align: center; padding-left: 20px; padding-right: 20px; padding-top: 5px; padding-bottom: 5px; border: 2px solid silver; font-style: italic; }
+table.stata td { text-align: center; padding-left: 20px; padding-right: 20px; padding-top: 5px; padding-bottom: 5px; border: 2px solid silver; font-style: italic; }
 
-#stata th.nobg { background: none; border-top: 0px; border-left: 0px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; }
+table.stata th.nobg { background: none; border-top: 0px; border-left: 0px; padding-left: 20px; padding-right: 20px; padding-top: 3px; padding-bottom: 3px; }
 
-#stata td a { font-variant: small-caps; text-decoration: none; color: black; font-weight: bold; font-style: normal; font-size: 15px; }
+table.stata td a { font-variant: small-caps; text-decoration: none; color: black; font-weight: bold; font-style: normal; font-size: 15px; }
 
-#stata td a:hover { color: #76add2; }
+table.stata td a:hover { color: #76add2; }
+
+.displayLegend {
+     margin-left: 150px;
+}
+
+/**************/
+/*   Graphs   */
+/**************/
+
+#code_requests, #code_bytes, #network_hits, #network_bytes, #user_hits, #user_bytes, #domain_hits, #domain_bytes {
+     width : 550px;
+     height: 300px;
+     background:#F3F2ED;
+     border:4px double white;
+     padding:0 10px;
+     margin:30px 0 30px 0;
+     border-radius:10px;
+     -moz-border-radius:10px;
+     -webkit-border-radius:10px;
+     box-shadow:3px 3px 6px 2px #A9A9A9;
+     -moz-box-shadow:3px 3px 6px 2px #A9A9A9;
+     -webkit-box-shadow:3px 3px 6px #A9A9A9;
+}
 
 /**************/
 /*   Header   */
@@ -64,12 +87,12 @@ ul li a { display:block; width:125px; text-decoration:none; text-align:center; p
 ul li a:hover { color: #76add2; }
 #menu { margin: 0 auto; padding: 0 auto; height: 28px; clear: both; background-color: black; border-bottom: 3px solid #76add2; }
 
-.iconUser { background-image: url("/squidreport/images/user.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
-.iconArrow { background-image: url("/squidreport/images/back-arrow.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
-.iconDomain { background-image: url("/squidreport/images/domain.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
-.iconNetwork { background-image: url("/squidreport/images/network.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
-.iconUrl { background-image: url("/squidreport/images/cursor.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
-.iconMime { background-image: url("/squidreport/images/info.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconUser { background-image: url("./images/user.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconArrow { background-image: url("./images/back-arrow.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconDomain { background-image: url("./images/domain.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconNetwork { background-image: url("./images/network.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconUrl { background-image: url("./images/cursor.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
+.iconMime { background-image: url("./images/info.png"); background-position: left center; background-repeat: no-repeat; padding-left: 20px; }
 
 /******************************/
 /*         Calendar           */

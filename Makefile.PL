@@ -42,10 +42,15 @@ if [ ! -d "$DESTDIR$BINDIR" ]; then
 fi
 if [ ! -d "$DESTDIR$CONFDIR" ]; then
         mkdir -p $DESTDIR$CONFDIR
+fi
+if [ ! -d "$DESTDIR$CONFDIR/lang" ]; then
         mkdir -p $DESTDIR$CONFDIR/lang
 fi
 if [ ! -d "$DESTDIR$HTMLDIR" ]; then
         mkdir -p $DESTDIR$HTMLDIR
+fi
+if [ ! -d "$DESTDIR$HTMLDIR/images" ]; then
+        mkdir -p $DESTDIR$HTMLDIR/images
 fi
 };
 
@@ -68,15 +73,15 @@ install -m 644 etc/user-aliases $DESTDIR$CONFDIR/user-aliases.orig
 install -m 644 etc/excluded $DESTDIR$CONFDIR/excluded.orig
 install -m 755 squid-analyzer $DESTDIR$BINDIR/
 install -m 644 resources/sorttable.js $DESTDIR$HTMLDIR/
-install -m 644 resources/logo-squidanalyzer.png $DESTDIR$HTMLDIR/
 install -m 644 resources/squidanalyzer.css $DESTDIR$HTMLDIR/
 install -m 644 resources/flotr2.js $DESTDIR$HTMLDIR/
-install -m 644 resources/cursor.png $DESTDIR$HTMLDIR/
-install -m 644 resources/domain.png $DESTDIR$HTMLDIR/
-install -m 644 resources/back-arrow.png $DESTDIR$HTMLDIR/
-install -m 644 resources/info.png $DESTDIR$HTMLDIR/
-install -m 644 resources/network.png $DESTDIR$HTMLDIR/
-install -m 644 resources/user.png $DESTDIR$HTMLDIR/
+install -m 644 resources/images/logo-squidanalyzer.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/cursor.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/domain.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/back-arrow.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/info.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/network.png $DESTDIR$HTMLDIR/images/
+install -m 644 resources/images/user.png $DESTDIR$HTMLDIR/images/
 install -m 644 lang/* $DESTDIR$CONFDIR/lang/
 pod2man doc/SquidAnalyzer.pod doc/squidanalyzer.3
 install -m 644 doc/squidanalyzer.3 $DESTDIR$MANDIR/squidanalyzer.3
