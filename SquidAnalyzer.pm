@@ -1435,7 +1435,7 @@ sub _print_cache_stat
 </tr>
 </table>
 
-<table><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
+<table class="graphs"><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
 
 	<h4>$Translate{'Legende'}</h4>
 	<div class="line-separator"></div>
@@ -1545,12 +1545,8 @@ sub _print_mime_stat
 };
 
 	print $out qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
 };
 	$self->_print_footer(\$out);
@@ -1672,7 +1668,7 @@ sub _print_network_stat
 	my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
 				join(',', @hits), $Translate{'Hit_graph'} );
 	@hits = ();
-	print $out qq{<table><tr><td>$network_hits</td>};
+	print $out qq{<table class="graphs"><tr><td>$network_hits</td>};
 	$network_hits = '';
 
 
@@ -1782,7 +1778,7 @@ sub _print_network_stat
 		$network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'} );
 		@hits = ();
-		print $outnet qq{<table><tr><td>$network_hits</td>};
+		print $outnet qq{<table class="graphs"><tr><td>$network_hits</td>};
 		$network_hits = '';
 
 		$t1 = $Translate{'Graph_cache_byte_title'};
@@ -1804,12 +1800,8 @@ sub _print_network_stat
 </tr>
 };
 		print $outnet qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
 };
 		$self->_print_footer(\$outnet);
@@ -1818,12 +1810,9 @@ sub _print_network_stat
 	print $out "</table>\n";
 
 	print $out qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
+</div>
 };
 	$self->_print_footer(\$out);
 	$out->close();
@@ -2058,7 +2047,7 @@ sub _print_user_stat
 		$user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'});
 		@hits = ();
-		print $outusr qq{<table><tr><td>$user_hits</td>};
+		print $outusr qq{<table class="graphs"><tr><td>$user_hits</td>};
 		$user_hits = '';
 
 		$t1 = $Translate{'Graph_cache_byte_title'};
@@ -2084,12 +2073,8 @@ sub _print_user_stat
 };
 
 	print $out qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
 };
 	$self->_print_footer(\$out);
@@ -2282,7 +2267,7 @@ sub _print_user_detail
 		my $comma_bytes = &format_bytes($url_stat{$url}{bytes});
 		print $$out qq{
 <tr align="right">
-<td align="left"><a href="http://$url/" target="_blank">$url</a></td>
+<td align="left"><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
 <td>$url_stat{$url}{hits}</td>
 <td>$h_percent</td>
 <td>$comma_bytes</td>
@@ -2361,7 +2346,7 @@ sub _print_top_url_stat
 			print $out $self->_print_title($t1, $stat_date);
 			print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 		} else {
-			print $out "<h4>$t1 $stat_date <div id=\"uplink\"><a href=\"#atop\">[ $Translate{'Up_link'} ]</a></div></h4>\n";
+			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
 		}
 		print $out qq{
 <table class="sortable stata">
@@ -2419,7 +2404,7 @@ sub _print_top_url_stat
 			}
 			print $out qq{
 <tr align=right>
-<td align=left><a href="http://$u/" target="_blank">$u</a></td>
+<td align=left><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
 <td>$url_stat{$u}{hits}</td>
 <td>$c_percent</td>
 <td>$comma_bytes</td>
@@ -2443,12 +2428,8 @@ sub _print_top_url_stat
 	}
 
 	print $out qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
 };
 	$self->_print_footer(\$out);
@@ -2550,7 +2531,7 @@ sub _print_top_domain_stat
 			}
 			my $title = "$Translate{'Domain_graph_hits_title'} $stat_date";
 			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, $Translate{'Requests_graph'} || 'Requests', %data);
-			print $out qq{<table><tr><td>$domain_hits</td>};
+			print $out qq{<table class="graphs"><tr><td>$domain_hits</td>};
 			$domain_hits = '';
 			%data = ();
 			foreach my $dom (keys %perdomain) {
@@ -2562,7 +2543,7 @@ sub _print_top_domain_stat
 			$domain_bytes = '';
 			%data = ();
 		} else {
-			print $out "<h4>$t1 $stat_date <div id=\"uplink\"><a href=\"#atop\">[ $Translate{'Up_link'} ]</a></div></h4>\n";
+			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
 		}
 		print $out qq{
 <table class="sortable stata">
@@ -2644,12 +2625,8 @@ sub _print_top_domain_stat
 	}
 
 	print $out qq{
-<div id="uplink">
-<table align=center>
-<tr>
-<th><a href="#atop">[ $Translate{'Up_link'} ]</a></th>
-</tr>
-</table>
+<div class="uplink">
+<a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
 };
 	$self->_print_footer(\$out);
