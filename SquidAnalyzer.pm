@@ -3004,10 +3004,10 @@ sub flotr2_bargraph
 <script type="text/javascript">
 (function mouse_zoom(container) {
 
-document.writeln('<table align="center"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
-	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
-	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;"></td></tr><tr><td>&nbsp;</td></tr></table>'
-	);
+//document.writeln('<table align="center"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
+//	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
+//	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;"></td></tr><tr><td>&nbsp;</td></tr></table>'
+//	);
     $data1
     $data2
     $data3
@@ -3098,6 +3098,8 @@ document.writeln('<table align="center"><tr><td><input type="button" class="dldB
     Flotr.EventAdapter.observe(container, "flotr:click", function() {
         drawGraph();
     });
+
+/*
     document.getElementById('reset$buttonid').onclick = function() {
       graph.download.restoreCanvas();
     };
@@ -3119,7 +3121,7 @@ document.writeln('<table align="center"><tr><td><input type="button" class="dldB
 	}
       graph.download.saveImage('$self->{ImgFormat}', null, null, true);
     };
-
+*/
 })(document.getElementById("$divid"));
 </script>
 EOF
@@ -3145,10 +3147,10 @@ sub flotr2_piegraph
 (function basic_pie(container) {
 
 
-document.writeln('<input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
-	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
-	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;">'
-	);
+//document.writeln('<input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
+//	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
+//	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;">'
+//	);
 
     @datadef
     var graph = Flotr.draw(container, [
@@ -3182,6 +3184,7 @@ document.writeln('<input type="button" class="dldButton" value="To Image" id="to
             backgroundColor: "#D2E8FF"
         }
     });
+/*
     document.getElementById('reset$buttonid').onclick = function() {
       graph.download.restoreCanvas();
     };
@@ -3203,7 +3206,7 @@ document.writeln('<input type="button" class="dldButton" value="To Image" id="to
 	}
       graph.download.saveImage('$self->{ImgFormat}', null, null, true);
     };
-
+i*/
 
 })(document.getElementById("$divid"));
 </script>
