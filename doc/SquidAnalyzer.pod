@@ -20,22 +20,9 @@ is done.
 
 =head1 REQUIREMENT
 
-perl 5.005_03 or higher and the following Perl modules:
-
-        GD
-        GD::Graph
-        GD::TextUtil
-        GD::Graph::bars3d;
-
-See GD and GD::Graph requirements for other needed libraries.
-
-If they are not yet include in your OS distribution you can always find them at http://search.cpan.org/
-
-If you have Internet access from your server, you can execute the following command to install GD::Graph::bars3d and all its dependencies.
-
-	perl -MCPAN -e 'install GD::Graph::bars3d'
-
-Images output format is PNG so libgd must be compiled with libpng.
+Nothing is required than a modern perl version 5.8 or higher. Graphics
+are based on the Flotr2 Javascript library so they are drawn at your
+browser side without extra installation required.
 
 =head1 INSTALLATION
 

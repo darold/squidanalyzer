@@ -156,26 +156,9 @@ Take care if you have rotate log enable to run it before rotation
 is done.
 .SH "REQUIREMENT"
 .IX Header "REQUIREMENT"
-perl 5.005_03 or higher and the following Perl modules:
-.PP
-.Vb 4
-\&        GD
-\&        GD::Graph
-\&        GD::TextUtil
-\&        GD::Graph::bars3d;
-.Ve
-.PP
-See \s-1GD\s0 and GD::Graph requirements for other needed libraries.
-.PP
-If they are not yet include in your \s-1OS\s0 distribution you can always find them at http://search.cpan.org/
-.PP
-If you have Internet access from your server, you can execute the following command to install GD::Graph::bars3d and all its dependencies.
-.PP
-.Vb 1
-\&        perl \-MCPAN \-e \*(Aqinstall GD::Graph::bars3d\*(Aq
-.Ve
-.PP
-Images output format is \s-1PNG\s0 so libgd must be compiled with libpng.
+Nothing is required than a modern perl version 5.8 or higher. Graphics
+are based on the Flotr2 Javascript library so they are drawn at your
+browser side without extra installation required.
 .SH "INSTALLATION"
 .IX Header "INSTALLATION"
 .SS "Generic install"
