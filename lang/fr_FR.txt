@@ -26,7 +26,7 @@ CharSet				iso-8859-15
 12				Déc
 Requests			Requêtes
 Bytes				Octets
-Megabytes			Mega octets
+Megabytes			Méga octets
 Total				Total
 Years				Années
 Months				Mois
@@ -38,19 +38,19 @@ Users				Utilisateurs
 Sites				Sites
 Domains				Domaines
 Requests_graph			Requêtes
-Megabytes_graph			Mega octets
+Megabytes_graph			Méga octets
 Months_graph			Mois
 Days_graph			Jours
-Hit_graph			Trouves
+Hit_graph			Trouvés
 Miss_graph			Manquants
 Total_graph			Total
 Domains_graph			Domaines
-Users_help			Nombre total d'utilisateurs differents pendant cette période
-Sites_help			Nombre total de sites differents visités pendant cette période
-Domains_help			Nombre total de domaines visités pendant cette période
+Users_help			Nombre total d'utilisateurs différents pendant cette période
+Sites_help			Nombre total de sites différents visités pendant cette période
+Domains_help			Nombre total de domaines différents visités pendant cette période
 Hit_help			Objets trouvés dans le cache
 Miss_help			Objets non trouvés dans le cache
-Cost_help			1 Mega octet =
+Cost_help			1 Méga octet =
 Generation			Rapport généré
 Main_cache_title		Statistiques du cache
 Cache_title			Statistiques du cache pour
@@ -71,7 +71,7 @@ Monthly				Mensuelles
 Months				Mois
 Mime_title			Statistiques des types MIME pour
 Mime_number			Nombre de types MIME
-Network_title			Statistiques Réseaux pour
+Network_title			Statistiques réseaux pour
 Network_number			Nombre de réseaux
 Duration			Durée
 Time				Temps
@@ -92,7 +92,7 @@ Domain_graph_bytes_title	Statistiques des transferts par domaines pour
 First_visit			Première visite
 Last_visit			Dernière visite
 Globals_Statistics		Statistiques Globales
-Legende				Légende
-File_Generated			Fichier généré par
+Legend				Légende
+File_Generated			Généré par
 Up_link				Haut de Page
 
