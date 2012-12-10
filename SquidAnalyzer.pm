@@ -405,8 +405,6 @@ sub _init
 	$self->{WebUrl} .= '/' if ($self->{WebUrl} && ($self->{WebUrl} !~ /\/$/));
 	$self->{DateFormat} = $options{DateFormat} || '%y-%m-%d';
 	$self->{Lang} = $options{Lang} || '';
-	$self->{HeaderFile} = $options{HeaderFile} || '';
-	$self->{FooterFile} = $options{FooterFile} || '';
 	$self->{AnonymizeLogin} = $options{AnonymizeLogin} || 0;
 	$self->{SiblingHit} = $options{SiblingHit} || 1;
 	$self->{ImgFormat} = $options{ImgFormat} || 'png';
@@ -418,22 +416,6 @@ sub _init
 			next if (!$l);
 			my ($key, $str) = split(/\t+/, $l);
 			$Translate{$key} = $str;
-		}
-		close(IN);
-	}
-	if ($self->{HeaderFile}) {
-		open(IN, "$self->{HeaderFile}") or die "ERROR: can't open header file $self->{HeaderFile}, $!\n";
-		$self->{HeaderFile} = '';
-		while (my $l = <IN>) {
-			$self->{HeaderFile} .= $l;
-		}
-		close(IN);
-	}
-	if ($self->{FooterFile}) {
-		open(IN, "$self->{FooterFile}") or die "ERROR: can't open footer file $self->{FooterFile}, $!\n";
-		$self->{FooterFile} = '';
-		while (my $l = <IN>) {
-			$self->{FooterFile} .= $l;
 		}
 		close(IN);
 	}
@@ -2810,10 +2792,6 @@ sub parse_config
 	}
 	if ($opt{Lang} && !-e $opt{Lang}) {
 		print STDERR "Error: can't find translation file $opt{Lang}. See option: Lang\n";
-		exit 0;
-	}
-	if ($opt{FooterFile} && !-e $opt{FooterFile}) {
-		print STDERR "Error: can't find custom footer file $opt{FooterFile}. See option: FooterFile\n";
 		exit 0;
 	}
 	if ($opt{ImgFormat} && !grep(/^$opt{ImgFormat}$/, 'png','jpg')) {
