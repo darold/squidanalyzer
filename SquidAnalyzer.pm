@@ -1094,7 +1094,9 @@ sub _print_header
 {
 	my ($self, $fileout, $menu, $calendar) = @_;
 
-	my $now = strftime("%a %b %e %H:%M:%S %Y", localtime);
+	my $curdate = `date | iconv -t $Translate{CharSet} 2>/dev/null`;
+	chomp($curdate);
+	my $now = $curdate || strftime("%a %b %e %H:%M:%S %Y", localtime);
 
 	print $$fileout qq{
 <!DOCTYPE html
@@ -2613,11 +2615,11 @@ sub _print_top_domain_stat
 			print $out qq{
 <tr>
 <td>*.$_</td>
-<td>$domain_stat{$_}{hits}</td>
+<td>$domain_stat{$_}{hits}</span></td>
 <td>$c_percent</td>
 <td>$comma_bytes</td>
 <td>$b_percent</td>
-<td>$duration</td>
+<td>$duration</span></td>
 <td>$d_percent</td>
 };
 	print $out qq{
