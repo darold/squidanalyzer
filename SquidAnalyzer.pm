@@ -2531,7 +2531,7 @@ sub _print_top_domain_stat
 				$data{$dom} = $perdomain{$dom}{hits};
 			}
 			my $title = "$Translate{'Domain_graph_hits_title'} $stat_date";
-			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, $Translate{'Requests_graph'} || 'Requests', %data);
+			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, '', %data);
 			print $out qq{<table class="graphs"><tr><td>$domain_hits</td>};
 			$domain_hits = '';
 			%data = ();
@@ -2539,7 +2539,7 @@ sub _print_top_domain_stat
 				$data{$dom} = int($perdomain{$dom}{bytes}/1000000);
 			}
 			$title = "$Translate{'Domain_graph_bytes_title'} $stat_date";
-			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, $Translate{'Megabytes_graph'} || $Translate{'Megabytes'}, %data);
+			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, '', %data);
 			print $out qq{<td>$domain_bytes</td></tr></table>};
 			$domain_bytes = '';
 			%data = ();
