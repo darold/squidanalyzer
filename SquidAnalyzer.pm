@@ -1518,6 +1518,7 @@ sub _print_mime_stat
 	print $out qq{
 </tr>
 </thead>
+<tbody>
 };
 	foreach (sort { $mime_stat{$b}{"$self->{OrderMime}"} <=> $mime_stat{$a}{"$self->{OrderMime}"} } keys %mime_stat) {
 		my $c_percent = '0.0';
@@ -1541,6 +1542,7 @@ sub _print_mime_stat
 </tr>};
 	}
 	print $out qq{
+</tbody>
 </table>
 };
 
@@ -1705,6 +1707,7 @@ sub _print_network_stat
 <th>$Translate{'Url'}</th>
 </tr>
 </thead>
+<tbody>
 };
 	if (!-d "$outdir/networks") {
 		mkdir("$outdir/networks", 0755) || return;
@@ -1807,7 +1810,7 @@ sub _print_network_stat
 		$self->_print_footer(\$outnet);
 		$outnet->close();
 	}
-	print $out "</table>\n";
+	print $out "</tbody></table>\n";
 
 	print $out qq{
 <div class="uplink">
@@ -1963,6 +1966,7 @@ sub _print_user_stat
 <th>$Translate{'Url'}</th>
 </tr>
 </thead>
+<tbody>
 };
 	if (!-d "$outdir/users") {
 		mkdir("$outdir/users", 0755) || return;
@@ -2069,6 +2073,7 @@ sub _print_user_stat
 		$outusr->close();
 	}
 	print $out qq{
+</tbody>
 </table>
 };
 
@@ -2141,6 +2146,7 @@ sub _print_netuser_stat
 <th>$Translate{'Url'}</th>
 </tr>
 </thead>
+<tbody>
 };
 	foreach my $usr (sort { $netuser_stat{$b}{"$self->{OrderUser}"} <=> $netuser_stat{$a}{"$self->{OrderUser}"} } keys %netuser_stat) {
 		my $h_percent = '0.0';
@@ -2188,6 +2194,7 @@ sub _print_netuser_stat
 </tr>};
 	}
 	print $$out qq{
+</tbody>
 </table>
 };
 	return $nuser;
@@ -2253,6 +2260,7 @@ sub _print_user_detail
 	print $$out qq{
 </tr>
 </thead>
+<tbody>
 };
 	
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
@@ -2282,6 +2290,7 @@ sub _print_user_detail
 </tr>};
 	}
 	print $$out qq{
+</tbody>
 </table>
 };
 
@@ -2370,6 +2379,7 @@ sub _print_top_url_stat
 	print $out qq{
 </tr>
 </thead>
+<tbody>
 };
 		my $i = 0;
 		foreach my $u (sort { $url_stat{$b}{"\L$tpe\E"} <=> $url_stat{$a}{"\L$tpe\E"} } keys %url_stat) {
@@ -2403,7 +2413,6 @@ sub _print_top_url_stat
 				}
 			}
 			print $out qq{
-<tbody>
 <tr>
 <td><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
 <td>$url_stat{$u}{hits}</td>
@@ -2568,6 +2577,7 @@ sub _print_top_domain_stat
 	print $out qq{
 </tr>
 </thead>
+<tbody>
 };
 		my $i = 0;
 		foreach (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
@@ -2601,7 +2611,6 @@ sub _print_top_domain_stat
 				}
 			}
 			print $out qq{
-<tbody>
 <tr>
 <td>*.$_</td>
 <td>$domain_stat{$_}{hits}</td>
@@ -2707,6 +2716,7 @@ sub _gen_summary
 	print $out qq{
 	</tr>
 	</thead>
+	<tbody>
 };
 	foreach my $year (sort {$b <=> $a} keys %code_stat) {
 		my $comma_bytes = &format_bytes($total_bytes{$year});
@@ -2714,7 +2724,6 @@ sub _gen_summary
 		my $miss_bytes = &format_bytes($code_stat{$year}{MISS}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
 		print $out qq{
-	<tbody>
 	<tr>
 	<td><a href="$year/index.html">$Translate{'Stat_label'} $year</a></td>
 	<td>$code_stat{$year}{HIT}{request}</td>
