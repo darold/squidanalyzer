@@ -2899,10 +2899,10 @@ sub set_date
 
 	my $date_format = $self->{DateFormat};
 
-        $date_format =~ s/\%y/$year/i;
-        $date_format =~ s/\%m/$month/i;
-        $date_format =~ s/\%d/$day/i;
-        $date_format =~ s/\%M/$Translate{$month}/i;
+        $date_format =~ s/\%y/$year/;
+        $date_format =~ s/\%m/$month/;
+        $date_format =~ s/\%d/$day/;
+        $date_format =~ s/\%M/$Translate{$month}/;
 
 	$date_format =~ s/([^\p{Letter}\p{Digit}]){2,3}/$1/;
 	$date_format =~ s/^[^\p{Letter}\p{Digit}]+//;
