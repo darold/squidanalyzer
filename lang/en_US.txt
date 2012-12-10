@@ -24,6 +24,9 @@ CharSet				utf-8
 10				Oct
 11				Nov
 12				Dec
+KB				Kilo bytes
+MB				Mega bytes
+GB				Giga bytes
 Requests			Requests
 Bytes				Bytes
 Megabytes			Mega bytes

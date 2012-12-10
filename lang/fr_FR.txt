@@ -24,6 +24,9 @@ CharSet				iso-8859-15
 10				Oct
 11				Nov
 12				Déc
+KB				Kilo octets
+MB				Méga octets
+GB				Giga octets
 Requests			Requêtes
 Bytes				Octets
 Megabytes			Méga octets

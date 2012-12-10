@@ -24,6 +24,9 @@ CharSet				iso-8859-15
 10				Okt
 11				Nov
 12				Dez
+KB				Kilobytes
+MB				Megabytes
+GB				Gigabytes
 Requests			Anfragen
 Bytes				Bytes
 Megabytes			Megabytes

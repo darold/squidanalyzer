@@ -49,6 +49,9 @@ my %Translate = (
 	'10' => 'Oct',
 	'11' => 'Nov',
 	'12' => 'Dec',
+	'KB' => 'Kilo bytes',
+	'MB' => 'Mega bytes',
+	'GB' => 'Giga bytes',
 	'Bytes' => 'Bytes',
 	'Total' => 'Total',
 	'Years' => 'Years',
@@ -470,6 +473,21 @@ sub _init
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
 	$self->{TopNumber} = $options{TopNumber} || 10;
+	$self->{TransfertUnit} = $options{TransfertUnit} || 'BYTES';
+	if (!grep(/^$self->{TransfertUnit}$/i, 'BYTES', 'KB', 'MB', 'GB')) {
+		die "ERROR: TransfertUnit must be one of these values: KB, MB or GB\n";
+	} else {
+		if (uc($self->{TransfertUnit}) eq 'BYTES') {
+			$self->{TransfertUnitValue} = 1;
+			$self->{TransfertUnit} = 'Bytes';
+		} elsif (uc($self->{TransfertUnit}) eq 'KB') {
+			$self->{TransfertUnitValue} = 1024;
+		} elsif (uc($self->{TransfertUnit}) eq 'MB') {
+			$self->{TransfertUnitValue} = 1024*1024;
+		} elsif (uc($self->{TransfertUnit}) eq 'GB') {
+			$self->{TransfertUnitValue} = 1024*1024*1024;
+		}
+	} 
 
 	# Init statistics storage hashes
 	$self->_clear_stats();
@@ -1311,9 +1329,9 @@ sub _print_cache_stat
 	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
 
 	my $total_cost = sprintf("%2.2f", int($total_bytes/1000000) * $self->{CostPrice});
-	my $comma_bytes = &format_bytes($total_bytes);
-	my $hit_bytes = &format_bytes($code_stat{HIT}{bytes});
-	my $miss_bytes = &format_bytes($code_stat{MISS}{bytes});
+	my $comma_bytes = $self->format_bytes($total_bytes);
+	my $hit_bytes = $self->format_bytes($code_stat{HIT}{bytes});
+	my $miss_bytes = $self->format_bytes($code_stat{MISS}{bytes});
 	my $colspn = 5;
 	$colspn = 6 if ($self->{CostPrice});
 
@@ -1400,7 +1418,7 @@ sub _print_cache_stat
 <table class="stata">
 <tr>
 <th colspan="2" class="headerBlack">$Translate{'Requests'}</th>
-<th colspan="2" class="headerBlack">$Translate{'Bytes'}</th>
+<th colspan="2" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
 <th colspan="$colspn" class="headerBlack">$Translate{'Total'}</th>
 </tr>
 <tr>
@@ -1409,7 +1427,7 @@ sub _print_cache_stat
 <th>$Translate{'Hit'}</th>
 <th>$Translate{'Miss'}</th>
 <th>$Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Sites'}</th>
 <th>$Translate{'Domains'}</th>
@@ -1511,7 +1529,7 @@ sub _print_mime_stat
 <th>$Translate{'Mime_link'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 };
 	print $out qq{
@@ -1528,7 +1546,7 @@ sub _print_mime_stat
 		my $b_percent = '0.0';
 		$b_percent = sprintf("%2.2f", ($mime_stat{$_}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $total_cost = sprintf("%2.2f", int($mime_stat{$_}{bytes}/1000000) * $self->{CostPrice});
-		my $comma_bytes = &format_bytes($mime_stat{$_}{bytes});
+		my $comma_bytes = $self->format_bytes($mime_stat{$_}{bytes});
 		print $out qq{
 <tr>
 <td>$_</td>
@@ -1695,7 +1713,7 @@ sub _print_network_stat
 <th>$Translate{'Network_link'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -1734,7 +1752,7 @@ sub _print_network_stat
 				}
 			}
 		}
-		my $comma_bytes = &format_bytes($network_stat{$net}{bytes});
+		my $comma_bytes = $self->format_bytes($network_stat{$net}{bytes});
 		print $out qq{
 <tr>
 <td><a href="networks/$net/$net.html">$show</a></td>
@@ -1798,9 +1816,10 @@ sub _print_network_stat
 		print $outnet qq{<td>$network_bytes</td></tr></table>};
 		$network_bytes = '';
 		my $retuser = $self->_print_netuser_stat($outdir, \$outnet, $net);
+		my $comma_largest = $self->format_bytes($network_stat{$net}{largest_file});
 		print $out qq{
 <td>$retuser</td>
-<td>$network_stat{$net}{largest_file}</td>
+<td>$comma_largest</td>
 <td>$network_stat{$net}{url}</td>
 </tr>
 };
@@ -1955,7 +1974,7 @@ sub _print_user_stat
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -1991,7 +2010,7 @@ sub _print_user_stat
 			}
 		}
 		my $url = &escape($usr);
-		my $comma_bytes = &format_bytes($user_stat{$usr}{bytes});
+		my $comma_bytes = $self->format_bytes($user_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
 			print $out qq{
 <tr>
@@ -2014,8 +2033,9 @@ sub _print_user_stat
 	print $out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
+	my $comma_largest = $self->format_bytes($user_stat{$usr}{largest_file});
 	print $out qq{
-<td>$user_stat{$usr}{largest_file}</td>
+<td>$comma_largest</td>
 <td>$user_stat{$usr}{url}</td>
 </tr>};
 
@@ -2135,7 +2155,7 @@ sub _print_netuser_stat
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -2167,7 +2187,7 @@ sub _print_netuser_stat
 			}
 		}
 		my $url = &escape($usr);
-		my $comma_bytes = &format_bytes($netuser_stat{$usr}{bytes});
+		my $comma_bytes = $self->format_bytes($netuser_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
 			print $$out qq{
 <tr>
@@ -2190,8 +2210,9 @@ sub _print_netuser_stat
 		print $$out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
+		my $comma_largest = $self->format_bytes($netuser_stat{$usr}{largest_file});
 		print $$out qq{
-<td>$netuser_stat{$usr}{largest_file}</td>
+<td>$comma_largest</td>
 <td>$netuser_stat{$usr}{url}</td>
 </tr>};
 	}
@@ -2251,7 +2272,7 @@ sub _print_user_detail
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -2274,7 +2295,7 @@ sub _print_user_detail
 		$d_percent = sprintf("%2.2f", ($url_stat{$url}{duration}/$total_duration) * 100) if ($total_duration);
 		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($url_stat{$url}{bytes}/1000000) * $self->{CostPrice});
-		my $comma_bytes = &format_bytes($url_stat{$url}{bytes});
+		my $comma_bytes = $self->format_bytes($url_stat{$url}{bytes});
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
@@ -2366,7 +2387,7 @@ sub _print_top_url_stat
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -2393,7 +2414,7 @@ sub _print_top_url_stat
 			$d_percent = sprintf("%2.2f", ($url_stat{$u}{duration}/$total_duration) * 100) if ($total_duration);
 			my $total_cost = sprintf("%2.2f", int($url_stat{$u}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($url_stat{$u}{duration}/1000));
-			my $comma_bytes = &format_bytes($url_stat{$u}{bytes});
+			my $comma_bytes = $self->format_bytes($url_stat{$u}{bytes});
 			my $firsthit = '-';
 			if ($url_stat{$u}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$u}{firsthit})));
@@ -2564,7 +2585,7 @@ sub _print_top_domain_stat
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
 <th>% $Translate{'Requests'}</th>
-<th>$Translate{'Bytes'}</th>
+<th>$Translate{$self->{TransfertUnit}}</th>
 <th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
 <th>% $Translate{'Time'}</th>
@@ -2591,7 +2612,7 @@ sub _print_top_domain_stat
 			$d_percent = sprintf("%2.2f", ($domain_stat{$_}{duration}/$total_duration) * 100) if ($total_duration);
 			my $total_cost = sprintf("%2.2f", int($domain_stat{$_}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($domain_stat{$_}{duration}/1000));
-			my $comma_bytes = &format_bytes($domain_stat{$_}{bytes});
+			my $comma_bytes = $self->format_bytes($domain_stat{$_}{bytes});
 			my $firsthit = '-';
 			if ($domain_stat{$_}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$_}{firsthit})));
@@ -2700,7 +2721,7 @@ sub _gen_summary
 	<tr>
 	<th class="nobg"></th>
 	<th colspan="2" scope="col" class="headerBlack">$Translate{'Requests'}</th>
-	<th colspan="2" scope="col" class="headerBlack">$Translate{'Bytes'}</th>
+	<th colspan="2" scope="col" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
 	<th colspan="$colspn" scope="col" class="headerBlack">$Translate{'Total'}</th>
 	</tr>
 	<tr>
@@ -2710,7 +2731,7 @@ sub _gen_summary
 	<th scope="col">$Translate{'Hit'}</th>
 	<th scope="col">$Translate{'Miss'}</th>
 	<th scope="col">$Translate{'Requests'}</th>
-	<th scope="col">$Translate{'Bytes'}</th>
+	<th scope="col">$Translate{$self->{TransfertUnit}}</th>
 };
 	print $out qq{
 	<th scope="col">$Translate{'Cost'} $self->{Currency}</th>
@@ -2721,9 +2742,9 @@ sub _gen_summary
 	<tbody>
 };
 	foreach my $year (sort {$b <=> $a} keys %code_stat) {
-		my $comma_bytes = &format_bytes($total_bytes{$year});
-		my $hit_bytes = &format_bytes($code_stat{$year}{HIT}{bytes});
-		my $miss_bytes = &format_bytes($code_stat{$year}{MISS}{bytes});
+		my $comma_bytes = $self->format_bytes($total_bytes{$year});
+		my $hit_bytes = $self->format_bytes($code_stat{$year}{HIT}{bytes});
+		my $miss_bytes = $self->format_bytes($code_stat{$year}{MISS}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
 		print $out qq{
 	<tr>
@@ -2915,7 +2936,12 @@ sub set_date
 # Format bytes with comma for better reading
 sub format_bytes
 {
-	my $text = reverse $_[0];
+	my ($self, $text) = @_;
+
+	if ($self->{TransfertUnitValue} > 1) {
+		$text = sprintf("%.2f", $text / $self->{TransfertUnitValue});
+	}
+	$text = reverse $text;
 
 	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
 
