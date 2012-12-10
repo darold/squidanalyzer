@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2012-12-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2012-12-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -284,6 +284,10 @@ Here follow the configuration directives used by Squid Analyzer.
 .IX Item "Output output_directory"
 Where SquidAnalyzer should dump all \s-1HTML\s0, data and images files.
 You should give a path that can be read by a Web browser.
+.IP "WebUrl" 4
+.IX Item "WebUrl"
+The \s-1URL\s0 of the SquidAnalyzer javascript, \s-1HTML\s0 and images files.
+Default: /squidreport
 .IP "LogFile squid_access_log_file" 4
 .IX Item "LogFile squid_access_log_file"
 Set the path to the Squid log file.
@@ -388,23 +392,20 @@ you can have multiple line of the same exclusion type.
 Used to set the translation file to be used. Value must be set to
 a file containing all string translated. See the lang directory
 for translation files. Default is defined internally in English.
-.IP "HeaderFile custom_header_file" 4
-.IX Item "HeaderFile custom_header_file"
-Custom header. Must be a path to a text file containing \s-1HTML\s0 code that
-will be placed just after the body tag and just before the program name
-and version. Default is defined internally if this directive is not set
-to a valid file.
-.IP "FooterFile custom_footer_file" 4
-.IX Item "FooterFile custom_footer_file"
-Custom Footer. Must be a path to a text file containing \s-1HTML\s0 code that
-will be placed at the bottom of each page just before the end if the
-body tag. Default is defined internally if this directive is not set
-to a valid file.
+.IP "DateFormat" 4
+.IX Item "DateFormat"
+Date format used to display date (year = \f(CW%y\fR, month = \f(CW%m\fR and day = \f(CW%d\fR)
+You can also use \f(CW%M\fR to replace month by its 3 letters abbreviation.
+Default: \f(CW%y\fR\-%m\-%d
 .IP "SiblingHit" 4
 .IX Item "SiblingHit"
 Adds peer cache hit (\s-1CD_SIBLING_HIT\s0) to be taken has local cache hit.
 Enabled by default, you must disabled it if you don't want to report
 peer cache hit onto your stats.
+.IP "TransfertUnit" 4
+.IX Item "TransfertUnit"
+Allow to change the default unit used to display transfert size. Default
+is \s-1BYTES\s0, other possible values are \s-1KB\s0, \s-1MB\s0 and \s-1GB\s0.
 .SH "AUTHOR"
 .IX Header "AUTHOR"
 Gilles \s-1DAROLD\s0 <gilles@darold.net>
