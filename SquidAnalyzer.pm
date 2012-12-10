@@ -1413,7 +1413,7 @@ sub _print_cache_stat
 <th>$Translate{'Domains'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
 </tr>
@@ -1503,17 +1503,17 @@ sub _print_mime_stat
 
 	print $out "<h3>$Translate{'Mime_number'}: $ntype</h3>\n";
 	print $out qq{
-<table class="sortable stata" cellpadding=1 cellspacing=1 align=center>
+<table class="sortable stata">
 <thead>
 <tr>
-<th nowrap>$Translate{'Mime_link'}</th>
+<th>$Translate{'Mime_link'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
 </tr>
@@ -1527,8 +1527,8 @@ sub _print_mime_stat
 		my $total_cost = sprintf("%2.2f", int($mime_stat{$_}{bytes}/1000000) * $self->{CostPrice});
 		my $comma_bytes = &format_bytes($mime_stat{$_}{bytes});
 		print $out qq{
-<tr align=right>
-<td align=left>$_</td>
+<tr>
+<td>$_</td>
 <td>$mime_stat{$_}{hits}</td>
 <td>$c_percent</td>
 <td>$comma_bytes</td>
@@ -1685,22 +1685,22 @@ sub _print_network_stat
 	$network_bytes = '';
 	print $out "<h3>$Translate{'Network_number'}: $nnet</h3>\n";
 	print $out qq{
-<table class="sortable stata" cellpadding=1 cellspacing=1 align=center">
+<table class="sortable stata">
 <thead>
 <tr>
 <th>$Translate{'Network_link'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
-<th nowrap>$Translate{'Users'}</th>
+<th>$Translate{'Users'}</th>
 <th>$Translate{'Largest'}</th>
 <th>$Translate{'Url'}</th>
 </tr>
@@ -1731,8 +1731,8 @@ sub _print_network_stat
 		}
 		my $comma_bytes = &format_bytes($network_stat{$net}{bytes});
 		print $out qq{
-<tr align=right>
-<td align=left nowrap><a href="networks/$net/$net.html">$show</a></td>
+<tr>
+<td><a href="networks/$net/$net.html">$show</a></td>
 <td>$network_stat{$net}{hits}</td>
 <td>$h_percent</td>
 <td>$comma_bytes</td>
@@ -1796,7 +1796,7 @@ sub _print_network_stat
 		print $out qq{
 <td>$retuser</td>
 <td>$network_stat{$net}{largest_file}</td>
-<td align=left>$network_stat{$net}{url}</td>
+<td>$network_stat{$net}{url}</td>
 </tr>
 };
 		print $outnet qq{
@@ -1946,17 +1946,17 @@ sub _print_user_stat
 	print $out qq{
 <table class="sortable stata" >
 <thead>
-<tr align="center">
+<tr>
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
 <th>$Translate{'Largest'}</th>
@@ -1988,13 +1988,13 @@ sub _print_user_stat
 		my $comma_bytes = &format_bytes($user_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
 			print $out qq{
-<tr align=right>
-<td align=left nowrap><a href="users/$url/$url.html">$show</a></td>
+<tr>
+<td><a href="users/$url/$url.html">$show</a></td>
 };
 		} else {
 			print $out qq{
-<tr align=right>
-<td align=left nowrap>$show</td>
+<tr>
+<td>$show</td>
 };
 		}
 		print $out qq{
@@ -2010,7 +2010,7 @@ sub _print_user_stat
 } if ($self->{CostPrice});
 	print $out qq{
 <td>$user_stat{$usr}{largest_file}</td>
-<td align=left>$user_stat{$usr}{url}</td>
+<td>$user_stat{$usr}{url}</td>
 </tr>};
 
 		if (!-d "$outdir/users/$url") {
@@ -2127,14 +2127,14 @@ sub _print_netuser_stat
 <tr>
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $$out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $$out qq{
 <th>$Translate{'Largest'}</th>
@@ -2162,13 +2162,13 @@ sub _print_netuser_stat
 		my $comma_bytes = &format_bytes($netuser_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
 			print $$out qq{
-<tr align=right>
-<td align=left><a href="../../users/$url/$url.html">$show</a></td>
+<tr>
+<td><a href="../../users/$url/$url.html">$show</a></td>
 };
 		} else {
 			print $$out qq{
-<tr align=right>
-<td align=left>$show</td>
+<tr>
+<td>$show</td>
 };
 		}
 		print $$out qq{
@@ -2184,7 +2184,7 @@ sub _print_netuser_stat
 } if ($self->{CostPrice});
 		print $$out qq{
 <td>$netuser_stat{$usr}{largest_file}</td>
-<td align=left>$netuser_stat{$usr}{url}</td>
+<td>$netuser_stat{$usr}{url}</td>
 </tr>};
 	}
 	print $$out qq{
@@ -2238,17 +2238,17 @@ sub _print_user_detail
 	print $$out qq{
 <table class="sortable stata">
 <thead>
-<tr align="center">
+<tr>
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $$out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $$out qq{
 </tr>
@@ -2266,8 +2266,8 @@ sub _print_user_detail
 		my $total_cost = sprintf("%2.2f", int($url_stat{$url}{bytes}/1000000) * $self->{CostPrice});
 		my $comma_bytes = &format_bytes($url_stat{$url}{bytes});
 		print $$out qq{
-<tr align="right">
-<td align="left"><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
+<tr>
+<td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
 <td>$url_stat{$url}{hits}</td>
 <td>$h_percent</td>
 <td>$comma_bytes</td>
@@ -2354,14 +2354,14 @@ sub _print_top_url_stat
 <tr>
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
@@ -2403,8 +2403,9 @@ sub _print_top_url_stat
 				}
 			}
 			print $out qq{
-<tr align=right>
-<td align=left><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
+<tbody>
+<tr>
+<td><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
 <td>$url_stat{$u}{hits}</td>
 <td>$c_percent</td>
 <td>$comma_bytes</td>
@@ -2424,7 +2425,7 @@ sub _print_top_url_stat
 			$i++;
 			last if ($i > $self->{TopNumber});
 		}
-		print $out qq{</table>};
+		print $out qq{</tbody></table>};
 	}
 
 	print $out qq{
@@ -2551,14 +2552,14 @@ sub _print_top_domain_stat
 <tr>
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'}</th>
-<th nowrap>% $Translate{'Requests'}</th>
+<th>% $Translate{'Requests'}</th>
 <th>$Translate{'Bytes'}</th>
-<th nowrap>% $Translate{'Bytes'}</th>
+<th>% $Translate{'Bytes'}</th>
 <th>$Translate{'Duration'}</th>
-<th nowrap>% $Translate{'Time'}</th>
+<th>% $Translate{'Time'}</th>
 };
 	print $out qq{
-<th nowrap>$Translate{'Cost'} $self->{Currency}</th>
+<th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
@@ -2600,8 +2601,9 @@ sub _print_top_domain_stat
 				}
 			}
 			print $out qq{
-<tr align=right>
-<td align=left>*.$_</td>
+<tbody>
+<tr>
+<td>*.$_</td>
 <td>$domain_stat{$_}{hits}</td>
 <td>$c_percent</td>
 <td>$comma_bytes</td>
@@ -2621,7 +2623,7 @@ sub _print_top_domain_stat
 			$i++;
 			last if ($i > $self->{TopNumber});
 		}
-		print $out qq{</table>};
+		print $out qq{</tbody></table>};
 	}
 
 	print $out qq{
@@ -3004,7 +3006,7 @@ sub flotr2_bargraph
 <script type="text/javascript">
 (function mouse_zoom(container) {
 
-//document.writeln('<table align="center"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
+//document.writeln('<table class="tbbutton"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
 //	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
 //	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;"></td></tr><tr><td>&nbsp;</td></tr></table>'
 //	);
