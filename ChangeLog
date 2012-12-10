@@ -1,5 +1,53 @@
 Revision history for SquidAnalyzer
 
+5.0 - Mon Dec 10 22:24:23 CET 2012
+
+Thanks to the great work of Nathanael Bonin, SquidAnalyzer has now a new design.
+I also replaced all GD graphs by the use of a Javascript Flotr2 graphic library,
+that mean that there is no more needs of Perl modules dependancies to install
+SquidAnalyzer.
+
+	- Update documentation.
+	- Add TransfertUnit configuration directive to allow changing default
+	  Bytes transfert unit. Possible values are BYTES, KB, MB and GB.
+	  Thanks to Nathanael Bonin for the feature request.
+	- Fix date encoding with call to date+iconv or fallback to strftime().
+	- Fix sorttable with missing tbody tag. Thanks to Nathanael Bonin for
+	  the patch.
+	- Remove some hardcoded CSS from the html code. Thanks to Nathanael
+	  Bonin for the patches.
+	- Fix some translation issues.
+	- Improve CSS and dynamic html general design. Thanks to Nathanael Bonin
+	  for the patches.
+	- Fix some untranslated string. Thanks to Nathanael Bonin for the patch.
+	- Fix accent within report, now SquidAnalyzer will use the CharSet
+	  translation directive to set the charset following the language.
+	  Default to utf-8, french, german and portuges will use iso-8859-15.
+	- Fix github issue #5 where per user/ip network stats was wrong and very
+	  high. Thanks to Ben Tullis for the report.
+	- Removed obsolete files.
+	- Fix several design issues, moved png images in a dedicated directory.
+	  Thanks to Nathanael Bonin for the patches.
+	- Reorder source tree and apply tree change on Perl install.
+	- Removed FooterFile, no more used.
+	- Remove code for graphs generated using GD::Graph libraries, replaced
+	  by the Javascript library Flotr2.
+	- Fix extra .0 in networks report. Thanks to Ben Tullis for the report.
+	- Add the use %M to replace month by its 3 letters abbreviation into
+	  DateFormat configuration directive. Thanks to pk-its for the feature
+	  request.
+	- Add missing german translation. Thanks to pk-its for the patch.
+	- Remove space in user alias to prevent corruption of data files. Thanks
+	  to Robert Becskei for the report.
+	- Fix stat_user.dat format error when username have a space in its login
+	  name. Thanks to Moise Michel for the report.
+	- Force date/time used in report generation date to used 24h notation.
+	  Thanks to Klaus Tachtler for the report
+	- Fix install of squidanalyzer.conf, network-aliases, user-aliases  and
+	  excluded to be copied with the .orig extention so that nones of these
+	  file can be overriden at upgrade. Thanks to Klaus Tachtler for the
+	  report.
+
 4.4 - Tue Aug 21 21:01:43 CEST 2012
 
 	- Add support to bzip2 compressed log file. Feature request by Edmonds
