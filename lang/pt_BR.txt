@@ -98,3 +98,4 @@ Last_visit			Ultima visita
 Globals_Statistics		Estatísticas globais
 Legend				Legenda
 File_Generated			Gerado pela
+Click_year_stat			Click on year's statistics link for details

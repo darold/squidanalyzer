@@ -97,3 +97,4 @@ Last_visit			Letzter Besuch
 Globals_Statistics		Globals Statistik
 Legend				Beschriftung
 File_Generated			Erzeugt durch
+Click_year_stat			Click on year's statistics link for details

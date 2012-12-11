@@ -98,4 +98,5 @@ Globals_Statistics		Statistiques Globales
 Legend				Légende
 File_Generated			Généré par
 Up_link				Haut de Page
+Click_year_stat			Cliquez sur le lien des statistiques annuelles pour plus de détail
 
