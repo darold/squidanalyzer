@@ -48,6 +48,19 @@ SquidAnalyzer.
 	  file can be overriden at upgrade. Thanks to Klaus Tachtler for the
 	  report.
 
+UPGRADE: You must reinstall all but backward compatibility is fully preserved. Even
+if backward compatibility is preserved on data files, the HTML and graph have changed,
+so after re-installing SquidAnalyzer you may want to run squid-analyzer with the
+--rebuild command line option to regenerate those files. So run the following commands:
+        
+        tar xzf SquidAnalyzer-5.0.tar.gz
+        cd SquidAnalyzer-5.0/
+        perl Makefile.PL HTMLDIR=/var/www/squidanalyzer
+        make && make install
+        /usr/local/bin/squid-analyzer --rebuild
+        
+should be the normal procedure to upgrade. Change the path to the HTML output dir if required.
+
 4.4 - Tue Aug 21 21:01:43 CEST 2012
 
 	- Add support to bzip2 compressed log file. Feature request by Edmonds
