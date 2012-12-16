@@ -1510,10 +1510,8 @@ sub _print_mime_stat
 <thead>
 <tr>
 <th>$Translate{'Mime_link'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -1533,10 +1531,8 @@ sub _print_mime_stat
 		print $out qq{
 <tr>
 <td>$_</td>
-<td>$mime_stat{$_}{hits}</td>
-<td>$c_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
+<td>$mime_stat{$_}{hits} <span class="italicPercent">($c_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -1694,12 +1690,9 @@ sub _print_network_stat
 <thead>
 <tr>
 <th>$Translate{'Network_link'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -1739,12 +1732,9 @@ sub _print_network_stat
 		print $out qq{
 <tr>
 <td><a href="networks/$net/$net.html">$show</a></td>
-<td>$network_stat{$net}{hits}</td>
-<td>$h_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$network_stat{$net}{duration}</td>
-<td>$d_percent</td>
+<td>$network_stat{$net}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$network_stat{$net}{duration} <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -1955,12 +1945,9 @@ sub _print_user_stat
 <thead>
 <tr>
 <th>$Translate{'Users'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -2006,12 +1993,9 @@ sub _print_user_stat
 };
 		}
 		print $out qq{
-<td>$user_stat{$usr}{hits}</td>
-<td>$h_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$user_stat{$usr}{duration}</td>
-<td>$d_percent</td>
+<td>$user_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$user_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -2136,12 +2120,9 @@ sub _print_netuser_stat
 <thead>
 <tr>
 <th>$Translate{'Users'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -2183,12 +2164,9 @@ sub _print_netuser_stat
 };
 		}
 		print $$out qq{
-<td>$netuser_stat{$usr}{hits}</td>
-<td>$h_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$netuser_stat{$usr}{duration}</td>
-<td>$d_percent</td>
+<td>$netuser_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$netuser_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
 };
 		print $$out qq{
 <td>$total_cost</td>
@@ -2253,12 +2231,9 @@ sub _print_user_detail
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -2282,12 +2257,9 @@ sub _print_user_detail
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
-<td>$url_stat{$url}{hits}</td>
-<td>$h_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$url_stat{$url}{duration}</td>
-<td>$d_percent</td>
+<td>$url_stat{$url}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
 };
 		print $$out qq{
 <td>$total_cost</td>
@@ -2368,12 +2340,9 @@ sub _print_top_url_stat
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -2389,8 +2358,8 @@ sub _print_top_url_stat
 };
 		my $i = 0;
 		foreach my $u (sort { $url_stat{$b}{"\L$tpe\E"} <=> $url_stat{$a}{"\L$tpe\E"} } keys %url_stat) {
-			my $c_percent = '0.0';
-			$c_percent = sprintf("%2.2f", ($url_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
+			my $h_percent = '0.0';
+			$h_percent = sprintf("%2.2f", ($url_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 			my $b_percent = '0.0';
 			$b_percent = sprintf("%2.2f", ($url_stat{$u}{bytes}/$total_bytes) * 100) if ($total_bytes);
 			my $d_percent = '0.0';
@@ -2421,12 +2390,9 @@ sub _print_top_url_stat
 			print $out qq{
 <tr>
 <td><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
-<td>$url_stat{$u}{hits}</td>
-<td>$c_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$duration</td>
-<td>$d_percent</td>
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -2566,12 +2532,9 @@ sub _print_top_domain_stat
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
-<th>$Translate{'Requests'}</th>
-<th>% $Translate{'Requests'}</th>
-<th>$Translate{$self->{TransfertUnit}}</th>
-<th>% $Translate{'Bytes'}</th>
-<th>$Translate{'Duration'}</th>
-<th>% $Translate{'Time'}</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -2587,8 +2550,8 @@ sub _print_top_domain_stat
 };
 		my $i = 0;
 		foreach (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
-			my $c_percent = '0.0';
-			$c_percent = sprintf("%2.2f", ($domain_stat{$_}{hits}/$total_hits) * 100) if ($total_hits);
+			my $h_percent = '0.0';
+			$h_percent = sprintf("%2.2f", ($domain_stat{$_}{hits}/$total_hits) * 100) if ($total_hits);
 			my $b_percent = '0.0';
 			$b_percent = sprintf("%2.2f", ($domain_stat{$_}{bytes}/$total_bytes) * 100) if ($total_bytes);
 			my $d_percent = '0.0';
@@ -2619,12 +2582,9 @@ sub _print_top_domain_stat
 			print $out qq{
 <tr>
 <td>*.$_</td>
-<td>$domain_stat{$_}{hits}</span></td>
-<td>$c_percent</td>
-<td>$comma_bytes</td>
-<td>$b_percent</td>
-<td>$duration</span></td>
-<td>$d_percent</td>
+<td>$domain_stat{$_}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
 <td>$total_cost</td>
