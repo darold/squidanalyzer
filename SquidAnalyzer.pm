@@ -1936,7 +1936,7 @@ sub _print_user_stat
 	my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
 				join(',', @hits), $Translate{'Hit_graph'});
 	@hits = ();
-	print $out qq{<table><tr><td>$user_hits</td>};
+	print $out qq{<table class="graphs"><tr><td>$user_hits</td>};
 	$user_hits = '';
 
 	$t1 = $Translate{'Graph_cache_byte_title'};
