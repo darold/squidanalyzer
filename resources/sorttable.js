@@ -264,8 +264,18 @@ sorttable = {
     return aa-bb;
   },
   sort_alpha: function(a,b) {
-    if (a[0]==b[0]) return 0;
-    if (a[0]<b[0]) return -1;
+    // SquidAnalyzer: remove percentage for numeric sort
+    if (a[0].replace(/ <.*\(.*%\).*/, '')) {
+	b[0].replace(/ <.*\(.*%\).*/,''); 
+	aa = parseFloat(a[0].replace(/[^0-9.-]/g,''));
+	if (isNaN(aa)) aa = 0;
+	bb = parseFloat(b[0].replace(/[^0-9.-]/g,'')); 
+	if (isNaN(bb)) bb = 0;
+	return aa-bb;
+    } else {
+	if (a[0]==b[0]) return 0;
+	if (a[0]<b[0]) return -1;
+    }
     return 1;
   },
   sort_ddmm: function(a,b) {
