@@ -2113,7 +2113,7 @@ sub _print_netuser_stat
 	my $nuser = scalar keys %netuser_stat;
 
 	print $$out qq{
-<b>$Translate{'User_number'}:</b> $nuser<br>
+<h3>$Translate{'User_number'}: $nuser</h3>
 };
 	print $$out qq{
 <table class="sortable stata">
@@ -2224,7 +2224,7 @@ sub _print_user_detail
 	my $nurl = scalar keys %url_stat;
 
 	print $$out qq{
-<b>$Translate{'Url_number'}:</b> $nurl<br>
+<h3>$Translate{'Url_number'}: $nurl</h3>
 };
 	print $$out qq{
 <table class="sortable stata">
