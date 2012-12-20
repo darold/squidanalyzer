@@ -399,6 +399,7 @@ sub _init
 	$options{LogFile} = $log_file if ($log_file);
 
 	# Configuration options
+	$self->{MinPie} = $options{MinPie} || 2;
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
 	$self->{Output} = $options{Output} || '';
@@ -1644,46 +1645,46 @@ sub _print_network_stat
 		$title = $Translate{'Monthly'} || 'Monthly';
 		$unit = $Translate{'Months'} || 'Months';
 	}
-
-	my @hits = ();
-	my @bytes = ();
-	for ("$first" .. "$last") {
-		if (exists $total_net_detail{$_}{hits}) {
-			push(@hits, "[ $_, $total_net_detail{$_}{hits} ]");
-		} else {
-			push(@hits, "[ $_, 0 ]");
-		}
-		if (exists $total_net_detail{$_}{bytes}) {
-			push(@bytes, "[ $_, " . int($total_net_detail{$_}{bytes}/1000000) . " ]");
-		} else {
-			push(@bytes, "[ $_, 0 ]");
-		}
-	}
-	%total_net_detail = ();
-
-	my $t1 = $Translate{'Graph_cache_hit_title'};
-	$t1 =~ s/\%s/$title/;
-	$t1 = "$t1 $stat_date";
-	my $xlabel = $unit || '';
-	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
-	my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
-				join(',', @hits), $Translate{'Hit_graph'} );
-	@hits = ();
-	print $out qq{<table class="graphs"><tr><td>$network_hits</td>};
-	$network_hits = '';
-
-
-	$t1 = $Translate{'Graph_cache_byte_title'};
-	$t1 =~ s/\%s/$title/;
-	$t1 = "$t1 $stat_date";
-	$xlabel = $unit || '';
-	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
-	my $network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
-				join(',', @bytes), $Translate{'Bytes'} );
-	@bytes = ();
-
-	print $out qq{<td>$network_bytes</td></tr></table>};
-	$network_bytes = '';
+#
+#	my @hits = ();
+#	my @bytes = ();
+#	for ("$first" .. "$last") {
+#		if (exists $total_net_detail{$_}{hits}) {
+#			push(@hits, "[ $_, $total_net_detail{$_}{hits} ]");
+#		} else {
+#			push(@hits, "[ $_, 0 ]");
+#		}
+#		if (exists $total_net_detail{$_}{bytes}) {
+#			push(@bytes, "[ $_, " . int($total_net_detail{$_}{bytes}/1000000) . " ]");
+#		} else {
+#			push(@bytes, "[ $_, 0 ]");
+#		}
+#	}
+#	%total_net_detail = ();
+#
+#	my $t1 = $Translate{'Graph_cache_hit_title'};
+#	$t1 =~ s/\%s/$title/;
+#	$t1 = "$t1 $stat_date";
+#	my $xlabel = $unit || '';
+#	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+#	my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
+#				join(',', @hits), $Translate{'Hit_graph'} );
+#	@hits = ();
+#	print $out qq{<table class="graphs"><tr><td>$network_hits</td>};
+#	$network_hits = '';
+#
+#
+#	$t1 = $Translate{'Graph_cache_byte_title'};
+#	$t1 =~ s/\%s/$title/;
+#	$t1 = "$t1 $stat_date";
+#	$xlabel = $unit || '';
+#	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+#	my $network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
+#				join(',', @bytes), $Translate{'Bytes'} );
+#	@bytes = ();
+#
+#	print $out qq{<td>$network_bytes</td></tr></table>};
+#	$network_bytes = '';
 	print $out "<h3>$Translate{'Network_number'}: $nnet</h3>\n";
 	print $out qq{
 <table class="sortable stata">
@@ -1750,8 +1751,8 @@ sub _print_network_stat
 		$self->_print_header(\$outnet, $self->{menu2}, $cal);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date);
 
-		@hits = ();
-		@bytes = ();
+		my @hits = ();
+		my @bytes = ();
 		for ("$first" .. "$last") {
 			if (exists $detail_network_stat{$net}{$_}{hits}) {
 				push(@hits, "[ $_, " . $detail_network_stat{$net}{$_}{hits} . " ]");
@@ -1766,12 +1767,12 @@ sub _print_network_stat
 		}
 		delete $detail_network_stat{$net};
 
-		$t1 = $Translate{'Graph_cache_hit_title'};
+		my $t1 = $Translate{'Graph_cache_hit_title'};
 		$t1 =~ s/\%s/$title $show/;
 		$t1 = "$t1 $stat_date";
-		$xlabel = $unit || '';
-		$ylabel = $Translate{'Requests_graph'} || 'Requests';
-		$network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
+		my $xlabel = $unit || '';
+		my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+		my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'} );
 		@hits = ();
 		print $outnet qq{<table class="graphs"><tr><td>$network_hits</td>};
@@ -1782,7 +1783,7 @@ sub _print_network_stat
 		$t1 = "$t1 $stat_date";
 		$xlabel = $unit || '';
 		$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
-		$network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
+		my $network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
 					join(',', @bytes), $Translate{'Bytes'} );
 		@bytes = ();
 
@@ -1898,48 +1899,48 @@ sub _print_user_stat
 		$unit = $Translate{'Months'} || 'Months';
 	}
 
-	my @hits = ();
-	my @bytes = ();
-	for ("$first" .. "$last") {
-		if (exists $total_user_detail{$_}{hits}) {
-			push(@hits, "[ $_, $total_user_detail{$_}{hits} ]");
-		} else {
-			push(@hits, "[ $_, 0 ]");
-		}
-		if (exists $total_user_detail{$_}{bytes}) {
-			push(@bytes, "[ $_, " . int($total_user_detail{$_}{bytes}/1000000) . " ]");
-		} else {
-			push(@bytes, "[ $_, 0 ]");
-		}
-	}
+#	my @hits = ();
+#	my @bytes = ();
+#	for ("$first" .. "$last") {
+#		if (exists $total_user_detail{$_}{hits}) {
+#			push(@hits, "[ $_, $total_user_detail{$_}{hits} ]");
+#		} else {
+#			push(@hits, "[ $_, 0 ]");
+#		}
+#		if (exists $total_user_detail{$_}{bytes}) {
+#			push(@bytes, "[ $_, " . int($total_user_detail{$_}{bytes}/1000000) . " ]");
+#		} else {
+#			push(@bytes, "[ $_, 0 ]");
+#		}
+#	}
 	%total_user_detail = ();
 
 	print $out $self->_print_title($Translate{'User_title'}, $stat_date);
 
 	print $out "<h3>$Translate{'User_number'}: $nuser</h3>\n";
-
-	my $t1 = $Translate{'Graph_cache_hit_title'};
-	$t1 =~ s/\%s/$title/;
-	$t1 = "$t1 $stat_date";
-	my $xlabel = $unit || '';
-	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
-	my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
-				join(',', @hits), $Translate{'Hit_graph'});
-	@hits = ();
-	print $out qq{<table class="graphs"><tr><td>$user_hits</td>};
-	$user_hits = '';
-
-	$t1 = $Translate{'Graph_cache_byte_title'};
-	$t1 =~ s/\%s/$title/;
-	$t1 = "$t1 $stat_date";
-	$xlabel = $unit || '';
-	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
-	my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
-				join(',', @bytes), $Translate{'Bytes'});
-	@bytes = ();
-	print $out qq{<td>$user_bytes</td></tr></table>};
-	$user_bytes = '';
-
+#
+#	my $t1 = $Translate{'Graph_cache_hit_title'};
+#	$t1 =~ s/\%s/$title/;
+#	$t1 = "$t1 $stat_date";
+#	my $xlabel = $unit || '';
+#	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+#	my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
+#				join(',', @hits), $Translate{'Hit_graph'});
+#	@hits = ();
+#	print $out qq{<table class="graphs"><tr><td>$user_hits</td>};
+#	$user_hits = '';
+#
+#	$t1 = $Translate{'Graph_cache_byte_title'};
+#	$t1 =~ s/\%s/$title/;
+#	$t1 = "$t1 $stat_date";
+#	$xlabel = $unit || '';
+#	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+#	my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
+#				join(',', @bytes), $Translate{'Bytes'});
+#	@bytes = ();
+#	print $out qq{<td>$user_bytes</td></tr></table>};
+#	$user_bytes = '';
+#
 	print $out qq{
 <table class="sortable stata" >
 <thead>
@@ -2016,8 +2017,8 @@ sub _print_user_stat
 		$self->_print_header(\$outusr, $self->{menu2}, $cal);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date);
 
-		@hits = ();
-		@bytes = ();
+		my @hits = ();
+		my @bytes = ();
 		for ("$first" .. "$last") {
 			if (exists $detail_user_stat{$usr}{$_}{hits}) {
 				push(@hits, "[ $_, $detail_user_stat{$usr}{$_}{hits} ]");
@@ -2032,12 +2033,12 @@ sub _print_user_stat
 		}
 		delete $detail_user_stat{$usr};
 
-		$t1 = $Translate{'Graph_cache_hit_title'};
+		my $t1 = $Translate{'Graph_cache_hit_title'};
 		$t1 =~ s/\%s/$title $show/;
 		$t1 = "$t1 $stat_date";
-		$xlabel = $unit || '';
-		$ylabel = $Translate{'Requests_graph'} || 'Requests';
-		$user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
+		my $xlabel = $unit || '';
+		my $ylabel = $Translate{'Requests_graph'} || 'Requests';
+		my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'});
 		@hits = ();
 		print $outusr qq{<table class="graphs"><tr><td>$user_hits</td>};
@@ -2046,8 +2047,8 @@ sub _print_user_stat
 		$t1 = $Translate{'Graph_cache_byte_title'};
 		$t1 =~ s/\%s/$title $show/;
 		$t1 = "$t1 $stat_date";
-		my $xlabel = $unit || '';
-		my $ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
+		$xlabel = $unit || '';
+		$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
 		my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
 					join(',', @bytes), $Translate{'Bytes'});
 		@bytes = ();
@@ -2508,17 +2509,36 @@ sub _print_top_domain_stat
 			print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
 			my %data = ();
+			my $total_hits = 0;
 			foreach my $dom (keys %perdomain) {
-				$data{$dom} = $perdomain{$dom}{hits};
+				$total_hits += $perdomain{$dom}{hits};
+			}
+			$total_hits ||= 1;
+			foreach my $dom (keys %perdomain) {
+				if (($perdomain{$dom}{hits}/$total_hits)*100 > $self->{MinPie}) {
+					$data{$dom} = $perdomain{$dom}{hits};
+				} else {
+					$data{'others'} += $perdomain{$dom}{hits};
+				}
 			}
 			my $title = "$Translate{'Domain_graph_hits_title'} $stat_date";
 			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, '', %data);
 			print $out qq{<table class="graphs"><tr><td>$domain_hits</td>};
 			$domain_hits = '';
 			%data = ();
+			my $total_bytes = 0;
 			foreach my $dom (keys %perdomain) {
-				$data{$dom} = int($perdomain{$dom}{bytes}/1000000);
+				$total_bytes += $perdomain{$dom}{bytes};
 			}
+			$total_bytes ||= 1;
+			foreach my $dom (keys %perdomain) {
+				if (($perdomain{$dom}{bytes}/$total_bytes)*100 > $self->{MinPie}) {
+					$data{$dom} = int($perdomain{$dom}{bytes}/1000000);
+				} else {
+					$data{'others'} += $perdomain{$dom}{bytes};
+				}
+			}
+			$data{'others'} = int($data{'others'}/1000000);
 			$title = "$Translate{'Domain_graph_bytes_title'} $stat_date";
 			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, '', %data);
 			print $out qq{<td>$domain_bytes</td></tr></table>};
