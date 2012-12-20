@@ -57,7 +57,7 @@ Cost_help			1 Méga octet =
 Generation			Rapport généré
 Main_cache_title		Statistiques du cache
 Cache_title			Statistiques du cache pour
-Stat_label			Stat
+Stat_label			Stats
 Mime_link			Types MIME
 Network_link			Réseaux
 User_link			Utilisateurs
