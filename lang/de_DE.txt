@@ -94,7 +94,8 @@ Domain_graph_hits_title		Domain Treffer Statistik
 Domain_graph_bytes_title	Domain Bytes Statistik
 First_visit			Erster Besuch
 Last_visit			Letzter Besuch
-Globals_Statistics		Globals Statistik
+Globals_Statistics		&Uuml;bersicht Statistiken
 Legend				Beschriftung
 File_Generated			Erzeugt durch
-Click_year_stat			Click on year's statistics link for details
+Up_link				Zur&uuml;ck zum Anfang der Seite
+Click_year_stat			Klicken Sie bitte auf den Link mit der gew&uuml;nschten Jahreszahl, um in die Detailanzeige zu gelangen
