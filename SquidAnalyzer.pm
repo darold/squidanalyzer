@@ -410,6 +410,7 @@ sub _init
 	$self->{AnonymizeLogin} = $options{AnonymizeLogin} || 0;
 	$self->{SiblingHit} = $options{SiblingHit} || 1;
 	$self->{ImgFormat} = $options{ImgFormat} || 'png';
+	$self->{Locale} = $options{Locale} || '';
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
@@ -1096,7 +1097,11 @@ sub _print_header
 {
 	my ($self, $fileout, $menu, $calendar) = @_;
 
-	my $curdate = `date | iconv -t $Translate{CharSet} 2>/dev/null`;
+	my $lang = '';
+	if ($self->{Locale}) {
+		$lang = 'LANG=' . $self->{Locale};
+	}
+	my $curdate = `$lang date | iconv -t $Translate{CharSet} 2>/dev/null`;
 	chomp($curdate);
 	my $now = $curdate || strftime("%a %b %e %H:%M:%S %Y", localtime);
 

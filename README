@@ -234,6 +234,19 @@ CONFIGURATION
         Allow to change the default unit used to display transfert size.
         Default is BYTES, other possible values are KB, MB and GB.
 
+    MinPie
+        Minimum percentage of data in pie's graphs to not be placed in the
+        others item. Lower values will be summarized into the others item.
+
+    Locale
+        Set this to your locale to display generated date in your language.
+        Default is to use the current locale of the system. If you want date
+        in German for example, set it to de_DE.
+
+                Rapport généré le mardi 11 décembre 2012, 15:13:09 (UTC+0100).
+
+        with a Locale set to fr_FR.
+
 AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
