@@ -1706,7 +1706,7 @@ sub _print_network_stat
 	print $out qq{
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Largest'}</th>
-<th>$Translate{'Url'}</th>
+<th style="text-align: left;">$Translate{'Url'}</th>
 </tr>
 </thead>
 <tbody>
@@ -1799,7 +1799,7 @@ sub _print_network_stat
 		print $out qq{
 <td>$retuser</td>
 <td>$comma_largest</td>
-<td>$network_stat{$net}{url}</td>
+<td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
 };
 		print $outnet qq{
@@ -1960,7 +1960,7 @@ sub _print_user_stat
 } if ($self->{CostPrice});
 	print $out qq{
 <th>$Translate{'Largest'}</th>
-<th>$Translate{'Url'}</th>
+<th style="text-align: left;">$Translate{'Url'}</th>
 </tr>
 </thead>
 <tbody>
@@ -2009,7 +2009,7 @@ sub _print_user_stat
 	my $comma_largest = $self->format_bytes($user_stat{$usr}{largest_file});
 	print $out qq{
 <td>$comma_largest</td>
-<td>$user_stat{$usr}{url}</td>
+<td style="text-align: left;">$user_stat{$usr}{url}</td>
 </tr>};
 
 		if (!-d "$outdir/users/$url") {
@@ -2135,7 +2135,7 @@ sub _print_netuser_stat
 } if ($self->{CostPrice});
 	print $$out qq{
 <th>$Translate{'Largest'}</th>
-<th>$Translate{'Url'}</th>
+<th style="text-align: left;">$Translate{'Url'}</th>
 </tr>
 </thead>
 <tbody>
@@ -2180,7 +2180,7 @@ sub _print_netuser_stat
 		my $comma_largest = $self->format_bytes($netuser_stat{$usr}{largest_file});
 		print $$out qq{
 <td>$comma_largest</td>
-<td>$netuser_stat{$usr}{url}</td>
+<td style="text-align: left;">$netuser_stat{$usr}{url}</td>
 </tr>};
 	}
 	print $$out qq{
