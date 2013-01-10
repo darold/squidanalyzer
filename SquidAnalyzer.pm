@@ -195,10 +195,10 @@ sub parseFile
 		if ( $line =~ s#^(\d+\.\d{3})\s+(\d+)\s+([^\s]+)\s+([^\s]+)\s+(\d+)\s+([^\s]+)\s+## ) {
 			$time = $1 || 0;
 			$elapsed = $2 || 0;
+			$client_ip = $3 || '';
 			$code = $4 || '';
 			$bytes = $5 || 0;
 			$method = $6 || '';
-			$client_ip = $3 || '';
 
 			# Go to last parsed date (incremental mode)
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
@@ -220,7 +220,7 @@ sub parseFile
 				next;
 			}
 
-			if ( $line =~ s#^(.*)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+)\s*## ) {
+			if ( $line =~ s#^(.*?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+)\s*## ) {
 				$url = lc($1) || '';
 				$login = lc($2) || '';
 				$status = lc($3) || '';
