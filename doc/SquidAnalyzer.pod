@@ -197,8 +197,11 @@ run. Default disable.
 
 =item OrderUrl bytes|hits|duration
 
-Used to set how SquidAnalyzer sort Network, User and Url report
-screen. Value can be: bytes, hits or duration. Default is bytes.
+Used to set how SquidAnalyzer sort Network, User and User detailed Urls
+reports screen. Value can be: bytes, hits or duration. Default is bytes.
+Note that OrderUrl is limited to User detailed Urls reports and does not
+apply to Top Url and Top domain report where there is three reports each
+already ordered.
 
 =item OrderMime bytes|hits
 
