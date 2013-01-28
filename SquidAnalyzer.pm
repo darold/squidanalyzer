@@ -1935,48 +1935,12 @@ sub _print_user_stat
 		$unit = $Translate{'Months'} || 'Months';
 	}
 
-#	my @hits = ();
-#	my @bytes = ();
-#	for ("$first" .. "$last") {
-#		if (exists $total_user_detail{$_}{hits}) {
-#			push(@hits, "[ $_, $total_user_detail{$_}{hits} ]");
-#		} else {
-#			push(@hits, "[ $_, 0 ]");
-#		}
-#		if (exists $total_user_detail{$_}{bytes}) {
-#			push(@bytes, "[ $_, " . int($total_user_detail{$_}{bytes}/1000000) . " ]");
-#		} else {
-#			push(@bytes, "[ $_, 0 ]");
-#		}
-#	}
 	%total_user_detail = ();
 
 	print $out $self->_print_title($Translate{'User_title'}, $stat_date);
 
 	print $out "<h3>$Translate{'User_number'}: $nuser</h3>\n";
-#
-#	my $t1 = $Translate{'Graph_cache_hit_title'};
-#	$t1 =~ s/\%s/$title/;
-#	$t1 = "$t1 $stat_date";
-#	my $xlabel = $unit || '';
-#	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
-#	my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
-#				join(',', @hits), $Translate{'Hit_graph'});
-#	@hits = ();
-#	print $out qq{<table class="graphs"><tr><td>$user_hits</td>};
-#	$user_hits = '';
-#
-#	$t1 = $Translate{'Graph_cache_byte_title'};
-#	$t1 =~ s/\%s/$title/;
-#	$t1 = "$t1 $stat_date";
-#	$xlabel = $unit || '';
-#	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
-#	my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
-#				join(',', @bytes), $Translate{'Bytes'});
-#	@bytes = ();
-#	print $out qq{<td>$user_bytes</td></tr></table>};
-#	$user_bytes = '';
-#
+
 	print $out qq{
 <table class="sortable stata" >
 <thead>
@@ -2093,7 +2057,7 @@ sub _print_user_stat
 
 		delete $user_stat{$usr};
 		if ($self->{UrlReport}) {
-			$self->_print_user_detail(\$outusr, $outdir, $usr);
+			$self->_print_user_detail(\$outusr, $outdir, $usr, $type);
 		}
 		$self->_print_footer(\$outusr);
 		$outusr->close();
@@ -2223,7 +2187,7 @@ sub _print_netuser_stat
 
 sub _print_user_detail
 {
-	my ($self, $out, $outdir, $usr) = @_;
+	my ($self, $out, $outdir, $usr, $type) = @_;
 
 	# Load code statistics
 	my $infile = new IO::File;
@@ -2273,6 +2237,10 @@ sub _print_user_detail
 <th>$Translate{'Duration'} (%)</th>
 };
 	print $$out qq{
+<th>$Translate{'First_visit'}</th>
+<th>$Translate{'Last_visit'}</th>
+} if ($type eq 'hour');
+	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
 	print $$out qq{
@@ -2291,6 +2259,26 @@ sub _print_user_detail
 		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($url_stat{$url}{bytes}/1000000) * $self->{CostPrice});
 		my $comma_bytes = $self->format_bytes($url_stat{$url}{bytes});
+		my $firsthit = '-';
+		if ($url_stat{$url}{firsthit}) {
+			$firsthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$url}{firsthit})));
+		}
+		my $lasthit = '-';
+		if ($url_stat{$url}{lasthit}) {
+			$lasthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$url}{lasthit})));
+		}
+		if ($type eq 'hour') {
+			if ($url_stat{$url}{firsthit}) {
+				$firsthit = ucfirst(strftime("%T", localtime($url_stat{$url}{firsthit})));
+			} else {
+				$firsthit = '-';
+			}
+			if ($url_stat{$url}{lasthit}) {
+				$lasthit = ucfirst(strftime("%T", localtime($url_stat{$url}{lasthit})));
+			} else {
+				$firsthit = '-';
+			}
+		}
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
@@ -2298,6 +2286,10 @@ sub _print_user_detail
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
 };
+		print $$out qq{
+<td>$firsthit</td>
+<td>$lasthit</td>
+} if ($type eq 'hour');
 		print $$out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
@@ -2382,12 +2374,12 @@ sub _print_top_url_stat
 <th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
-<th>$Translate{'Cost'} $self->{Currency}</th>
-} if ($self->{CostPrice});
-	print $out qq{
 <th>$Translate{'First_visit'}</th>
 <th>$Translate{'Last_visit'}</th>
-} if ($day);
+} if ($type eq 'hour');
+	print $out qq{
+<th>$Translate{'Cost'} $self->{Currency}</th>
+} if ($self->{CostPrice});
 	print $out qq{
 </tr>
 </thead>
@@ -2432,12 +2424,12 @@ sub _print_top_url_stat
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
-<td>$total_cost</td>
-} if ($self->{CostPrice});
-	print $out qq{
 <td>$firsthit</td>
 <td>$lasthit</td>
-} if ($day);
+} if ($type eq 'hour');
+	print $out qq{
+<td>$total_cost</td>
+} if ($self->{CostPrice});
 	print $out qq{
 </tr>};
 			$i++;
@@ -2593,12 +2585,12 @@ sub _print_top_domain_stat
 <th>$Translate{'Duration'} (%)</th>
 };
 	print $out qq{
-<th>$Translate{'Cost'} $self->{Currency}</th>
-} if ($self->{CostPrice});
-	print $out qq{
 <th>$Translate{'First_visit'}</th>
 <th>$Translate{'Last_visit'}</th>
-} if ($day);
+} if ($type eq 'hour');
+	print $out qq{
+<th>$Translate{'Cost'} $self->{Currency}</th>
+} if ($self->{CostPrice});
 	print $out qq{
 </tr>
 </thead>
@@ -2643,12 +2635,12 @@ sub _print_top_domain_stat
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
 };
 	print $out qq{
-<td>$total_cost</td>
-} if ($self->{CostPrice});
-	print $out qq{
 <td>$firsthit</td>
 <td>$lasthit</td>
-} if ($day);
+}  if ($type eq 'hour');
+	print $out qq{
+<td>$total_cost</td>
+} if ($self->{CostPrice});
 	print $out qq{
 </tr>};
 			$i++;
