@@ -1126,9 +1126,9 @@ sub _print_header
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
 <!-- javascript to draw graphics -->
 <script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
-<script  type="text/javascript" >var sortpos = 1;</script>
+<script  type="text/javascript" >var sortpos = 2;</script>
 </head>
-<body onload="var myTH = document.getElementsByTagName('th')[sortpos]; sorttable.innerSortFunction.apply(myTH, []); sorttable.innerSortFunction.apply(myTH, []);">
+<body onload="var myTH = document.getElementsByTagName('th')[sortpos]; sorttable.innerSortFunction.apply(myTH, []);">
 <div id="conteneur">
 <a name="atop"></a>
 	<div id="header">
@@ -1578,8 +1578,8 @@ sub _print_mime_stat
 	print $out qq{
 </tr>};
 	}
-	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
+	my $sortpos = 2;
+	$sortpos = 3 if ($self->{OrderMime} eq 'bytes');
 	print $out qq{
 </tbody>
 </table>
@@ -1837,9 +1837,9 @@ sub _print_network_stat
 <td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
 };
-		my $sortpos = 1;
-		$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
-		$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
+		my $sortpos = 2;
+		$sortpos = 3 if ($self->{OrderNetwork} eq 'bytes');
+		$sortpos = 4 if ($self->{OrderNetwork} eq 'duration');
 		print $outnet qq{
 		<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
@@ -1851,9 +1851,9 @@ sub _print_network_stat
 	}
 	print $out "</tbody></table>\n";
 
-	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
+	my $sortpos = 2;
+	$sortpos = 3 if ($self->{OrderNetwork} eq 'bytes');
+	$sortpos = 4 if ($self->{OrderNetwork} eq 'duration');
 	print $out qq{
 <script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
@@ -2074,9 +2074,9 @@ sub _print_user_stat
 		$self->_print_footer(\$outusr);
 		$outusr->close();
 	}
-	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
+	my $sortpos = 2;
+	$sortpos = 3 if ($self->{OrderUser} eq 'bytes');
+	$sortpos = 4 if ($self->{OrderUser} eq 'duration');
 	print $out qq{
 </tbody>
 </table>
@@ -2238,12 +2238,10 @@ sub _print_user_detail
 		}
 	}
 	$infile->close();
-	my $nurl = scalar keys %url_stat;
 
+	my $nurl = scalar keys %url_stat;
 	print $$out qq{
 <h3>$Translate{'Url_number'}: $nurl</h3>
-};
-	print $$out qq{
 <table class="sortable stata">
 <thead>
 <tr>
@@ -2312,9 +2310,9 @@ sub _print_user_detail
 		print $$out qq{
 </tr>};
 	}
-	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
+	my $sortpos = 2;
+	$sortpos = 3 if ($self->{OrderUrl} eq 'bytes');
+	$sortpos = 4 if ($self->{OrderUrl} eq 'duration');
 	print $$out qq{
 </tbody>
 </table>
@@ -2375,12 +2373,12 @@ sub _print_top_url_stat
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$self->_print_header(\$out, $self->{menu}, $cal);
+	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
 		$t1 =~ s/\%d/$self->{TopNumber}/;
 		if ($tpe eq 'Hits') {
 			print $out $self->_print_title($t1, $stat_date);
-			print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 		} else {
 			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
 		}
@@ -2548,13 +2546,14 @@ sub _print_top_domain_stat
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$self->_print_header(\$out, $self->{menu}, $cal);
+	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
+
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Domain_${tpe}_title"};
 		$t1 =~ s/\%d/$self->{TopNumber}/;
 
 		if ($tpe eq 'Hits') {
 			print $out $self->_print_title($t1, $stat_date);
-			print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
 			my %data = ();
 			my $total_hits = 0;
