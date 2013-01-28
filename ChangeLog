@@ -1,5 +1,45 @@
 Revision history for SquidAnalyzer
 
+5.1-alpha
+
+	- Fix documentation about OrderUrl that is limited to User detailed Urls
+	  reports, not Top Url and Top domain.
+	- Set default sorttable sort in descending order first.
+	- Fix default order in Mime, Network, User and User details views.
+	  Thanks to Wesley Bresson for the report.
+	- Update sorttable.js to allow sort on page load using the new function
+	  sorttable.innerSortFunction().
+	- Add documentation about FreeBSD install to avoid issue with error:
+	    FreeBSD: Cannot determine short module description
+	  Thanks to hackson99 for the report.
+	- Fix first and last visit time in the user detail view that was not
+	  displayed at all.
+	- Fix parser issue when squid logformat has additional field at end.
+	  Thanks to nuxsmin for the patch.
+	- Add pie chart on Mime type statistics.
+	- Add MinPie configuration directive to set the percentage of pie graph
+	  data which under item will be stored in others label.
+	- Force left alignment on largest Url column.
+	- Add Locale configuration directive to set the locale when retrieving
+	  date from system. Thanks to Klaus Tachtler for the suggestion.
+	- Fix missing Up link translation and some German translation. Thanks
+	  to Klaus Tachtler for the patch.
+	- Fix HTML code in user and url reports. Thanks to Nathanael Bonin for
+	  the patch.
+	- Fix typo in fr_FR.txt lang file. Thanks to Nathanael Bonin for the
+	  patch.
+	- Replace .orig extension on configuration files by .sample. Thanks to
+	  David Walser for the report.
+	- Update squidanalyzer.spec for RPM build. Thanks to David Walser for
+	  the patch.
+	- Modify sorttable.js to be able to sort column with both value and
+	  percentage as numeric.
+	- Remove percentage column and store the percent information directly
+	  in the column between parenthesis. Thanks for Nathanael Bonin for
+	  the patch.
+	- Add missing class CSS style to user graphs table. Thanks to Nathanael
+	  Bonin for the report.
+
 5.0 - Mon Dec 10 22:24:23 CET 2012
 
 Thanks to the great work of Nathanael Bonin, SquidAnalyzer has now a new design.
