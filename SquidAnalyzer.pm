@@ -1126,8 +1126,9 @@ sub _print_header
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
 <!-- javascript to draw graphics -->
 <script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
+<script  type="text/javascript" >var sortpos = 1;</script>
 </head>
-<body>
+<body onload="var myTH = document.getElementsByTagName('th')[sortpos]; sorttable.innerSortFunction.apply(myTH, []); sorttable.innerSortFunction.apply(myTH, []);">
 <div id="conteneur">
 <a name="atop"></a>
 	<div id="header">
@@ -1577,9 +1578,12 @@ sub _print_mime_stat
 	print $out qq{
 </tr>};
 	}
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
 	print $out qq{
 </tbody>
 </table>
+<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 	print $out qq{
@@ -1833,7 +1837,11 @@ sub _print_network_stat
 <td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
 };
+		my $sortpos = 1;
+		$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
+		$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 		print $outnet qq{
+		<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
     <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
@@ -1843,7 +1851,11 @@ sub _print_network_stat
 	}
 	print $out "</tbody></table>\n";
 
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 	print $out qq{
+<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
     <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
@@ -2062,9 +2074,13 @@ sub _print_user_stat
 		$self->_print_footer(\$outusr);
 		$outusr->close();
 	}
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
 	print $out qq{
 </tbody>
 </table>
+<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 	print $out qq{
@@ -2296,9 +2312,13 @@ sub _print_user_detail
 		print $$out qq{
 </tr>};
 	}
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 	print $$out qq{
 </tbody>
 </table>
+<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 }
