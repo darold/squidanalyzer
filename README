@@ -36,6 +36,22 @@ INSTALLATION
     The default output directory for html reports will be
     /var/www/squidanalyzer/.
 
+    On FreeBSD, if make install is freezing and you have the following
+    messages:
+
+            FreeBSD: Registering installation in the package database
+            FreeBSD: Cannot determine short module description
+            FreeBSD: Cannot determine module description
+
+    please proceed as follow:
+
+            perl Makefile.PL INSTALLDIRS=site
+            make
+            make install
+
+    as the issue is related to an install into the default Perl vendor
+    installdirs it will then use Perl site installdirs.
+
   Custom install
     You can create your fully customized SquidAnalyzer installation by using
     the Makefile.PL Perl script. Here is a sample:
