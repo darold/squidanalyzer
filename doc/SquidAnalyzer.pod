@@ -1,6 +1,6 @@
 =head1 NAME
 
-SquidAnalyzer v5.0 - Squid access log report generation tool
+SquidAnalyzer - Squid access log report generation tool
 
 
 =head1 DESCRIPTION
@@ -301,7 +301,7 @@ Gilles DAROLD <gilles@darold.net>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2012 Gilles DAROLD
+Copyright (c) 2001-2013 Gilles DAROLD
     
 This package is free software and published under the GPL v3 or above
 license.

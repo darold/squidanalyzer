@@ -1,5 +1,5 @@
 NAME
-    SquidAnalyzer v5.0 - Squid access log report generation tool
+    SquidAnalyzer - Squid access log report generation tool
 
 DESCRIPTION
     SquidAnalyzer parse native access log format of the Squid proxy and
@@ -270,7 +270,7 @@ AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
 COPYRIGHT
-    Copyright (c) 2001-2012 Gilles DAROLD
+    Copyright (c) 2001-2013 Gilles DAROLD
 
     This package is free software and published under the GPL v3 or above
     license.
