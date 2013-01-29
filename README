@@ -127,6 +127,37 @@ INSTALLATION
     See the file squidanalyzer.conf to customized your output statistics and
     match your network and file system configuration.
 
+USAGE
+    SquidAnalyzer can be run manually or by cron job using the
+    squid-analyzer Perl script. Here are authorized usage:
+
+      squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+
+        -c | --configfile filename : path to the SquidAnalyzer configuration file.
+                                     By default: /etc/squidanalyzer.conf
+        -d | --debug               : show debug informations.
+        -h | --help                : show this message and exit.
+        -l | --logfile filename    : path to the Squid logfile to parse.
+                                     By default: /var/log/squid/access.log
+        -p | --preserve number     : used to set the statistic obsolescence in
+                                     number of month. Older stats will be removed.
+        -r | --rebuild             : use this option to rebuild all html and graphs
+                                     output from all data files.
+        -v | version               : show version and exit.
+
+    There is special options like --rebuild that force SquidAnalyzer to
+    rebuild all HTML reports, useful after an new feature or a bug fix.
+
+    The --preserve option should be used if you want to rotate your
+    statistics and data. The value is the number of months to keep, older
+    reports and data will be removed from the filesystem. Useful to preserve
+    space, for example:
+
+            squid-analyzer -p 6 -c /etc/squidanalyzer/squidanalyzer.conf
+
+    will only preserve six month of statistics from the last run of
+    squidanalyzer.
+
 CONFIGURATION
     Unless previous version customization of SquidAnalyzer is now done by a
     single configuration file squidanalyzer.conf.
