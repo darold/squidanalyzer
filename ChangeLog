@@ -1,7 +1,13 @@
 Revision history for SquidAnalyzer
 
-5.1-alpha
+5.1 - Wed Jan 30 00:11:57 CET 2013
 
+	- Add squid-analyzer usage information into documentation.
+	- Update INSTALL file about FreeBSD issue.
+	- Add -v | --version and -d | --debug command line options.
+	- Add support to automatic deletion of obsolete statistics and data.
+	- Add -p | --preserve option to allow automatic removing of obsolete
+	  statistic. Thanks to ammdispose for the feature request.
 	- Fix documentation about OrderUrl that is limited to User detailed Urls
 	  reports, not Top Url and Top domain.
 	- Set default sorttable sort in descending order first.
@@ -39,6 +45,21 @@ Revision history for SquidAnalyzer
 	  the patch.
 	- Add missing class CSS style to user graphs table. Thanks to Nathanael
 	  Bonin for the report.
+
+UPGRADE: You must reinstall all. Backward compatibility is preserved on data
+files, but the HTML reports have changed, so after re-installing SquidAnalyzer
+you may want to run manually squid-analyzer with the --rebuild command line
+option to regenerate those files.  So run the following commands:
+        
+        tar xzf SquidAnalyzer-5.1.tar.gz
+        cd SquidAnalyzer-5.1/
+        perl Makefile.PL HTMLDIR=/var/www/squidanalyzer
+        make && make install
+        /usr/local/bin/squid-analyzer --rebuild
+        
+should be the normal procedure to upgrade. Change the path to the HTML output
+dir if required.
+
 
 5.0 - Mon Dec 10 22:24:23 CET 2012
 
@@ -88,10 +109,11 @@ SquidAnalyzer.
 	  file can be overriden at upgrade. Thanks to Klaus Tachtler for the
 	  report.
 
-UPGRADE: You must reinstall all but backward compatibility is fully preserved. Even
-if backward compatibility is preserved on data files, the HTML and graph have changed,
-so after re-installing SquidAnalyzer you may want to run squid-analyzer with the
---rebuild command line option to regenerate those files. So run the following commands:
+UPGRADE: You must reinstall all but backward compatibility is fully preserved.
+Even if backward compatibility is preserved on data files, the HTML and graph
+have changed, so after re-installing SquidAnalyzer you may want to run manually
+squid-analyzer with the --rebuild command line option to regenerate those files.
+So run the following commands:
         
         tar xzf SquidAnalyzer-5.0.tar.gz
         cd SquidAnalyzer-5.0/
@@ -99,7 +121,8 @@ so after re-installing SquidAnalyzer you may want to run squid-analyzer with the
         make && make install
         /usr/local/bin/squid-analyzer --rebuild
         
-should be the normal procedure to upgrade. Change the path to the HTML output dir if required.
+should be the normal procedure to upgrade. Change the path to the HTML output
+dir if required.
 
 4.4 - Tue Aug 21 21:01:43 CEST 2012
 
