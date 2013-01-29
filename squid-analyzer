@@ -10,17 +10,19 @@ $| = 1;
 
 my $DEFAULT_CONFFILE = '/etc/squidanalyzer/squidanalyzer.conf';
 
-my $logfile = '';
+my $logfile    = '';
 my $configfile = '';
-my $help = '';
-my $rebuild = '';
+my $help       = '';
+my $rebuild    = '';
+my $preserve   = '';
 
 # get the command line parameters
 my $result = GetOptions (
-	"l|logfile=s"          => \$logfile,
 	"c|configfile=s"       => \$configfile,
 	"h|help"               => \$help,
+	"l|logfile=s"          => \$logfile,
 	"r|rebuild!"           => \$rebuild,
+	"p|preserve=i"         => \$preserve,
 );  
 
 # Allow backward compatibility with release < 4.0
@@ -40,6 +42,11 @@ my $sa = new SquidAnalyzer($configfile, $logfile);
 # Run parsing
 $sa->parseFile();
 
+# Remove old statistics
+if ($preserve) {
+	$sa->{preserve} = $preserve;
+}
+
 # Recover month and year statistics from day stats
 if ($rebuild) {
 	$sa->{history_time} = '';
@@ -56,13 +63,15 @@ sub usage
 	print qq{
 Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 
-    -l | --logfile filename    : path to the Squid logfile to parse.
-				 By default: /var/log/squid/access.log
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
 				 By default: /etc/squidanalyzer.conf
+    -h | --help                : show this message and exit.
+    -l | --logfile filename    : path to the Squid logfile to parse.
+				 By default: /var/log/squid/access.log
+    -p | --preserve number     : used to set the statistic obsolescence in
+				 number of month. Older stats will be removed.
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
-    -h | --help                : show this message and exit.
 
 };
 
