@@ -132,14 +132,14 @@ my %Translate = (
 
 sub new
 {
-	my ($class, $conf_file, $log_file) = @_;
+	my ($class, $conf_file, $log_file, $debug) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file);
+	$self->_init($conf_file, $log_file, $debug);
 
 	# Return the instance
 	return($self);
@@ -380,7 +380,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file) = @_;
+	my ($self, $conf_file, $log_file, $debug) = @_;
 
 	# Prevent for a call without instance
 	if (!ref($self)) {
@@ -493,6 +493,9 @@ sub _init
 	$self->{history_time} = 0;
 	$self->{preserve} = 0;
 	$self->{oldest_date} = '';
+
+	# Override verbose mode
+	$self->{QuietMode} = 0 if ($debug);
 
 	# Get the last parsing date for incremental parsing
 	if (-e "$self->{Output}/SquidAnalyzer.current") {

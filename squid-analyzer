@@ -15,15 +15,25 @@ my $configfile = '';
 my $help       = '';
 my $rebuild    = '';
 my $preserve   = '';
+my $debug      = 0;
+my $version    = 0;
 
 # get the command line parameters
 my $result = GetOptions (
 	"c|configfile=s"       => \$configfile,
+	"d|debug!"             => \$debug,
 	"h|help"               => \$help,
 	"l|logfile=s"          => \$logfile,
 	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
+	"v|version!"           => \$version,
 );  
+
+# Show version and exit
+if ($version) {
+	print "SquidAnalyzer version $SquidAnalyzer::VERSION\n";
+	exit 0;
+}
 
 # Allow backward compatibility with release < 4.0
 $configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
@@ -37,7 +47,7 @@ if (!$configfile || $help) {
 }
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, $logfile);
+my $sa = new SquidAnalyzer($configfile, $logfile, $debug);
 
 # Run parsing
 $sa->parseFile();
@@ -65,6 +75,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
 				 By default: /etc/squidanalyzer.conf
+    -d | --debug               : show debug informations.
     -h | --help                : show this message and exit.
     -l | --logfile filename    : path to the Squid logfile to parse.
 				 By default: /var/log/squid/access.log
@@ -72,6 +83,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 				 number of month. Older stats will be removed.
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
+    -v | version               : show version and exit.
 
 };
 
