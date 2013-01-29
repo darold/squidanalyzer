@@ -15,7 +15,7 @@ use strict;             # make things properly
 
 BEGIN {
 	use Exporter();
-	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG);
+	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
 	use POSIX;
 	use IO::File;
 
@@ -31,8 +31,9 @@ BEGIN {
 
 }
 
-$ZCAT_PROG = "/bin/zcat";
+$ZCAT_PROG  = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
+$RM_PROG  = "/bin/rm";
 
 # Default translation srings
 my %Translate = (
@@ -488,7 +489,10 @@ sub _init
         $self->{first_day} = 0;
 	$self->{begin_time} = 0;
 	$self->{end_time} = 0;
+	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
+	$self->{preserve} = 0;
+	$self->{oldest_date} = '';
 
 	# Get the last parsing date for incremental parsing
 	if (-e "$self->{Output}/SquidAnalyzer.current") {
@@ -1186,17 +1190,45 @@ sub buildHTML
 		$old_day = (localtime($self->{history_time}))[3];
 		$old_day = "0$old_day" if ($old_day < 10);
 	}
+	my $p_month = 0;
+	my $p_year = 0;
+	# Set oldest stat to preserve based on history time, not current time
+	if ($self->{preserve} && $self->{history_time}) {
+		$p_month = $old_month - $self->{preserve};
+		$p_year = $old_year;
+		while ($p_month < 0) {
+			$p_year--;
+			$p_month = 12 + $p_month
+		}
+		$p_month = sprintf("%02d", $p_month);
+		$self->{oldest_date} = $p_year . '-' . $p_month;
+	}
+	print STDERR "Obsolete statistics before $self->{oldest_date}\n" if (!$self->{QuietMode});
 
 	# Generate all HTML output
 	opendir(DIR, $outdir) || die "Error: can't opendir $outdir: $!";
 	my @years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
 	closedir DIR;
 	foreach my $y (sort {$a <=> $b} @years) {
-		next if ($y < $old_year);
+		next if (!$y);
+		# Remove the full year repository if it is older that the last date to preserve
+		if ($self->{oldest_date} && ($y < $p_year)) {
+			print STDERR "Removing obsolete statistics for year $y\n" if (!$self->{QuietMode});
+			`$RM_PROG -rf $outdir/$y`;
+			next;
+		}
+		next if (!$self->{oldest_date} && ($y < $old_year));
 		opendir(DIR, "$outdir/$y") || die "Error: can't opendir $outdir/$y: $!";
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		closedir DIR;
 		foreach my $m (sort {$a <=> $b} @months) {
+			next if (!$m);
+			# Remove the full year repository if it is older that the last date to preserve
+			if ($self->{oldest_date} && ("$y$m" < "$p_year$p_month")) {
+				print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
+				`$RM_PROG -rf $outdir/$y/$m`;
+				next;
+			}
 			next if ($m < $old_month);
 			opendir(DIR, "$outdir/$y/$m") || die "Error: can't opendir $outdir/$y/$m: $!";
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
