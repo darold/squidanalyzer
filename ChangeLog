@@ -2,6 +2,10 @@ Revision history for SquidAnalyzer
 
 5.1 - Wed Jan 30 00:11:57 CET 2013
 
+This release adds more graphs, fixes several major issues and allow automatic
+removing of obsolete statistics. The Javascript library sorttable.js have been
+updated.
+
 	- Add squid-analyzer usage information into documentation.
 	- Update INSTALL file about FreeBSD issue.
 	- Add -v | --version and -d | --debug command line options.
