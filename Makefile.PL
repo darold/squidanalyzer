@@ -67,10 +67,13 @@ if [ ! -d "$DESTDIR$MANDIR" ]; then
 	mkdir -p $DESTDIR$MANDIR
 fi
 # Copy files that must not be overriden 
-install -m 644 etc/squidanalyzer.conf $DESTDIR$CONFDIR/squidanalyzer.conf.sample
-install -m 644 etc/network-aliases $DESTDIR$CONFDIR/network-aliases.sample
-install -m 644 etc/user-aliases $DESTDIR$CONFDIR/user-aliases.sample
-install -m 644 etc/excluded $DESTDIR$CONFDIR/excluded.sample
+for file in squidanalyzer.conf network-aliases user-aliases excluded; do
+if [ -e $DESTDIR$CONFDIR/\$file ]; then
+	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file.sample
+else
+	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file
+fi
+done
 install -m 755 squid-analyzer $DESTDIR$BINDIR/
 install -m 644 resources/sorttable.js $DESTDIR$HTMLDIR/
 install -m 644 resources/squidanalyzer.css $DESTDIR$HTMLDIR/
