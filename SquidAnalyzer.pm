@@ -1220,7 +1220,7 @@ sub buildHTML
 		closedir DIR;
 		foreach my $m (sort {$a <=> $b} @months) {
 			next if (!$m);
-			# Remove the full year repository if it is older that the last date to preserve
+			# Remove the full month repository if it is older that the last date to preserve
 			if ($p_year && ("$y$m" < "$p_year$p_month")) {
 				print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
 				`$RM_PROG -rf $outdir/$y/$m`;
