@@ -1226,12 +1226,12 @@ sub buildHTML
 				`$RM_PROG -rf $outdir/$y/$m`;
 				next;
 			}
-			next if ($m < $old_month);
+			next if ("$y$m" < "$old_year$old_month");
 			opendir(DIR, "$outdir/$y/$m") || die "Error: can't opendir $outdir/$y/$m: $!";
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
 			closedir DIR;
 			foreach my $d (sort {$a <=> $b} @days) {
-				next if ($d < $old_day);
+				next if ("$y$m$d" < "$old_year$old_month$old_day");
 				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
 				$self->gen_html_output($outdir, $y, $m, $d);
 			}
