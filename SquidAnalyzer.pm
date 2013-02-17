@@ -31,7 +31,7 @@ BEGIN {
 
 }
 
-$ZCAT_PROG  = "/bin/zcat";
+$ZCAT_PROG = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
 $RM_PROG  = "/bin/rm";
 
@@ -396,7 +396,7 @@ sub _init
 			$conf_file = 'squidanalyzer.conf';
 		}
 	}
-	my %options = &parse_config($conf_file);
+	my %options = &parse_config($conf_file, $log_file);
 
 	# Use squid log file given as command line parameter
 	$options{LogFile} = $log_file if ($log_file);
@@ -2820,7 +2820,7 @@ sub _gen_summary
 
 sub parse_config
 {
-	my ($file) = @_;
+	my ($file, $log_file) = @_;
 
 	die "FATAL: no configuration file!\n" if (!-e $file);
 
@@ -2839,7 +2839,7 @@ sub parse_config
 		print STDERR "Error: you must give a valid output directory. See option: Output\n";
 		exit 0;
 	}
-	if (!exists $opt{LogFile} || !-f $opt{LogFile}) {
+	if (!$log_file && (!exists $opt{LogFile} || !-f $opt{LogFile})) {
 		print STDERR "Error: you must give the path to the Squid log file. See option: LogFile\n";
 		exit 0;
 	}
