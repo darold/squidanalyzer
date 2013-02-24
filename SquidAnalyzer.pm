@@ -2876,7 +2876,7 @@ sub parse_network_aliases
 		$l =~ s/[\s\t]*#.*//;
 		my @data = split(/[\t]+/, $l, 2);
 		if ($#data == 1) {
-			push(@{$alias{$data[0]}}, split(/[\s,;\t]/, $data[1]));
+			push(@{$alias{$data[0]}}, split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]));
 		} else {
 			die "ERROR: wrong format in network aliases file $file, line $i\n";
 		}
@@ -2902,7 +2902,7 @@ sub parse_user_aliases
 		my @data = split(/[\t]+/, $l, 2);
 		$data[0] =~ s/\s+/_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
-			push(@{$alias{$data[0]}}, split(/[\s,;\t]/, $data[1]));
+			push(@{$alias{$data[0]}}, split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]));
 		} else {
 			die "ERROR: wrong format in user aliases file $file, line $i\n";
 		}
