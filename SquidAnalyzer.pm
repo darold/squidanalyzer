@@ -1607,8 +1607,8 @@ sub _print_mime_stat
 	print $out qq{
 </tr>};
 	}
-	my $sortpos = 2;
-	$sortpos = 3 if ($self->{OrderMime} eq 'bytes');
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
 	print $out qq{
 </tbody>
 </table>
@@ -1866,9 +1866,9 @@ sub _print_network_stat
 <td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
 };
-		my $sortpos = 2;
-		$sortpos = 3 if ($self->{OrderNetwork} eq 'bytes');
-		$sortpos = 4 if ($self->{OrderNetwork} eq 'duration');
+		my $sortpos = 1;
+		$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
+		$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 		print $outnet qq{
 		<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
@@ -1880,9 +1880,9 @@ sub _print_network_stat
 	}
 	print $out "</tbody></table>\n";
 
-	my $sortpos = 2;
-	$sortpos = 3 if ($self->{OrderNetwork} eq 'bytes');
-	$sortpos = 4 if ($self->{OrderNetwork} eq 'duration');
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 	print $out qq{
 <script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
@@ -2103,9 +2103,9 @@ sub _print_user_stat
 		$self->_print_footer(\$outusr);
 		$outusr->close();
 	}
-	my $sortpos = 2;
-	$sortpos = 3 if ($self->{OrderUser} eq 'bytes');
-	$sortpos = 4 if ($self->{OrderUser} eq 'duration');
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
 	print $out qq{
 </tbody>
 </table>
@@ -2339,9 +2339,9 @@ sub _print_user_detail
 		print $$out qq{
 </tr>};
 	}
-	my $sortpos = 2;
-	$sortpos = 3 if ($self->{OrderUrl} eq 'bytes');
-	$sortpos = 4 if ($self->{OrderUrl} eq 'duration');
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 	print $$out qq{
 </tbody>
 </table>
