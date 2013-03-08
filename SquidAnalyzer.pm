@@ -1103,7 +1103,7 @@ sub _read_stat
 
 sub _print_header
 {
-	my ($self, $fileout, $menu, $calendar) = @_;
+	my ($self, $fileout, $menu, $calendar, $sortpos) = @_;
 
 	my $lang = '';
 	if ($self->{Locale}) {
@@ -1112,6 +1112,7 @@ sub _print_header
 	my $curdate = `$lang date | iconv -t $Translate{CharSet} 2>/dev/null`;
 	chomp($curdate);
 	my $now = $curdate || strftime("%a %b %e %H:%M:%S %Y", localtime);
+	$sortpos ||= 2;
 
 	print $$fileout qq{
 <!DOCTYPE html
@@ -1132,9 +1133,9 @@ sub _print_header
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
 <!-- javascript to draw graphics -->
 <script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
-<script  type="text/javascript" >var sortpos = 2;</script>
+<script  type="text/javascript" >sortpos = $sortpos;</script>
 </head>
-<body onload="var myTH = document.getElementsByTagName('th')[sortpos]; sorttable.innerSortFunction.apply(myTH, []);">
+<body onload="var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);">
 <div id="conteneur">
 <a name="atop"></a>
 	<div id="header">
@@ -1536,9 +1537,14 @@ sub _print_mime_stat
 	my $file = $outdir . '/mime_type.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderMime} eq 'duration');
+
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	# Print title and calendar view
 	print $out $self->_print_title($Translate{'Mime_title'}, $stat_date);
 
@@ -1612,7 +1618,6 @@ sub _print_mime_stat
 	print $out qq{
 </tbody>
 </table>
-<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 	print $out qq{
@@ -1691,12 +1696,16 @@ sub _print_network_stat
 	$infile->close();
 	my $nnet = scalar keys %network_stat;
 
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
+
 	my $file = $outdir . '/network.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out $self->_print_title($Translate{'Network_title'}, $stat_date);
 
 	my $last = '23';
@@ -1817,7 +1826,7 @@ sub _print_network_stat
 		$outnet->open(">$outdir/networks/$net/$net.html") || return;
 		# Print the HTML header
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
-		$self->_print_header(\$outnet, $self->{menu2}, $cal);
+		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date);
 
 		my @hits = ();
@@ -1870,7 +1879,6 @@ sub _print_network_stat
 		$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
 		$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 		print $outnet qq{
-		<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
     <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
@@ -1884,7 +1892,6 @@ sub _print_network_stat
 	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
 	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 	print $out qq{
-<script type="text/javascript">sortpos = $sortpos;</script>
 <div class="uplink">
     <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
 </div>
@@ -1956,9 +1963,14 @@ sub _print_user_stat
 	my $file = $outdir . '/user.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
+
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 
 	my $last = '23';
 	my $first = '00';
@@ -2055,7 +2067,7 @@ sub _print_user_stat
 		$outusr->open(">$outdir/users/$url/$url.html") || return;
 		# Print the HTML header
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
-		$self->_print_header(\$outusr, $self->{menu2}, $cal);
+		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date);
 
 		my @hits = ();
@@ -2109,7 +2121,6 @@ sub _print_user_stat
 	print $out qq{
 </tbody>
 </table>
-<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 	print $out qq{
@@ -2345,7 +2356,6 @@ sub _print_user_detail
 	print $$out qq{
 </tbody>
 </table>
-<script type="text/javascript">sortpos = $sortpos;</script>
 };
 
 }
@@ -2399,9 +2409,14 @@ sub _print_top_url_stat
 	my $file = $outdir . '/url.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
+
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
@@ -2572,9 +2587,14 @@ sub _print_top_domain_stat
 	my $file = $outdir . '/domain.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+
+	my $sortpos = 1;
+	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
+	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
+
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
