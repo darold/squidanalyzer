@@ -296,6 +296,8 @@ sub parseFile
 	if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
 		print STDERR "No new log registered...\n" if (!$self->{QuietMode});
 	} else {
+		print STDERR "\nParsing ended, generating last day data files...\n";
+
 		# Save last parsed data
 		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
 
@@ -314,12 +316,12 @@ sub parseFile
 
 		# Compute month statistics
 		if (!$self->{QuietMode}) {
-			print STDERR "\nParsing ended, generating data files now...\n";
-			print STDERR "Compute and dump month statistics for $self->{first_year}/$self->{first_month} to $self->{last_year}/$self->{last_month}\n";
+			print STDERR "Generating monthly data files now...\n";
 		}
 		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
 			$date =~ /^(\d{4})(\d{2})$/;
 			next if (($2 < 1) || ($2 > 12));
+			print STDERR "Compute and dump month statistics for $1/$2\n";
 			if (-d "$self->{Output}/$1/$2") {
 				$self->_save_data("$1", "$2");
 			}
@@ -486,7 +488,6 @@ sub _init
         $self->{last_day} = 0;
         $self->{first_year} = 0;
         $self->{first_month} = 0;
-        $self->{first_day} = 0;
 	$self->{begin_time} = 0;
 	$self->{end_time} = 0;
 	# Used to stored command line parameters from squid-analyzer
@@ -594,33 +595,20 @@ sub _parseData
 		}
 	}
 
-	# Store data when day change to save memory
-	if ($self->{tmp_saving} =~ /^(\d{4})(\d{2})(\d{2})$/) {
+	# Store data when hour change to save memory
+	if ($self->{tmp_saving} && ($self->{tmp_saving} ne $hour) ) {
+		$date =~ /^(\d{4})(\d{2})(\d{2})$/;
 		# If the day has changed then we want to save stats of the previous one
-		if ($self->{last_day} && ($3 ne $self->{last_day})) {
-			$self->_save_data("$1", "$2", "$3");
-			$self->{first_day} = '';
-		}
-		# If the month has changed then we want to save stats of the previous one
-		if ($self->{last_month} && ($2 ne $self->{last_month})) {
-			$self->_save_data("$1", "$2");
-			$self->{first_month} = '';
-		}
-		# If the year has changed then we want to save stats of the previous one
-		if ($self->{last_year} && ($1 ne $self->{last_year})) {
-			$self->_save_data("$1");
-			$self->{first_year} = '';
-			# Stats can be cleared
-			print STDERR "Clearing complete statistics storage hashes for year $1.\n" if (!$self->{QuietMode});
-			$self->_clear_stats();
-		}
+		$self->_save_data("$1", "$2", "$3");
+		# Stats can be cleared
+		print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
+		$self->_clear_stats();
 	}
 
 	$self->{first_year} ||= $self->{last_year};
 	$self->{first_month} ||= $self->{last_month};
-	$self->{first_day} ||= $self->{last_day};
 
-	$self->{tmp_saving} = $date;
+	$self->{tmp_saving} = $hour;
 
 	#### Store client statistics
 	$self->{stat_user_hour}{$id}{$hour}{hits}++;
@@ -629,9 +617,6 @@ sub _parseData
 	$self->{stat_user_day}{$id}{$self->{last_day}}{hits}++;
 	$self->{stat_user_day}{$id}{$self->{last_day}}{bytes} += $bytes;
 	$self->{stat_user_day}{$id}{$self->{last_day}}{duration} += $elapsed;
-	$self->{stat_user_month}{$id}{$self->{last_month}}{hits}++;
-	$self->{stat_user_month}{$id}{$self->{last_month}}{bytes} += $bytes;
-	$self->{stat_user_month}{$id}{$self->{last_month}}{duration} += $elapsed;
 	if ($bytes > $self->{stat_usermax_hour}{$id}{largest_file_size}) {
 		$self->{stat_usermax_hour}{$id}{largest_file_size} = $bytes;
 		$self->{stat_usermax_hour}{$id}{largest_file_url} = $url;
@@ -639,10 +624,6 @@ sub _parseData
 	if ($bytes > $self->{stat_usermax_day}{$id}{largest_file_size}) {
 		$self->{stat_usermax_day}{$id}{largest_file_size} = $bytes;
 		$self->{stat_usermax_day}{$id}{largest_file_url} = $url;
-	}
-	if ($bytes > $self->{stat_usermax_month}{$id}{largest_file_size}) {
-		$self->{stat_usermax_month}{$id}{largest_file_size} = $bytes;
-		$self->{stat_usermax_month}{$id}{largest_file_url} = $url;
 	}
 
 	#### Store networks statistics
@@ -652,9 +633,6 @@ sub _parseData
 	$self->{stat_network_day}{$network}{$self->{last_day}}{hits}++;
 	$self->{stat_network_day}{$network}{$self->{last_day}}{bytes} += $bytes;
 	$self->{stat_network_day}{$network}{$self->{last_day}}{duration} += $elapsed;
-	$self->{stat_network_month}{$network}{$self->{last_month}}{hits}++;
-	$self->{stat_network_month}{$network}{$self->{last_month}}{bytes} += $bytes;
-	$self->{stat_network_month}{$network}{$self->{last_month}}{duration} += $elapsed;
 	if ($bytes > $self->{stat_netmax_hour}{$network}{largest_file_size}) {
 		$self->{stat_netmax_hour}{$network}{largest_file_size} = $bytes;
 		$self->{stat_netmax_hour}{$network}{largest_file_url} = $url;
@@ -663,18 +641,12 @@ sub _parseData
 		$self->{stat_netmax_day}{$network}{largest_file_size} = $bytes;
 		$self->{stat_netmax_day}{$network}{largest_file_url} = $url;
 	}
-	if ($bytes > $self->{stat_netmax_month}{$network}{largest_file_size}) {
-		$self->{stat_netmax_month}{$network}{largest_file_size} = $bytes;
-		$self->{stat_netmax_month}{$network}{largest_file_url} = $url;
-	}
 
 	#### Store HIT/MISS statistics
 	$self->{stat_code_hour}{$code}{$hour}{hits}++;
 	$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
-	$self->{stat_code_month}{$code}{$self->{last_month}}{hits}++;
-	$self->{stat_code_month}{$code}{$self->{last_month}}{bytes} += $bytes;
 
 	#### Store url statistics
 	if ($self->{UrlReport}) {
@@ -688,9 +660,6 @@ sub _parseData
 		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit});
 		$self->{stat_user_url_day}{$id}{$dest}{lasthit} = $time;
 		$self->{stat_user_url_day}{$id}{$dest}{bytes} += $bytes;
-		$self->{stat_user_url_month}{$id}{$dest}{duration} += $elapsed;
-		$self->{stat_user_url_month}{$id}{$dest}{hits}++;
-		$self->{stat_user_url_month}{$id}{$dest}{bytes} += $bytes;
 	}
 
 	#### Store user per networks statistics
@@ -709,21 +678,11 @@ sub _parseData
 		$self->{stat_netuser_day}{$network}{$id}{largest_file_url} = $url;
 	}
 
-	$self->{stat_netuser_month}{$network}{$id}{duration} += $elapsed;
-	$self->{stat_netuser_month}{$network}{$id}{bytes} += $bytes;
-	$self->{stat_netuser_month}{$network}{$id}{hits}++;
-	if ($bytes > $self->{stat_netuser_month}{$network}{$id}{largest_file_size}) {
-		$self->{stat_netuser_month}{$network}{$id}{largest_file_size} = $bytes;
-		$self->{stat_netuser_month}{$network}{$id}{largest_file_url} = $url;
-	}
-
 	#### Store mime type statistics
 	$self->{stat_mime_type_hour}{"$type"}{hits}++;
 	$self->{stat_mime_type_hour}{"$type"}{bytes} += $bytes;
 	$self->{stat_mime_type_day}{"$type"}{hits}++;
 	$self->{stat_mime_type_day}{"$type"}{bytes} += $bytes;
-	$self->{stat_mime_type_month}{"$type"}{hits}++;
-	$self->{stat_mime_type_month}{"$type"}{bytes} += $bytes;
 
 }
 
@@ -743,7 +702,19 @@ sub _save_stat
 	$path =~ s/[\/]+$//;
 
 	#### Load history
-	$self->_read_stat($year, $month, $day);
+	if ($type eq 'day') {
+		foreach my $d ("01" .. "31") {
+			$self->_read_stat($year, $month, $d, 'day');
+		}
+	} elsif ($type eq 'month') {
+		foreach my $m ("01" .. "12") {
+			$self->_read_stat($year, $m, $day, 'month');
+		}
+	} else {
+		$self->_read_stat($year, $month, $day);
+	}
+
+	print STDERR "Dumping data into $self->{Output}/$path\n" if (!$self->{QuietMode});
 
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
@@ -882,7 +853,7 @@ sub _save_data
 	if ($day && !-d "$self->{Output}/$year/$month/$day") {
 		mkdir("$self->{Output}/$year/$month/$day", 0755) || die "ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n";
 	}
-	print STDERR "Dumping data into $self->{Output}/$path\n" if (!$self->{QuietMode});
+	# Dumping data
 	$self->_save_stat($year, $month, $day);
 
 }
@@ -890,7 +861,7 @@ sub _save_data
 
 sub _read_stat
 {
-	my ($self, $year, $month, $day) = @_;
+	my ($self, $year, $month, $day, $sum_type) = @_;
 
 	my $type = 'hour';
 	if (!$day) {
@@ -903,6 +874,16 @@ sub _read_stat
 	my $path = join('/',  $year, $month, $day);
 	$path =~ s/[\/]+$//;
 
+	return if (! -d "$self->{Output}/$path");
+
+	print STDERR "Reading data from previous dat files in $self->{Output}/$path/\n" if (!$self->{QuietMode});
+
+	my $k = '';
+	my $key = '';
+	$key = $day if ($sum_type eq 'day');
+	$key = $month if ($sum_type eq 'month');
+	$sum_type ||= $type;
+
 	#### Read previous client statistics
 	my $dat_file_user = new IO::File;
 	if ($dat_file_user->open("$self->{Output}/$path/stat_user.dat")) {
@@ -914,24 +895,27 @@ sub _read_stat
 				my $hits = $2 || '';
 				my $bytes = $3 || '';
 				my $duration = $4 || '';
-				if ($5 > $self->{"stat_usermax_$type"}{$id}{largest_file_size}) {
-					$self->{"stat_usermax_$type"}{$id}{largest_file_size} = $5;
-					$self->{"stat_usermax_$type"}{$id}{largest_file_url} = $6;
+				if ($5 > $self->{"stat_usermax_$sum_type"}{$id}{largest_file_size}) {
+					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $5;
+					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $6;
 				}
 				$hits =~ s/,$//;	
 				$bytes =~ s/,$//;	
 				$duration =~ s/,$//;	
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					$self->{"stat_user_$type"}{$id}{$tmp}{hits} += $hits_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_user_$sum_type"}{$id}{$k}{hits} += $hits_tmp{$tmp};
 				}
 				my %bytes_tmp = split(/[:,]/, $bytes);
 				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					$self->{"stat_user_$type"}{$id}{$tmp}{bytes} += $bytes_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_user_$sum_type"}{$id}{$k}{bytes} += $bytes_tmp{$tmp};
 				}
 				my %duration_tmp = split(/[:,]/, $duration);
 				foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
-					$self->{"stat_user_$type"}{$id}{$tmp}{duration} += $duration_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_user_$sum_type"}{$id}{$k}{duration} += $duration_tmp{$tmp};
 				}
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
@@ -951,15 +935,15 @@ sub _read_stat
 			while (my $l = <$dat_file_user_url>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
-					$self->{"stat_user_url_$type"}{$1}{"$7"}{hits} += $2;
-					$self->{"stat_user_url_$type"}{$1}{"$7"}{bytes} += $3;
-					$self->{"stat_user_url_$type"}{$1}{"$7"}{duration} += $4;
-					$self->{"stat_user_url_$type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$type"}{$1}{"$7"}{firsthit});
-					$self->{"stat_user_url_$type"}{$1}{"$7"}{lasthit} = $6;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit});
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6;
 				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
-					$self->{"stat_user_url_$type"}{$1}{"$5"}{hits} += $2;
-					$self->{"stat_user_url_$type"}{$1}{"$5"}{bytes} += $3;
-					$self->{"stat_user_url_$type"}{$1}{"$5"}{duration} += $4;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{hits} += $2;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{bytes} += $3;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{duration} += $4;
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
 					print STDERR "$l\n";
@@ -988,24 +972,27 @@ sub _read_stat
 				my $hits = $1 || '';
 				my $bytes = $2 || '';
 				my $duration = $3 || '';
-				if ($4 > $self->{"stat_netmax_$type"}{$net}{largest_file_size}) {
-					$self->{"stat_netmax_$type"}{$net}{largest_file_size} = $4;
-					$self->{"stat_netmax_$type"}{$net}{largest_file_url} = $5;
+				if ($4 > $self->{"stat_netmax_$sum_type"}{$net}{largest_file_size}) {
+					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_size} = $4;
+					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_url} = $5;
 				}
 				$hits =~ s/,$//;	
 				$bytes =~ s/,$//;	
 				$duration =~ s/,$//;	
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					$self->{"stat_network_$type"}{$net}{$tmp}{hits} += $hits_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_network_$sum_type"}{$net}{$k}{hits} += $hits_tmp{$tmp};
 				}
 				my %bytes_tmp = split(/[:,]/, $bytes);
 				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					$self->{"stat_network_$type"}{$net}{$tmp}{bytes} += $bytes_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_network_$sum_type"}{$net}{$k}{bytes} += $bytes_tmp{$tmp};
 				}
 				my %duration_tmp = split(/[:,]/, $duration);
 				foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
-					$self->{"stat_network_$type"}{$net}{$tmp}{duration} += $duration_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_network_$sum_type"}{$net}{$k}{duration} += $duration_tmp{$tmp};
 				}
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
@@ -1032,12 +1019,12 @@ sub _read_stat
 				$data = $l;
 			}
 			if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-				$self->{"stat_netuser_$type"}{$net}{$id}{hits} += $1;
-				$self->{"stat_netuser_$type"}{$net}{$id}{bytes} += $2;
-				$self->{"stat_netuser_$type"}{$net}{$id}{duration} += $3;
-				if ($6 > $self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size}) {
-					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size} = $4;
-					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_url} = $5;
+				$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
+				$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
+				$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
+				if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
+					$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
+					$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
 				}
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
@@ -1063,11 +1050,13 @@ sub _read_stat
 				$bytes =~ s/,$//;	
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					$self->{"stat_code_$type"}{$code}{$tmp}{hits} += $hits_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_code_$sum_type"}{$code}{$k}{hits} += $hits_tmp{$tmp};
 				}
 				my %bytes_tmp = split(/[:,]/, $bytes);
 				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					$self->{"stat_code_$type"}{$code}{$tmp}{bytes} += $bytes_tmp{$tmp};
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
 				}
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
@@ -1087,8 +1076,8 @@ sub _read_stat
 			chomp($l);
 			if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
 				my $mime = $1;
-				$self->{"stat_mime_type_$type"}{$mime}{hits} += $2;
-				$self->{"stat_mime_type_$type"}{$mime}{bytes} += $3;
+				$self->{"stat_mime_type_$sum_type"}{$mime}{hits} += $2;
+				$self->{"stat_mime_type_$sum_type"}{$mime}{bytes} += $3;
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
 				print STDERR "$l\n";
@@ -1613,7 +1602,7 @@ sub _print_mime_stat
 	print $out qq{
 </tr>};
 	}
-	my $sortpos = 1;
+	$sortpos = 1;
 	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
 	print $out qq{
 </tbody>
@@ -1875,7 +1864,7 @@ sub _print_network_stat
 <td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
 };
-		my $sortpos = 1;
+		$sortpos = 1;
 		$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
 		$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 		print $outnet qq{
@@ -1888,7 +1877,7 @@ sub _print_network_stat
 	}
 	print $out "</tbody></table>\n";
 
-	my $sortpos = 1;
+	$sortpos = 1;
 	$sortpos = 2 if ($self->{OrderNetwork} eq 'bytes');
 	$sortpos = 3 if ($self->{OrderNetwork} eq 'duration');
 	print $out qq{
@@ -2115,7 +2104,7 @@ sub _print_user_stat
 		$self->_print_footer(\$outusr);
 		$outusr->close();
 	}
-	my $sortpos = 1;
+	$sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
 	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
 	print $out qq{
