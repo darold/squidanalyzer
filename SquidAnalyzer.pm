@@ -497,6 +497,14 @@ sub _init
 	# Override verbose mode
 	$self->{QuietMode} = 0 if ($debug);
 
+	# Enable local date format if defined, else strftime will be used. The limitation
+	# this behavior is that all dates in HTML files will be the same for performences reasons.
+	if ($self->{Locale}) {
+		my $lang = 'LANG=' . $self->{Locale};
+		$self->{start_date} = `$lang date | iconv -t $Translate{CharSet} 2>/dev/null`;
+		chomp($self->{start_date});
+	}
+
 	# Get the last parsing date for incremental parsing
 	if (-e "$self->{Output}/SquidAnalyzer.current") {
 		my $current = new IO::File;
@@ -1094,13 +1102,7 @@ sub _print_header
 {
 	my ($self, $fileout, $menu, $calendar, $sortpos) = @_;
 
-	my $lang = '';
-	if ($self->{Locale}) {
-		$lang = 'LANG=' . $self->{Locale};
-	}
-	my $curdate = `$lang date | iconv -t $Translate{CharSet} 2>/dev/null`;
-	chomp($curdate);
-	my $now = $curdate || strftime("%a %b %e %H:%M:%S %Y", localtime);
+	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", localtime);
 	$sortpos ||= 2;
 
 	print $$fileout qq{
