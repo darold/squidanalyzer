@@ -1180,15 +1180,17 @@ sub buildHTML
 	my $p_month = 0;
 	my $p_year = 0;
 	if ($self->{history_time}) {
-		$old_year = (localtime($self->{history_time}))[5]+1900;
-		$old_month = (localtime($self->{history_time}))[4]+1;
+		my @ltime = localtime($self->{history_time});
+		$old_year = $ltime[5]+1900;
+		$old_month = $ltime[4]+1;
 		$old_month = "0$old_month" if ($old_month < 10);
-		$old_day = (localtime($self->{history_time}))[3];
+		$old_day = $ltime[3];
 		$old_day = "0$old_day" if ($old_day < 10);
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
-			$p_year = (localtime($self->{history_time}-($self->{preserve}*2592000)))[5]+1900;
-			$p_month = (localtime($self->{history_time}-($self->{preserve}*2592000)))[4]+1;
+			@ltime = localtime($self->{history_time}-($self->{preserve}*2592000));
+			$p_year = $ltime[5]+1900;
+			$p_month = $ltime[4]+1;
 			$p_month = sprintf("%02d", $p_month);
 	        	print STDERR "Obsolete statistics before $p_year-$p_month\n" if (!$self->{QuietMode});
 		}
