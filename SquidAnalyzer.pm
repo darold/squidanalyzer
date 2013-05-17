@@ -303,7 +303,7 @@ sub parseFile
 
 		if (!$self->{QuietMode}) {
 			print STDERR "END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{end_time})), "\n";
-			print "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
+			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
 
 		# Set the current start time into history file
@@ -386,7 +386,7 @@ sub _init
 
 	# Prevent for a call without instance
 	if (!ref($self)) {
-		print "ERROR - init : Unable to call init without an object instance.\n";
+		print STDERR "ERROR - init : Unable to call init without an object instance.\n";
 		exit(0);
 	}
 
