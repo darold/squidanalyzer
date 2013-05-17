@@ -1203,7 +1203,7 @@ sub buildHTML
 		# Remove the full year repository if it is older that the last date to preserve
 		if ($p_year && ($y < $p_year)) {
 			print STDERR "Removing obsolete statistics for year $y\n" if (!$self->{QuietMode});
-			`$RM_PROG -rf $outdir/$y`;
+			system ($RM_PROG, "-rf", "$outdir/$y");
 			next;
 		}
 		next if (!$p_year && ($y < $old_year));
@@ -1215,7 +1215,7 @@ sub buildHTML
 			# Remove the full month repository if it is older that the last date to preserve
 			if ($p_year && ("$y$m" < "$p_year$p_month")) {
 				print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
-				`$RM_PROG -rf $outdir/$y/$m`;
+				system ($RM_PROG, "-rf", "$outdir/$y/$m");
 				next;
 			}
 			next if ("$y$m" < "$old_year$old_month");
