@@ -456,9 +456,9 @@ sub _init
 	if ($self->{OrderMime} !~ /^(hits|bytes)$/) {
 		die "ERROR: OrderMime must be one of these values: hits or bytes\n";
 	}
-	$self->{NetworkAlias} = &parse_network_aliases($options{NetworkAlias} || '');
-	$self->{UserAlias} = &parse_user_aliases($options{UserAlias} || '');
-	%{$self->{Exclude}} = &parse_exclusion($options{Exclude} || '');
+	%{$self->{NetworkAlias}} = &parse_network_aliases($options{NetworkAlias} || '');
+	%{$self->{UserAlias}}    = &parse_user_aliases($options{UserAlias} || '');
+	%{$self->{Exclude}}      = &parse_exclusion($options{Exclude} || '');
 
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
@@ -584,9 +584,9 @@ sub _parseData
 
 	# Replace network by his aliases if any
 	my $network = '';
-	foreach my $n (keys %{$self->{NetworkAlias}}) {
-		if ( grep($client =~ /^$_/,  @{$self->{NetworkAlias}->{$n}}) ) {
-			$network = $n;
+	foreach my $r (keys %{$self->{NetworkAlias}}) {
+		if ($client =~ /^$r/) {
+			$network = $self->{NetworkAlias}->{$r};
 			last;
 		}
 	}
@@ -595,10 +595,11 @@ sub _parseData
 		$network = $client;
 		$network =~ s/\.\d+$/\.0/;
 	}
+
 	# Replace username by his alias if any
 	foreach my $u (keys %{$self->{UserAlias}}) {
-		if ( grep($id =~ /^$_$/,  @{$self->{UserAlias}->{$u}}) ) {
-			$id = $u;
+		if ( $id =~ /^$u$/i ) {
+			$id = $self->{UserAlias}->{$u};
 			last;
 		}
 	}
@@ -2021,8 +2022,8 @@ sub _print_user_stat
 		my $total_cost = sprintf("%2.2f", int($user_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
-			if ( grep($usr =~ /^$_$/,  @{$self->{UserAlias}->{$u}}) ) {
-				$show = $u;
+			if ( $usr =~ /^$u$/i ) {
+				$show = $self->{UserAlias}->{$u};
 				last;
 			}
 		}
@@ -2195,8 +2196,8 @@ sub _print_netuser_stat
 		my $total_cost = sprintf("%2.2f", int($netuser_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
-			if ( grep($usr =~ /^$_$/,  @{$self->{UserAlias}->{$u}}) ) {
-				$show = $u;
+			if ( $usr =~ /^$u$/i ) {
+				$show = $self->{UserAlias}->{$u};
 				last;
 			}
 		}
@@ -2887,16 +2888,21 @@ sub parse_network_aliases
 		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/));
 		$l =~ s/[\s\t]*#.*//;
-		my @data = split(/[\t]+/, $l, 2);
+		my @data = split(/\t+/, $l, 2);
 		if ($#data == 1) {
-			push(@{$alias{$data[0]}}, split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]));
+			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			foreach my $r (@rg) {
+				$r =~ s/^\^//;
+				&check_regex($r, "$file at line $i");
+				$alias{"$r"} = $data[0];
+			}
 		} else {
 			die "ERROR: wrong format in network aliases file $file, line $i\n";
 		}
 	}
 	close(ALIAS);
 
-	return \%alias;
+	return %alias;
 }
 
 sub parse_user_aliases
@@ -2912,17 +2918,23 @@ sub parse_user_aliases
 		chomp($l);
 		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
-		my @data = split(/[\t]+/, $l, 2);
+		my @data = split(/\t+/, $l, 2);
 		$data[0] =~ s/\s+/_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
-			push(@{$alias{$data[0]}}, split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]));
+			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			foreach my $r (@rg) {
+				$r =~ s/^\^//;
+				$r =~ s/([^\\])\$$/$1/;
+				&check_regex($r, "$file at line $i");
+				$alias{"$r"} = $data[0];
+			}
 		} else {
 			die "ERROR: wrong format in user aliases file $file, line $i\n";
 		}
 	}
 	close(ALIAS);
 
-	return \%alias;
+	return %alias;
 }
 
 sub parse_exclusion
@@ -2933,17 +2945,21 @@ sub parse_exclusion
 
 	my %exclusion = ();
 	open(EXCLUDED, $file) or die "ERROR: can't open exclusion file $file, $!\n";
+	my $i = 0;
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
+		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
-		if ($l =~ m#^USER[\s\t]+(.*)#) {
-			push(@{$exclusion{users}}, split(m#[\s\t]+#, $1));
-		} elsif ($l =~ m#^CLIENT[\s\t]+(.*)#) {
-			push(@{$exclusion{clients}}, split(m#[\s\t]+#, $1));
-		} elsif ($l =~ m#^URI[\s\t]+(.*)#) {
-			push(@{$exclusion{uris}}, split(m#[\s\t]+#, $1));
+		if ($l =~ m#^(USER|CLIENT|URI)[\s\t]+(.*)#) {
+			my $lbl = lc($1) . 's';
+			my @rg =  split(m#[\s\t]+#, $2);
+			foreach my $r (@rg) {
+				&check_regex($r, "$file at line $i");
+			}
+			push(@{$exclusion{$lbl}}, @rg);
 		} else {
 			# backward compatibility
+			&check_regex($l, "$file at line $i");
 			push(@{$exclusion{all}}, $l);
 		}
 	}
@@ -3303,6 +3319,16 @@ i*/
 </script>
 EOF
 
+}
+
+sub check_regex
+{
+	my ($pattern, $label) = @_;
+
+	eval { $pattern =~ m/^$pattern$/i;};
+	if ($@) {
+		die "FATAL: $label invalid regex '$pattern', $!\n";
+	}
 }
 
 1;
