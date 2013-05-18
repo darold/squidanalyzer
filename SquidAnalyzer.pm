@@ -296,7 +296,7 @@ sub parseFile
 	if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
 		print STDERR "No new log registered...\n" if (!$self->{QuietMode});
 	} else {
-		print STDERR "\nParsing ended, generating last day data files...\n";
+		print STDERR "\nParsing ended, generating last day data files...\n" if (!$self->{QuietMode});
 
 		# Save last parsed data
 		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
@@ -321,7 +321,7 @@ sub parseFile
 		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
 			$date =~ /^(\d{4})(\d{2})$/;
 			next if (($2 < 1) || ($2 > 12));
-			print STDERR "Compute and dump month statistics for $1/$2\n";
+			print STDERR "Compute and dump month statistics for $1/$2\n" if (!$self->{QuietMode});
 			if (-d "$self->{Output}/$1/$2") {
 				$self->_save_data("$1", "$2");
 			}
