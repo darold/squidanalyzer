@@ -416,6 +416,7 @@ sub _init
 	$self->{SiblingHit} = $options{SiblingHit} || 1;
 	$self->{ImgFormat} = $options{ImgFormat} || 'png';
 	$self->{Locale} = $options{Locale} || '';
+	$self->{WriteDelay} = $options{WriteDelay} || 3600;
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
@@ -605,7 +606,7 @@ sub _parseData
 	}
 
 	# Store data when hour change to save memory
-	if ($self->{tmp_saving} && ($self->{tmp_saving} ne $hour) ) {
+	if ($self->{tmp_saving} && ($time > ($self->{tmp_saving} + $self->{WriteDelay})) ) {
 		$date =~ /^(\d{4})(\d{2})(\d{2})$/;
 		# If the day has changed then we want to save stats of the previous one
 		$self->_save_data("$1", "$2", "$3");
@@ -617,7 +618,7 @@ sub _parseData
 	$self->{first_year} ||= $self->{last_year};
 	$self->{first_month} ||= $self->{last_month};
 
-	$self->{tmp_saving} = $hour;
+	$self->{tmp_saving} = $time;
 
 	#### Store client statistics
 	$self->{stat_user_hour}{$id}{$hour}{hits}++;
