@@ -254,8 +254,12 @@ CONFIGURATION
         the exclusion (USER, CLIENT or URI) and a space separated list of
         valid regex.
 
+        You can also use the NETWORK type to define network address with
+        netmask using the CIDR notation: xxx.xxx.xxx.xxx/n
+
         See example bellow:
 
+                NETWORK        192.168.1.0/24 10.10.0.0/16
                 CLIENT         192\.168\.1\.2 
                 CLIENT         10\.169\.1\.\d+ 192\.168\.10\..*
                 USER           myloginstr

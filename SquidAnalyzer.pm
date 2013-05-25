@@ -230,22 +230,12 @@ sub parseFile
 				# Remove extra space character in username
 				$login =~ s/\%20//g;
 
+				my $found = 0;
 				my $id = $client_ip || '';
 				if ($login ne '-') {
 					$id = $login;
 				}
 				next if (!$id || !$bytes);
-				# check for client/user exclusion in old syntax
-				my $found = 0;
-				if (exists $self->{Exclude}{all}) {
-					foreach my $e (@{$self->{Exclude}{all}}) {
-						if ( ($client_ip =~ m#^$e$#i) || ($login =~ m#^$e$#i)) {
-							$found = 1;
-							last;
-						}
-					} 
-					next if ($found);
-				}
 				# check for user exclusion
 				if (exists $self->{Exclude}{users}) {
 					foreach my $e (@{$self->{Exclude}{users}}) {
@@ -270,6 +260,16 @@ sub parseFile
 				if (exists $self->{Exclude}{uris}) {
 					foreach my $e (@{$self->{Exclude}{uris}}) {
 						if ($url =~ m#^$e$#i) {
+							$found = 1;
+							last;
+						}
+					}
+					next if ($found);
+				}
+				# check for Network exclusion
+				if (exists $self->{Exclude}{networks}) {
+					foreach my $e (@{$self->{Exclude}{networks}}) {
+						if (&check_ip($client_ip, $e)) {
 							$found = 1;
 							last;
 						}
@@ -2551,7 +2551,6 @@ sub _print_top_domain_stat
 			$first = $4;
 			$last = $5;
 		}
-		$url =~ /(\.[^\.]+)$/;
 		if ($url !~ /\.\d+$/) {
 			if ($url =~ /([^\.]+)(\.[^\.]+)$/) {
 				$perdomain{$2}{hits} += $hits;
@@ -2951,17 +2950,19 @@ sub parse_exclusion
 		chomp($l);
 		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/)); 
-		if ($l =~ m#^(USER|CLIENT|URI)[\s\t]+(.*)#) {
+		# remove comments at end of line
+		$l =~ s/[\s\t]*#.*//; 
+		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)[\s\t]+(.*)#) {
 			my $lbl = lc($1) . 's';
 			my @rg =  split(m#[\s\t]+#, $2);
 			foreach my $r (@rg) {
+				next if ($lbl eq 'networks');
 				&check_regex($r, "$file at line $i");
 			}
 			push(@{$exclusion{$lbl}}, @rg);
 		} else {
-			# backward compatibility
-			&check_regex($l, "$file at line $i");
-			push(@{$exclusion{all}}, $l);
+			# backward compatibility is not more supported
+			die "ERROR: wrong line format in file $file at line $i\n";
 		}
 	}
 	close(EXCLUDED);
@@ -3330,6 +3331,25 @@ sub check_regex
 	if ($@) {
 		die "FATAL: $label invalid regex '$pattern', $!\n";
 	}
+}
+
+sub check_ip
+{
+	my ($ip, $block) = @_;
+
+	my @ip = split(/\./, $ip);
+	my $ip1 = $ip[0] * 2**24 + $ip[1] * 2**16 + $ip[2] * 2**8 + $ip[3];
+	my @submask = split(/\//, $block);
+
+	my $ip2 = $submask[0];
+	my $netmask = $submask[1];
+
+	my @ip2 = split(/\./, $ip2);
+	$ip2 = $ip2[0] * 2**24 + $ip2[1] * 2**16 + $ip2[2] * 2**8 + $ip2[3];
+	if ( $ip1 >> (32-$netmask) == $ip2 >> (32-$netmask)) {
+		return 1;
+	}
+	return 0;
 }
 
 1;

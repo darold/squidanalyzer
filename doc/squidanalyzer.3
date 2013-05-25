@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2013-01-30" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2013-05-25" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -404,9 +404,13 @@ uri to exclude from report.
 You can define one by line exclusion by specifying first the type of the
 exclusion (\s-1USER\s0, \s-1CLIENT\s0 or \s-1URI\s0) and a space separated list of valid regex.
 .Sp
+You can also use the \s-1NETWORK\s0 type to define network address with netmask
+using the \s-1CIDR\s0 notation: xxx.xxx.xxx.xxx/n
+.Sp
 See example bellow:
 .Sp
-.Vb 6
+.Vb 7
+\&        NETWORK        192.168.1.0/24 10.10.0.0/16
 \&        CLIENT         192\e.168\e.1\e.2 
 \&        CLIENT         10\e.169\e.1\e.\ed+ 192\e.168\e.10\e..*
 \&        USER           myloginstr
