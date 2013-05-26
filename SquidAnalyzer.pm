@@ -663,12 +663,12 @@ sub _parseData
 		$self->{stat_user_url_hour}{$id}{$dest}{duration} += $elapsed;
 		$self->{stat_user_url_hour}{$id}{$dest}{hits}++;
 		$self->{stat_user_url_hour}{$id}{$dest}{bytes} += $bytes;
-		$self->{stat_user_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{firsthit});
-		$self->{stat_user_url_hour}{$id}{$dest}{lasthit} = $time;
+		$self->{stat_user_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_hour}{$id}{$dest}{firsthit}));
+		$self->{stat_user_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_user_url_hour}{$id}{$dest}{lasthit}));
 		$self->{stat_user_url_day}{$id}{$dest}{duration} += $elapsed;
 		$self->{stat_user_url_day}{$id}{$dest}{hits}++;
-		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit});
-		$self->{stat_user_url_day}{$id}{$dest}{lasthit} = $time;
+		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_day}{$id}{$dest}{firsthit}));
+		$self->{stat_user_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_user_url_day}{$id}{$dest}{lasthit}));
 		$self->{stat_user_url_day}{$id}{$dest}{bytes} += $bytes;
 	}
 
@@ -948,8 +948,8 @@ sub _read_stat
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit});
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
 				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
 					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{hits} += $2;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{bytes} += $3;
@@ -2265,8 +2265,8 @@ sub _print_user_detail
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
-			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit});
-			$url_stat{$6}{lasthit} = $5;
+			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
+			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
 			$total_hit += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -2390,8 +2390,8 @@ sub _print_top_url_stat
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
-			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit});
-			$url_stat{$6}{lasthit} = $5;
+			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
+			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -2558,8 +2558,8 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{hits} = $hits;
 				$domain_stat{"$1$2"}{bytes} = $bytes;
 				$domain_stat{"$1$2"}{duration} = $duration;
-				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit});
-				$domain_stat{"$1$2"}{lasthit} = $last;
+				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
+				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 			}
 		} else {
 			$perdomain{'other'}{hits} += $hits;
@@ -2567,8 +2567,8 @@ sub _print_top_domain_stat
 			$domain_stat{'unknown'}{hits} = $hits;
 			$domain_stat{'unknown'}{bytes} = $bytes;
 			$domain_stat{'unknown'}{duration} = $duration;
-			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit});
-			$domain_stat{'unknown'}{lasthit} = $last;
+			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
+			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
 		}
 		$total_hits += $hits;
 		$total_bytes += $bytes;
@@ -2659,40 +2659,40 @@ sub _print_top_domain_stat
 <tbody>
 };
 		my $i = 0;
-		foreach (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
+		foreach my $u (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
 			my $h_percent = '0.0';
-			$h_percent = sprintf("%2.2f", ($domain_stat{$_}{hits}/$total_hits) * 100) if ($total_hits);
+			$h_percent = sprintf("%2.2f", ($domain_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 			my $b_percent = '0.0';
-			$b_percent = sprintf("%2.2f", ($domain_stat{$_}{bytes}/$total_bytes) * 100) if ($total_bytes);
+			$b_percent = sprintf("%2.2f", ($domain_stat{$u}{bytes}/$total_bytes) * 100) if ($total_bytes);
 			my $d_percent = '0.0';
-			$d_percent = sprintf("%2.2f", ($domain_stat{$_}{duration}/$total_duration) * 100) if ($total_duration);
-			my $total_cost = sprintf("%2.2f", int($domain_stat{$_}{bytes}/1000000) * $self->{CostPrice});
-			my $duration = &parse_duration(int($domain_stat{$_}{duration}/1000));
-			my $comma_bytes = $self->format_bytes($domain_stat{$_}{bytes});
+			$d_percent = sprintf("%2.2f", ($domain_stat{$u}{duration}/$total_duration) * 100) if ($total_duration);
+			my $total_cost = sprintf("%2.2f", int($domain_stat{$u}{bytes}/1000000) * $self->{CostPrice});
+			my $duration = &parse_duration(int($domain_stat{$u}{duration}/1000));
+			my $comma_bytes = $self->format_bytes($domain_stat{$u}{bytes});
 			my $firsthit = '-';
-			if ($domain_stat{$_}{firsthit}) {
-				$firsthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$_}{firsthit})));
+			if ($domain_stat{$u}{firsthit}) {
+				$firsthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$u}{firsthit})));
 			}
 			my $lasthit = '-';
-			if ($domain_stat{$_}{lasthit}) {
-				$lasthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$_}{lasthit})));
+			if ($domain_stat{$u}{lasthit}) {
+				$lasthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$u}{lasthit})));
 			}
 			if ($type eq 'hour') {
-				if ($domain_stat{$_}{firsthit}) {
-					$firsthit = ucfirst(strftime("%T", localtime($domain_stat{$_}{firsthit})));
+				if ($domain_stat{$u}{firsthit}) {
+					$firsthit = ucfirst(strftime("%T", localtime($domain_stat{$u}{firsthit})));
 				} else {
 					$firsthit = '-';
 				}
-				if ($domain_stat{$_}{lasthit}) {
-					$lasthit = ucfirst(strftime("%T", localtime($domain_stat{$_}{lasthit})));
+				if ($domain_stat{$u}{lasthit}) {
+					$lasthit = ucfirst(strftime("%T", localtime($domain_stat{$u}{lasthit})));
 				} else {
 					$lasthit = '-';
 				}
 			}
 			print $out qq{
 <tr>
-<td>*.$_</td>
-<td>$domain_stat{$_}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>*.$u</td>
+<td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
 };
