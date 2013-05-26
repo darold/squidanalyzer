@@ -101,4 +101,6 @@ Up_link				Haut de Page
 Click_year_stat			Cliquez sur le lien des statistiques annuelles pour plus de détail
 Mime_graph_hits_title		Statistiques des requêtes par type MIME pour
 Mime_graph_bytes_title		Statistiques des transferts par type MIME pour
+User				Utilisateur
+Count				Compte
 

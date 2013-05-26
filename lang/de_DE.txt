@@ -101,3 +101,5 @@ Up_link				Zur&uuml;ck zum Anfang der Seite
 Click_year_stat			Klicken Sie bitte auf den Link mit der gew&uuml;nschten Jahreszahl, um in die Detailanzeige zu gelangen
 Mime_graph_hits_title		Mime Typen Treffer Statistik
 Mime_graph_bytes_title		Mime Typen Bytes Statistik
+User				User
+Count				Count
