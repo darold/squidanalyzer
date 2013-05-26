@@ -2383,6 +2383,7 @@ sub _print_top_url_stat
 			$url_stat{$4}{hits} = $1;
 			$url_stat{$4}{bytes} = $2;
 			$url_stat{$4}{duration} = $3;
+			$url_stat{$4}{users}{$user}++ if ($self->{TopUrlUser});
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -2392,6 +2393,7 @@ sub _print_top_url_stat
 			$url_stat{$6}{duration} = $3;
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
+			$url_stat{$6}{users}{$user}++ if ($self->{TopUrlUser});
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -2473,9 +2475,23 @@ sub _print_top_url_stat
 					$firsthit = '-';
 				}
 			}
+			print $out "<tr><td>\n";
+			if (exists $url_stat{$u}{users}) { 
+				print $out qq{
+<div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
+<table><tr><th>User</th><th>Count</th></tr>
+};
+				my $k = 1;
+				foreach my $user (sort { $url_stat{$u}{users}{$b} <=> $url_stat{$u}{users}{$a} } keys %{$url_stat{$u}{users}}) {
+					print $out "<tr><td>$user</td><td>$url_stat{$u}{users}{$user}</td></tr>\n";
+					$k++;
+					last if ($k > $self->{TopUrlUser});
+				}
+				print $out "</table>\n";
+			} else {
+				print $out "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>\n";
+			}
 			print $out qq{
-<tr>
-<td><a href="http://$u/" target="_blank" class="domainLink">$u</a></td>
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
@@ -2560,6 +2576,7 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{duration} = $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
+				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
 			}
 		} else {
 			$perdomain{'other'}{hits} += $hits;
@@ -2569,6 +2586,7 @@ sub _print_top_domain_stat
 			$domain_stat{'unknown'}{duration} = $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
+			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser});
 		}
 		$total_hits += $hits;
 		$total_bytes += $bytes;
@@ -2689,9 +2707,24 @@ sub _print_top_domain_stat
 					$lasthit = '-';
 				}
 			}
+			print $out "<tr><td>\n";
+			if (exists $domain_stat{$u}{users}) { 
+				print $out qq{
+<div class="tooltipLink"><span class="information">*.$u</span><div class="tooltip">
+<table><tr><th>User</th><th>Count</th></tr>
+};
+				my $k = 1;
+				foreach my $user (sort { $domain_stat{$u}{users}{$b} <=> $domain_stat{$u}{users}{$a} } keys %{$domain_stat{$u}{users}}) {
+					print $out "<tr><td>$user</td><td>$domain_stat{$u}{users}{$user}</td></tr>\n";
+					$k++;
+					last if ($k > $self->{TopUrlUser});
+				}
+				print $out "</table>\n";
+			} else {
+				print $out "*.$u\n";
+			}
 			print $out qq{
-<tr>
-<td>*.$u</td>
+</td>
 <td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>

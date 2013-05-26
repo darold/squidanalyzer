@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2013-05-25" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2013-05-26" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -395,9 +395,13 @@ special character. Default is &euro;
 .IP "TopNumber number" 4
 .IX Item "TopNumber number"
 Used to set the number of top url and second level domain to show.
-Default is top 10.
+Default is top 100.
+.IP "TopUrlUser Use this directive to show the top N users that look at an \s-1URL\s0 or a domain. Set it to 0 to disable this feature. Default is top 10." 4
+.IX Item "TopUrlUser Use this directive to show the top N users that look at an URL or a domain. Set it to 0 to disable this feature. Default is top 10."
+.PD 0
 .IP "Exclude exclusion_file" 4
 .IX Item "Exclude exclusion_file"
+.PD
 Used to set client ip addresses, network addresses, auth login or
 uri to exclude from report.
 .Sp

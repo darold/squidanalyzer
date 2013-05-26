@@ -244,8 +244,10 @@ CONFIGURATION
 
     TopNumber number
         Used to set the number of top url and second level domain to show.
-        Default is top 10.
+        Default is top 100.
 
+    TopUrlUser Use this directive to show the top N users that look at an
+    URL or a domain. Set it to 0 to disable this feature. Default is top 10.
     Exclude exclusion_file
         Used to set client ip addresses, network addresses, auth login or
         uri to exclude from report.
