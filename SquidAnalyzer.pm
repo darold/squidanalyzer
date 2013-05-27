@@ -597,7 +597,12 @@ sub _parseData
 	# Replace network by his aliases if any
 	my $network = '';
 	foreach my $r (keys %{$self->{NetworkAlias}}) {
-		if ($client =~ /^$r/) {
+		if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
+			if (&check_ip($client, $r)) {
+				$network = $self->{NetworkAlias}->{$r};
+				last;
+			}
+		} elsif ($client =~ /^$r/) {
 			$network = $self->{NetworkAlias}->{$r};
 			last;
 		}
@@ -1833,9 +1838,14 @@ sub _print_network_stat
 		my $show = $net;
 		if ($net =~ /^(\d+\.\d+\.\d+)/) {
 			$show = "$1.0";
-			foreach my $n (keys %{$self->{NetworkAlias}}) {
-				if ($show =~ /$self->{NetworkAlias}->{$n}/) {
-					$show = $n;
+			foreach my $r (keys %{$self->{NetworkAlias}}) {
+				if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
+					if (&check_ip($net, $r)) {
+						$show = $self->{NetworkAlias}->{$r};
+						last;
+					}
+				} elsif ($show =~ /$r/) {
+					$show = $self->{NetworkAlias}->{$r};
 					last;
 				}
 			}
@@ -2966,7 +2976,10 @@ sub parse_network_aliases
 			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
-				&check_regex($r, "$file at line $i");
+				# If this is not a cidr notation
+				if ($r !~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
+					&check_regex($r, "$file at line $i");
+				}
 				$alias{"$r"} = $data[0];
 			}
 		} else {
