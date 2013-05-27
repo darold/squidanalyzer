@@ -273,23 +273,27 @@ SquidAnalyzer can be run manually or by cron job using the squid-analyzer Perl
 script. Here are authorized usage:
 .PP
 .Vb 1
-\&  squid\-analyzer [ \-c squidanalyzer.conf ] [\-l logfile]
+\&    Usage: squid\-analyzer [ \-c squidanalyzer.conf ] [\-l logfile]
 \&
-\&    \-c | \-\-configfile filename : path to the SquidAnalyzer configuration file.
-\&                                 By default: /etc/squidanalyzer.conf
-\&    \-d | \-\-debug               : show debug informations.
-\&    \-h | \-\-help                : show this message and exit.
-\&    \-l | \-\-logfile filename    : path to the Squid logfile to parse.
-\&                                 By default: /var/log/squid/access.log
-\&    \-p | \-\-preserve number     : used to set the statistic obsolescence in
-\&                                 number of month. Older stats will be removed.
-\&    \-r | \-\-rebuild             : use this option to rebuild all html and graphs
-\&                                 output from all data files.
-\&    \-v | version               : show version and exit.
+\&        \-c | \-\-configfile filename : path to the SquidAnalyzer configuration file.
+\&                                     By default: /etc/squidanalyzer.conf
+\&        \-b | \-\-build_date date     : set the day to be rebuilt, format: yyyy\-mm\-dd,
+\&                                     yyyy\-mm or yyyy. Used with \-r or \-\-rebuild.
+\&        \-d | \-\-debug               : show debug informations.
+\&        \-h | \-\-help                : show this message and exit.
+\&        \-l | \-\-logfile filename    : path to the Squid logfile to parse.
+\&                                     By default: /var/log/squid/access.log
+\&        \-p | \-\-preserve number     : used to set the statistic obsolescence in
+\&                                     number of month. Older stats will be removed.
+\&        \-r | \-\-rebuild             : use this option to rebuild all html and graphs
+\&                                     output from all data files.
+\&        \-v | version               : show version and exit.
 .Ve
 .PP
 There is special options like \-\-rebuild that force SquidAnalyzer to rebuild all
-\&\s-1HTML\s0 reports, useful after an new feature or a bug fix.
+\&\s-1HTML\s0 reports, useful after an new feature or a bug fix. If you want to limit the
+rebuild to a single day, a single month or year, you can use the \-\-build_date
+option by specifying the date part to rebuild, format: yyyy-mm-dd, yyyy-mm or yyyy.
 .PP
 The \-\-preserve option should be used if you want to rotate your statistics and
 data. The value is the number of months to keep, older reports and data will be

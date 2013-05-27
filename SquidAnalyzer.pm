@@ -16,7 +16,7 @@ use strict;             # make things properly
 BEGIN {
 	use Exporter();
 	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
-	use POSIX;
+	use POSIX qw/ strftime /;
 	use IO::File;
 
 	# Set all internal variable
@@ -127,19 +127,21 @@ my %Translate = (
 	'Click_year_stat' => 'Click on year\'s statistics link for details',
 	'Mime_graph_hits_title' => 'Mime Type Hits Statistics on',
 	'Mime_graph_bytes_title' => 'Mime Type Bytes Statistiques on',
+	'User' => 'User',
+	'Count' => 'Count',
 );
 
 
 sub new
 {
-	my ($class, $conf_file, $log_file, $debug) = @_;
+	my ($class, $conf_file, $log_file, $debug, $rebuild) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file, $debug);
+	$self->_init($conf_file, $log_file, $debug, $rebuild);
 
 	# Return the instance
 	return($self);
@@ -184,6 +186,7 @@ sub parseFile
 	my $line_count = 0;
 	my $line_processed_count = 0;
 	my $line_stored_count = 0;
+
 	# Read and parse each line of the access log file
 	while ($line = <$logfile>) {
 		chomp($line);
@@ -382,7 +385,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild) = @_;
 
 	# Prevent for a call without instance
 	if (!ref($self)) {
@@ -398,7 +401,7 @@ sub _init
 			$conf_file = 'squidanalyzer.conf';
 		}
 	}
-	my %options = &parse_config($conf_file, $log_file);
+	my %options = &parse_config($conf_file, $log_file, $rebuild);
 
 	# Use squid log file given as command line parameter
 	$options{LogFile} = $log_file if ($log_file);
@@ -432,13 +435,13 @@ sub _init
 		die "ERROR: 'Output' configuration option must be set.\n";
 	}
 	if (! -d $self->{Output}) {
-		die "ERROR: 'Output' dorectory $self->{Output} doesn't exists.\n";
+		die "ERROR: 'Output' directory $self->{Output} doesn't exists.\n";
 	}
 	$self->{LogFile} = $options{LogFile} || '/var/log/squid/access.log';
 	if (!$self->{LogFile}) {
 		die "ERROR: 'LogFile' configuration option must be set.\n";
 	}
-	if (! -e $self->{LogFile}) {
+	if (!$rebuild && ! -e $self->{LogFile}) {
 		die "ERROR: 'LogFile' $self->{LogFile} doesn't exists.\n";
 	}
 	$self->{OrderUser} = lc($options{OrderUser}) || 'bytes';
@@ -507,7 +510,7 @@ sub _init
 	}
 
 	# Get the last parsing date for incremental parsing
-	if (-e "$self->{Output}/SquidAnalyzer.current") {
+	if (!$rebuild && -e "$self->{Output}/SquidAnalyzer.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/SquidAnalyzer.current")) {
 			print STDERR "ERROR: Can't read file $self->{Output}/SquidAnalyzer.current, $!\n" if (!$self->{QuietMode});
@@ -711,7 +714,7 @@ sub _save_stat
 	my $path = join('/', $year, $month, $day);
 	$path =~ s/[\/]+$//;
 
-	#### Load history
+	#### Load history if we are not rebuilding a particular day
 	if ($type eq 'day') {
 		foreach my $d ("01" .. "31") {
 			$self->_read_stat($year, $month, $d, 'day');
@@ -1167,6 +1170,25 @@ sub _print_footer
 
 }
 
+sub check_build_date
+{
+	my ($self, $year, $month, $day) = @_;
+
+	return 0 if (!$self->{build_date});
+
+	my ($y, $m, $d) = split(/\-/, $self->{build_date});
+
+	return 1 if ($year ne $y);
+	if ($m) {
+		return 1 if ($month && ($month ne $m));
+		if ($d) {
+			return 1 if ($day && ($day ne $d));
+		}
+	}
+
+	return 0;
+}
+
 sub buildHTML
 {
 	my ($self, $outdir) = @_;
@@ -1204,6 +1226,7 @@ sub buildHTML
 	closedir DIR;
 	foreach my $y (sort {$a <=> $b} @years) {
 		next if (!$y);
+		next if ($self->check_build_date($y));
 		# Remove the full year repository if it is older that the last date to preserve
 		if ($p_year && ($y < $p_year)) {
 			print STDERR "Removing obsolete statistics for year $y\n" if (!$self->{QuietMode});
@@ -1216,6 +1239,7 @@ sub buildHTML
 		closedir DIR;
 		foreach my $m (sort {$a <=> $b} @months) {
 			next if (!$m);
+			next if ($self->check_build_date($y, $m));
 			# Remove the full month repository if it is older that the last date to preserve
 			if ($p_year && ("$y$m" < "$p_year$p_month")) {
 				print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
@@ -1227,6 +1251,7 @@ sub buildHTML
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
 			closedir DIR;
 			foreach my $d (sort {$a <=> $b} @days) {
+				next if ($self->check_build_date($y, $m, $d));
 				next if ("$y$m$d" < "$old_year$old_month$old_day");
 				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
 				$self->gen_html_output($outdir, $y, $m, $d);
@@ -2479,7 +2504,7 @@ sub _print_top_url_stat
 			if (exists $url_stat{$u}{users}) { 
 				print $out qq{
 <div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
-<table><tr><th>User</th><th>Count</th></tr>
+<table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
 };
 				my $k = 1;
 				foreach my $user (sort { $url_stat{$u}{users}{$b} <=> $url_stat{$u}{users}{$a} } keys %{$url_stat{$u}{users}}) {
@@ -2711,7 +2736,7 @@ sub _print_top_domain_stat
 			if (exists $domain_stat{$u}{users}) { 
 				print $out qq{
 <div class="tooltipLink"><span class="information">*.$u</span><div class="tooltip">
-<table><tr><th>User</th><th>Count</th></tr>
+<table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
 };
 				my $k = 1;
 				foreach my $user (sort { $domain_stat{$u}{users}{$b} <=> $domain_stat{$u}{users}{$a} } keys %{$domain_stat{$u}{users}}) {
@@ -2867,7 +2892,7 @@ sub _gen_summary
 
 sub parse_config
 {
-	my ($file, $log_file) = @_;
+	my ($file, $log_file, $rebuild) = @_;
 
 	die "FATAL: no configuration file!\n" if (!-e $file);
 
@@ -2886,9 +2911,11 @@ sub parse_config
 		print STDERR "Error: you must give a valid output directory. See option: Output\n";
 		exit 0;
 	}
-	if (!$log_file && (!exists $opt{LogFile} || !-f $opt{LogFile})) {
-		print STDERR "Error: you must give the path to the Squid log file. See option: LogFile\n";
-		exit 0;
+	if (!$rebuild || $log_file) {
+		if (!$log_file && (!exists $opt{LogFile} || !-f $opt{LogFile})) {
+			print STDERR "Error: you must give the path to the Squid log file. See option: LogFile\n";
+			exit 0;
+		}
 	}
 	if (exists $opt{DateFormat}) {
 		if ( ($opt{DateFormat} !~ m#\%y#) || (($opt{DateFormat} !~ m#\%m#) && ($opt{DateFormat} !~ m#\%M#) )|| ($opt{DateFormat} !~ m#\%d#) ) {

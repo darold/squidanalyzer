@@ -17,10 +17,12 @@ my $rebuild    = '';
 my $preserve   = '';
 my $debug      = 0;
 my $version    = 0;
+my $build_date = '';
 
 # get the command line parameters
 my $result = GetOptions (
 	"c|configfile=s"       => \$configfile,
+	"b|build_date=s"       => \$build_date,
 	"d|debug!"             => \$debug,
 	"h|help"               => \$help,
 	"l|logfile=s"          => \$logfile,
@@ -35,6 +37,14 @@ if ($version) {
 	exit 0;
 }
 
+if ($build_date) {
+	$rebuild = 1;
+	if ( ($build_date !~ /^\d{4}-\d{2}-\d{2}$/) && ($build_date !~ /^\d{4}-\d{2}$/) && ($build_date !~ /^\d{4}$/) ) {
+		die("FATAL: bad syntax for build_date, expecting format: yyyy-mm-dd, yyyy-mm or yyyy\n");
+		exit 0;
+	}
+}
+
 # Allow backward compatibility with release < 4.0
 $configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
 if (($#ARGV < 0) && -e $DEFAULT_CONFFILE) {
@@ -47,19 +57,21 @@ if (!$configfile || $help) {
 }
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, $logfile, $debug);
+my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild);
 
-# Run parsing
-$sa->parseFile();
+# Run parsing only if we have a log file or that we are not in rebuild mode
+$sa->parseFile() if (!$rebuild || $logfile);
 
 # Remove old statistics
 if ($preserve) {
 	$sa->{preserve} = $preserve;
 }
 
-# Recover month and year statistics from day stats
+# In rebuild mode history time is not use and we must store the
+# specific rebuild date if any is provided at command line.
 if ($rebuild) {
 	$sa->{history_time} = '';
+	$sa->{build_date} = $build_date;
 }
 
 # Generate graphics and html
@@ -75,6 +87,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
 				 By default: /etc/squidanalyzer.conf
+    -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
+				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug informations.
     -h | --help                : show this message and exit.
     -l | --logfile filename    : path to the Squid logfile to parse.
