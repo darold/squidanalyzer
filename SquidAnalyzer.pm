@@ -420,6 +420,8 @@ sub _init
 	$self->{ImgFormat} = $options{ImgFormat} || 'png';
 	$self->{Locale} = $options{Locale} || '';
 	$self->{WriteDelay} = $options{WriteDelay} || 3600;
+	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
+	
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
@@ -569,16 +571,22 @@ sub _parseData
 	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type) = @_;
 
 	# Get the current year and month
-	my ($sec,$min,$hour,$wday,$yday,$isdst) = '';
-	($sec,$min,$hour,$self->{last_day},$self->{last_month},$self->{last_year},$wday,$yday,$isdst) = localtime($time);
-	$self->{last_year} += 1900;
-	$self->{last_month}++;
-	$self->{last_month} = "0$self->{last_month}" if ($self->{last_month} < 10);
-	$self->{last_day} = "0$self->{last_day}" if ($self->{last_day} < 10);
-	$hour = "0$hour" if ($hour < 10);
+	my ($sec,$min,$hour,$day,$month,$year,$wday,$yday,$isdst) = localtime($time);
+	$year += 1900;
+	$month = sprintf("%02d", $month + 1);
+	$day = sprintf("%02d", $day);
 
-	# Set the year/month value for history check
-	my $date = "$self->{last_year}$self->{last_month}$self->{last_day}";
+	# Store data when day change to save history
+	if ($self->{last_year}) {
+		if ("$year$month$day" ne "$self->{last_year}$self->{last_month}$self->{last_day}") {
+			$self->{tmp_saving} = $time;
+			# If the day has changed then we want to save stats of the previous one
+			$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+			# Stats can be cleared
+			print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
+			$self->_clear_stats();
+		}
+	}
 
 	# Extract the domainname part of the URL
 	my $dest = $url;
@@ -610,18 +618,23 @@ sub _parseData
 
 	# Store data when hour change to save memory
 	if ($self->{tmp_saving} && ($time > ($self->{tmp_saving} + $self->{WriteDelay})) ) {
-		$date =~ /^(\d{4})(\d{2})(\d{2})$/;
+		$self->{tmp_saving} = $time;
 		# If the day has changed then we want to save stats of the previous one
-		$self->_save_data("$1", "$2", "$3");
+		$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
 		# Stats can be cleared
 		print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
 		$self->_clear_stats();
 	}
 
+	# Stores last parsed date part
+	$self->{last_year} = $year;
+	$self->{last_month} = $month;
+	$self->{last_day} = $day;
+	$hour = sprintf("%02d", $hour);
+	# Stores first parsed date part
 	$self->{first_year} ||= $self->{last_year};
 	$self->{first_month} ||= $self->{last_month};
-
-	$self->{tmp_saving} = $time;
+	$self->{tmp_saving} = $time if (!$self->{tmp_saving});
 
 	#### Store client statistics
 	$self->{stat_user_hour}{$id}{$hour}{hits}++;
