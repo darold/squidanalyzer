@@ -102,5 +102,5 @@ Up_link				Up
 Click_year_stat			Click on year's statistics link for details
 Mime_graph_hits_title		Acessos a Tipos MIME em
 Mime_graph_bytes_title		Bytes Transferidos de Tipos MIME em
-User				User
-Count				Count
+User				Usu&aacute;rios
+Count				N&uacute;mero
