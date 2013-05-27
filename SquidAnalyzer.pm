@@ -2609,9 +2609,9 @@ sub _print_top_domain_stat
 			if ($url =~ /([^\.]+)(\.[^\.]+)$/) {
 				$perdomain{$2}{hits} += $hits;
 				$perdomain{$2}{bytes} += $bytes;
-				$domain_stat{"$1$2"}{hits} = $hits;
-				$domain_stat{"$1$2"}{bytes} = $bytes;
-				$domain_stat{"$1$2"}{duration} = $duration;
+				$domain_stat{"$1$2"}{hits} += $hits;
+				$domain_stat{"$1$2"}{bytes} += $bytes;
+				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
@@ -2619,8 +2619,8 @@ sub _print_top_domain_stat
 		} else {
 			$perdomain{'other'}{hits} += $hits;
 			$perdomain{'other'}{bytes} += $bytes;
-			$domain_stat{'unknown'}{hits} = $hits;
-			$domain_stat{'unknown'}{bytes} = $bytes;
+			$domain_stat{'unknown'}{hits} += $hits;
+			$domain_stat{'unknown'}{bytes} += $bytes;
 			$domain_stat{'unknown'}{duration} = $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
