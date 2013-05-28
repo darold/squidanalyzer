@@ -131,6 +131,31 @@ my %Translate = (
 	'Count' => 'Count',
 );
 
+my @TLD1 = (
+	'.co.uk','.com.es','.com.hr','.com.gl','.co.gl','.co.il','.co.ee','.com.mt','.com.mk',
+	'.com.pl','.com.pt','.com.ro','.co.rs','.in.rs','.com.tr','.com.ua','.com.au','.net.au',
+	'.com.cn','.org.cn','.net.cn','.cn.com','.com.hk','.co.id','.web.id','.co.ir','.com.jo',
+	'.com.my','.com.fj','.co.in','.co.kr','.ne.kr','.or.kr','.com.ki','.com.nf','.co.nz',
+	'.net.nz','.org.nz','.com.ph','.com.ps','.net.ps','.org.ps','.com.pk','.com.sb','.com.sg',
+	'.per.sg','.com.tw','.com.vn','.north.am','.south.am','.com.gt','.co.tt','.com.tt',
+	'.com.pa','.com.do','.com.ht','.com.gy','.com.mx','.co.cr','.co.gy','.co.ve','.com.ve',
+	'.com.pe','.com.jm','.com.ar','.com.sv','.com.ni','.co.lc','.com.lc','.com.ec','.info.ec',
+	'.com.co','.com.bo','.com.hn','.com.br','.net.br','.com.py','.com.uy','.com.pr','.co.ag',
+	'.com.ag','.co.vi','.com.bs','.co.za','.com.cm','.net.cm','.co.cm','.ac.ke','.co.ke','.or.ke',
+	'.co.na','.com.na','.org.na','.co.ug'
+);
+
+my @TLD2 = (
+	'.eu','.ie','.am','.at','.ba','.be','.by','.bg','.ch','.cz','.de','.dk','.es','.fi',
+	'.fr','.tf','.gr','.hu','.is','.it','.lv','.ee','.li','.lt','.lu','.yt','.me','.md',
+	'.mk','.nl','.no','.pl','.pt','.ro', '.rs','.re','.ru','.рф','.pm','.se','.sk','.asia',
+	'.ae','امارات.','', '.io','.cn','.cx','.fm','.hk', '.ir','.jo','.lk','.my','.in','.jp',
+	'.kr','.nu','.ph','.ps','.pk','.sg','.tl','.to','.tw','.tv','.mx','.mp','.vn','.ws',
+	'.as','.us','.ca','.cl','.ht','.tt','.do','.bz','.gy','.pe','.gs','.tc','.lc','.ec','.bo',
+	'.uy','.gd','.kn','.sh','.ac','.ag','.bs','.dm','.cd','.cm','.gm','.ly','.mg','.mu','.mw',
+	'.na','.sh','.sx','.st','.sc','.com','.tel','.net','.org','.info','.biz','.mobi','.xxx',
+	'.co','.pw'
+);
 
 sub new
 {
@@ -2599,6 +2624,12 @@ sub _print_top_domain_stat
 	my $duration = 0;
 	my $first = 0;
 	my $last = 0;
+	map {s/\./\\\./g;} @TLD1;
+	my $tld_pattern1 = join('|', @TLD1);
+	$tld_pattern1 = qr/([^\.]+?)($tld_pattern1)$/;
+	map {s/\./\\\./g;} @TLD2;
+	my $tld_pattern2 = join('|', @TLD2);
+	$tld_pattern2 = qr/([^\.]+?)($tld_pattern2)$/;
 	while(my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
@@ -2616,7 +2647,7 @@ sub _print_top_domain_stat
 			$last = $5;
 		}
 		if ($url !~ /\.\d+$/) {
-			if ($url =~ /([^\.]+)(\.[^\.]+)$/) {
+			if ( ($url =~ $tld_pattern1) || ($url =~ $tld_pattern2) ) {
 				$perdomain{$2}{hits} += $hits;
 				$perdomain{$2}{bytes} += $bytes;
 				$domain_stat{"$1$2"}{hits} += $hits;
@@ -2757,8 +2788,10 @@ sub _print_top_domain_stat
 			}
 			print $out "<tr><td>\n";
 			if (exists $domain_stat{$u}{users}) { 
+				my $dname = "*.$u";
+				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown'));
 				print $out qq{
-<div class="tooltipLink"><span class="information">*.$u</span><div class="tooltip">
+<div class="tooltipLink"><span class="information">$dname</span><div class="tooltip">
 <table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
 };
 				my $k = 1;
