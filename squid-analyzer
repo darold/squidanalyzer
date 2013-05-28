@@ -18,6 +18,7 @@ my $preserve   = '';
 my $debug      = 0;
 my $version    = 0;
 my $build_date = '';
+my $no_year_stat = 0;
 
 # get the command line parameters
 my $result = GetOptions (
@@ -29,6 +30,7 @@ my $result = GetOptions (
 	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
 	"v|version!"           => \$version,
+	"no-year-stat!"        => \$no_year_stat,
 );  
 
 # Show version and exit
@@ -58,6 +60,8 @@ if (!$configfile || $help) {
 
 # Instanciate SquidAnalyzer.pm perl module
 my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild);
+
+$sa->{no_year_stat} = $no_year_stat;
 
 # Run parsing only if we have a log file or that we are not in rebuild mode
 $sa->parseFile() if (!$rebuild || $logfile);

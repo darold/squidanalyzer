@@ -356,12 +356,14 @@ sub parseFile
 		}
 
 		# Compute year statistics
-		if (!$self->{QuietMode}) {
-			print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
-		}
-		for my $year ($self->{first_year} .. $self->{last_year}) {
-			if (-d "$self->{Output}/$year") {
-				$self->_save_data($year);
+		if (!$self->{no_year_stat}) {
+			if (!$self->{QuietMode}) {
+				print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
+			}
+			for my $year ($self->{first_year} .. $self->{last_year}) {
+				if (-d "$self->{Output}/$year") {
+					$self->_save_data($year);
+				}
 			}
 		}
 	}
@@ -446,6 +448,7 @@ sub _init
 	$self->{Locale} = $options{Locale} || '';
 	$self->{WriteDelay} = $options{WriteDelay} || 3600;
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
+	$self->{no_year_stat} = 0;
 	
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -585,6 +588,14 @@ sub _init
 <li><a href="../../user.html"><span class="iconUser">$Translate{'User_link'}</span></a></li>
 <li><a href="../../network.html"><span class="iconNetwork">$Translate{'Network_link'}</span></a></li>
 <li><a href="../../mime_type.html"><span class="iconMime">$Translate{'Mime_link'}</span></a></li>
+</ul>
+</div>
+};
+
+	$self->{menu3} = qq{
+<div id="menu">
+<ul>
+<li><a href="../index.html"><span class="iconArrow">$Translate{'Back_link'}</span></a></li>
 </ul>
 </div>
 };
@@ -1306,7 +1317,11 @@ sub buildHTML
 		$self->gen_html_output($outdir, $y);
 	}
 
-	$self->_gen_summary($outdir);
+	if (!$self->{no_year_stat}) {
+		$self->_gen_summary($outdir);
+	} else {
+		$self->_gen_year_summary($outdir);
+	}
 }
 
 sub gen_html_output
@@ -1376,30 +1391,31 @@ sub _print_cache_stat
 	}
 
 	# Load code statistics
-	my $infile = new IO::File;
-	$infile->open("$outdir/stat_code.dat") || return;
 	my %code_stat = ();
 	my %detail_code_stat = ();
-	while (my $l = <$infile>) {
-		chomp($l);
-		my ($code, $data) = split(/\s/, $l);
-		$data =~ /hits_$type=([^;]+);bytes_$type=([^;]+)/;
-		my $hits = $1 || '';
-		my $bytes = $2 || '';
-		$hits =~ s/,$//;
-		$bytes =~ s/,$//;
-		my %hits_tmp = split(/[:,]/, $hits);
-		foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-			$detail_code_stat{$code}{$tmp}{request} = $hits_tmp{$tmp};
-			$code_stat{$code}{request} += $hits_tmp{$tmp};
+	my $infile = new IO::File;
+	if ($infile->open("$outdir/stat_code.dat")) {
+		while (my $l = <$infile>) {
+			chomp($l);
+			my ($code, $data) = split(/\s/, $l);
+			$data =~ /hits_$type=([^;]+);bytes_$type=([^;]+)/;
+			my $hits = $1 || '';
+			my $bytes = $2 || '';
+			$hits =~ s/,$//;
+			$bytes =~ s/,$//;
+			my %hits_tmp = split(/[:,]/, $hits);
+			foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+				$detail_code_stat{$code}{$tmp}{request} = $hits_tmp{$tmp};
+				$code_stat{$code}{request} += $hits_tmp{$tmp};
+			}
+			my %bytes_tmp = split(/[:,]/, $bytes);
+			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+				$detail_code_stat{$code}{$tmp}{bytes} = $bytes_tmp{$tmp};
+				$code_stat{$code}{bytes} += $bytes_tmp{$tmp};
+			}
 		}
-		my %bytes_tmp = split(/[:,]/, $bytes);
-		foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-			$detail_code_stat{$code}{$tmp}{bytes} = $bytes_tmp{$tmp};
-			$code_stat{$code}{bytes} += $bytes_tmp{$tmp};
-		}
+		$infile->close();
 	}
-	$infile->close();
 	my $total_request =  $code_stat{HIT}{request} + $code_stat{MISS}{request};
 	my $total_bytes = $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes};
 
@@ -1408,10 +1424,21 @@ sub _print_cache_stat
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
+	if ( $self->{no_year_stat} && ($type eq 'month') ) {
+		$self->_print_header(\$out, $self->{menu3}, $cal);
+	} else {
+		$self->_print_header(\$out, $self->{menu}, $cal);
+	}
 
 	# Print title and calendar view
 	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
+
+	if ( $self->{no_year_stat} && ($type eq 'month') ) {
+		%code_stat = ();
+		$self->_print_footer(\$out);
+		$out->close();
+		return;
+	}
 
 	my $total_cost = sprintf("%2.2f", int($total_bytes/1000000) * $self->{CostPrice});
 	my $comma_bytes = $self->format_bytes($total_bytes);
@@ -3470,6 +3497,67 @@ sub check_ip
 	}
 	return 0;
 }
+
+sub _gen_year_summary
+{
+	my ($self, $outdir) = @_;
+
+	# Get all day subdirectory
+        opendir(DIR, "$outdir") or die "ERROR: Can't read directory $outdir, $!\n";
+        my @dirs = grep { /^\d{4}$/ && -d "$outdir/$_" } readdir(DIR);
+        closedir DIR;
+
+	my %code_stat = ();
+	my %total_request =  ();
+	my %total_bytes = ();
+	foreach my $d (@dirs) {
+		$code_stat{$d} = 1;
+	}
+	my $file = $outdir . '/index.html';
+	my $out = new IO::File;
+	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	# Print the HTML header
+	$self->_print_header(\$out);
+	my $colspn = 2;
+	$colspn = 3 if ($self->{CostPrice});
+	print $out qq{
+    <h4>$Translate{'Globals_Statistics'}</h4>
+    <div class="line-separator"></div>
+	<table class="stata">
+	<thead>
+	<tr>
+	<th scope="col">$Translate{'Years'}</th>
+	</tr>
+	</thead>
+	<tbody>
+};
+	foreach my $year (sort {$b <=> $a} keys %code_stat) {
+		print $out qq{
+	<tr>
+	<td><a href="$year/index.html">$Translate{'Stat_label'} $year *</a></td>
+	</tr>
+};
+	}
+	print $out qq{
+	</tbody>
+	</table>
+	<blockquote class="notification">(*) $Translate{'Click_year_stat'}</blockquote>
+
+	<h4>$Translate{'Legend'}</h4>
+	<div class="line-separator"></div>
+	<div class="displayLegend">
+		<span class="legendeTitle">$Translate{'Hit'}</span>: <span class="descLegend">$Translate{'Hit_help'}</span><br/>
+		<span class="legendeTitle">$Translate{'Miss'}</span>: <span class="descLegend">$Translate{'Miss_help'}</span><br/>
+};
+	print $out qq{<span class="legendeTitle">$Translate{'Cost'}</span>: <span class="descLegend">$Translate{'Cost_help'} $self->{CostPrice} $self->{Currency}</span><br/>} if ($self->{CostPrice});
+	print $out qq{
+	</div>
+};
+	$self->_print_footer(\$out);
+	$out->close();
+
+}
+
 
 1;
 
