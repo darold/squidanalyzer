@@ -430,9 +430,6 @@ sub _init
 	}
 	my %options = &parse_config($conf_file, $log_file, $rebuild);
 
-	# Use squid log file given as command line parameter
-	$options{LogFile} = $log_file if ($log_file);
-
 	# Configuration options
 	$self->{MinPie} = $options{MinPie} || 2;
 	$self->{QuietMode} = $options{QuietMode} || 0;
@@ -470,9 +467,6 @@ sub _init
 	$self->{LogFile} = $options{LogFile} || '/var/log/squid/access.log';
 	if (!$self->{LogFile}) {
 		die "ERROR: 'LogFile' configuration option must be set.\n";
-	}
-	if (!$rebuild && ! -e $self->{LogFile}) {
-		die "ERROR: 'LogFile' $self->{LogFile} doesn't exists.\n";
 	}
 	$self->{OrderUser} = lc($options{OrderUser}) || 'bytes';
 	$self->{OrderNetwork} = lc($options{OrderNetwork}) || 'bytes';
@@ -2989,14 +2983,17 @@ sub parse_config
 	}
 	close(CONF);
 
+	# Set logfile from command line if any.
+	$opt{LogFile} = $log_file if ($log_file);
+
 	# Check config
 	if (!exists $opt{Output} || !-d $opt{Output}) {
 		print STDERR "Error: you must give a valid output directory. See option: Output\n";
 		exit 0;
 	}
-	if (!$rebuild || $log_file) {
-		if (!$log_file && (!exists $opt{LogFile} || !-f $opt{LogFile})) {
-			print STDERR "Error: you must give the path to the Squid log file. See option: LogFile\n";
+	if ( !$opt{LogFile} || !-f $opt{LogFile} ) {
+		if (!$rebuild) {
+			print STDERR "Error: you must give a valid path to the Squid log file. See LogFile or option -l\n";
 			exit 0;
 		}
 	}
