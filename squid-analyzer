@@ -47,13 +47,17 @@ if ($build_date) {
 	}
 }
 
-# Allow backward compatibility with release < 4.0
-$configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
-if (($#ARGV < 0) && -e $DEFAULT_CONFFILE) {
-	$configfile = $DEFAULT_CONFFILE;
+# Look at configuration file
+if (!$configfile) {
+	# Backward compatibility with release < 4.0 with configuration
+	# file as single argument.
+	$configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
+
+	# Set default configuration file
+	$configfile ||= $DEFAULT_CONFFILE;
 }
 
-if (!$configfile || $help) {
+if ($help) {
 	&usage;
 	exit;
 }
