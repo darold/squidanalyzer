@@ -132,29 +132,29 @@ my %Translate = (
 );
 
 my @TLD1 = (
-	'.co.uk','.com.es','.com.hr','.com.gl','.co.gl','.co.il','.co.ee','.com.mt','.com.mk',
-	'.com.pl','.com.pt','.com.ro','.co.rs','.in.rs','.com.tr','.com.ua','.com.au','.net.au',
-	'.com.cn','.org.cn','.net.cn','.cn.com','.com.hk','.co.id','.web.id','.co.ir','.com.jo',
-	'.com.my','.com.fj','.co.in','.co.kr','.ne.kr','.or.kr','.com.ki','.com.nf','.co.nz',
-	'.net.nz','.org.nz','.com.ph','.com.ps','.net.ps','.org.ps','.com.pk','.com.sb','.com.sg',
-	'.per.sg','.com.tw','.com.vn','.north.am','.south.am','.com.gt','.co.tt','.com.tt',
-	'.com.pa','.com.do','.com.ht','.com.gy','.com.mx','.co.cr','.co.gy','.co.ve','.com.ve',
-	'.com.pe','.com.jm','.com.ar','.com.sv','.com.ni','.co.lc','.com.lc','.com.ec','.info.ec',
-	'.com.co','.com.bo','.com.hn','.com.br','.net.br','.com.py','.com.uy','.com.pr','.co.ag',
-	'.com.ag','.co.vi','.com.bs','.co.za','.com.cm','.net.cm','.co.cm','.ac.ke','.co.ke','.or.ke',
-	'.co.na','.com.na','.org.na','.co.ug'
+	'\.co\.uk','\.com\.es','\.com\.hr','\.com\.gl','\.co\.gl','\.co\.il','\.co\.ee','\.com\.mt','\.com\.mk',
+	'\.com\.pl','\.com\.pt','\.com\.ro','\.co\.rs','\.in\.rs','\.com\.tr','\.com\.ua','\.com\.au','\.net\.au',
+	'\.com\.cn','\.org\.cn','\.net\.cn','\.cn\.com','\.com\.hk','\.co\.id','\.web\.id','\.co\.ir','\.com\.jo',
+	'\.com\.my','\.com\.fj','\.co\.in','\.co\.kr','\.ne\.kr','\.or\.kr','\.com\.ki','\.com\.nf','\.co\.nz',
+	'\.net\.nz','\.org\.nz','\.com\.ph','\.com\.ps','\.net\.ps','\.org\.ps','\.com\.pk','\.com\.sb','\.com\.sg',
+	'\.per\.sg','\.com\.tw','\.com\.vn','\.north\.am','\.south\.am','\.com\.gt','\.co\.tt','\.com\.tt',
+	'\.com\.pa','\.com\.do','\.com\.ht','\.com\.gy','\.com\.mx','\.co\.cr','\.co\.gy','\.co\.ve','\.com\.ve',
+	'\.com\.pe','\.com\.jm','\.com\.ar','\.com\.sv','\.com\.ni','\.co\.lc','\.com\.lc','\.com\.ec','\.info\.ec',
+	'\.com\.co','\.com\.bo','\.com\.hn','\.com\.br','\.net\.br','\.com\.py','\.com\.uy','\.com\.pr','\.co\.ag',
+	'\.com\.ag','\.co\.vi','\.com\.bs','\.co\.za','\.com\.cm','\.net\.cm','\.co\.cm','\.ac\.ke','\.co\.ke','\.or\.ke',
+	'\.co\.na','\.com\.na','\.org\.na','\.co\.ug'
 );
 
 my @TLD2 = (
-	'.eu','.ie','.am','.at','.ba','.be','.by','.bg','.ch','.cz','.de','.dk','.es','.fi',
-	'.fr','.tf','.gr','.hu','.is','.it','.lv','.ee','.li','.lt','.lu','.yt','.me','.md',
-	'.mk','.nl','.no','.pl','.pt','.ro', '.rs','.re','.ru','.рф','.pm','.se','.sk','.asia',
-	'.ae','امارات.','', '.io','.cn','.cx','.fm','.hk', '.ir','.jo','.lk','.my','.in','.jp',
-	'.kr','.nu','.ph','.ps','.pk','.sg','.tl','.to','.tw','.tv','.mx','.mp','.vn','.ws',
-	'.as','.us','.ca','.cl','.ht','.tt','.do','.bz','.gy','.pe','.gs','.tc','.lc','.ec','.bo',
-	'.uy','.gd','.kn','.sh','.ac','.ag','.bs','.dm','.cd','.cm','.gm','.ly','.mg','.mu','.mw',
-	'.na','.sh','.sx','.st','.sc','.com','.tel','.net','.org','.info','.biz','.mobi','.xxx',
-	'.co','.pw'
+	'\.eu','\.ie','\.am','\.at','\.ba','\.be','\.by','\.bg','\.ch','\.cz','\.de','\.dk','\.es','\.fi',
+	'\.fr','\.tf','\.gr','\.hu','\.is','\.it','\.lv','\.ee','\.li','\.lt','\.lu','\.yt','\.me','\.md',
+	'\.mk','\.nl','\.no','\.pl','\.pt','\.ro', '\.rs','\.re','\.ru','\.рф','\.pm','\.se','\.sk','\.asia',
+	'\.ae','امارات\.','', '\.io','\.cn','\.cx','\.fm','\.hk', '\.ir','\.jo','\.lk','\.my','\.in','\.jp',
+	'\.kr','\.nu','\.ph','\.ps','\.pk','\.sg','\.tl','\.to','\.tw','\.tv','\.mx','\.mp','\.vn','\.ws',
+	'\.as','\.us','\.ca','\.cl','\.ht','\.tt','\.do','\.bz','\.gy','\.pe','\.gs','\.tc','\.lc','\.ec','\.bo',
+	'\.uy','\.gd','\.kn','\.sh','\.ac','\.ag','\.bs','\.dm','\.cd','\.cm','\.gm','\.ly','\.mg','\.mu','\.mw',
+	'\.na','\.sh','\.sx','\.st','\.sc','\.com','\.tel','\.net','\.org','\.info','\.biz','\.mobi','\.xxx',
+	'\.co','\.pw'
 );
 
 sub new
@@ -1334,25 +1334,27 @@ sub gen_html_output
 	}
 	my $stat_date = $self->set_date($year, $month, $day);
 
-	print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
-	my $nuser = $self->_print_user_stat($dir, $year, $month, $day);
-	print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
-	$self->_print_mime_stat($dir, $year, $month, $day);
-	print STDERR "\tNetwork statistics in $dir...\n" if (!$self->{QuietMode});
-	$self->_print_network_stat($dir, $year, $month, $day);
+	my $nuser = 0;
 	my $nurl = 0;
 	my $ndomain = 0;
-	if ($self->{UrlReport}) {
-		print STDERR "\tTop URL statistics in $dir...\n" if (!$self->{QuietMode});
-		$nurl = $self->_print_top_url_stat($dir, $year, $month, $day);
-		print STDERR "\tTop domain statistics in $dir...\n" if (!$self->{QuietMode});
-		$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day);
+	if ( !$self->{no_year_stat} || $month ) {
+		print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
+		$nuser = $self->_print_user_stat($dir, $year, $month, $day);
+		print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
+		$self->_print_mime_stat($dir, $year, $month, $day);
+		print STDERR "\tNetwork statistics in $dir...\n" if (!$self->{QuietMode});
+		$self->_print_network_stat($dir, $year, $month, $day);
+		if ($self->{UrlReport}) {
+			print STDERR "\tTop URL statistics in $dir...\n" if (!$self->{QuietMode});
+			$nurl = $self->_print_top_url_stat($dir, $year, $month, $day);
+			print STDERR "\tTop domain statistics in $dir...\n" if (!$self->{QuietMode});
+			$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day);
+		}
 	}
 	print STDERR "\tCache statistics in $dir...\n" if (!$self->{QuietMode});
 	$self->_print_cache_stat($dir, $year, $month, $day, $nuser, $nurl, $ndomain);
 
 	return ($nuser, $nurl, $ndomain);
-
 }
 
 sub parse_duration
@@ -1418,11 +1420,7 @@ sub _print_cache_stat
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	if ( $self->{no_year_stat} && ($type eq 'month') ) {
-		$self->_print_header(\$out, $self->{menu3}, $cal);
-	} else {
-		$self->_print_header(\$out, $self->{menu}, $cal);
-	}
+	$self->_print_header(\$out, $self->{menu}, $cal);
 
 	# Print title and calendar view
 	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
@@ -2645,10 +2643,8 @@ sub _print_top_domain_stat
 	my $duration = 0;
 	my $first = 0;
 	my $last = 0;
-	map {s/\./\\\./g;} @TLD1;
 	my $tld_pattern1 = join('|', @TLD1);
 	$tld_pattern1 = qr/([^\.]+?)($tld_pattern1)$/;
-	map {s/\./\\\./g;} @TLD2;
 	my $tld_pattern2 = join('|', @TLD2);
 	$tld_pattern2 = qr/([^\.]+?)($tld_pattern2)$/;
 	while(my $l = <$infile>) {
@@ -2667,6 +2663,7 @@ sub _print_top_domain_stat
 			$first = $4;
 			$last = $5;
 		}
+		my $done = 0;
 		if ($url !~ /\.\d+$/) {
 			if ( ($url =~ $tld_pattern1) || ($url =~ $tld_pattern2) ) {
 				$perdomain{$2}{hits} += $hits;
@@ -2677,10 +2674,12 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$done = 1;
 			}
-		} else {
-			$perdomain{'other'}{hits} += $hits;
-			$perdomain{'other'}{bytes} += $bytes;
+		}
+		if (!$done) {
+			$perdomain{'others'}{hits} += $hits;
+			$perdomain{'others'}{bytes} += $bytes;
 			$domain_stat{'unknown'}{hits} += $hits;
 			$domain_stat{'unknown'}{bytes} += $bytes;
 			$domain_stat{'unknown'}{duration} = $duration;
@@ -2709,6 +2708,8 @@ sub _print_top_domain_stat
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
+	$total_hits ||= 1;
+	$total_bytes ||= 1;
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Domain_${tpe}_title"};
 		$t1 =~ s/\%d/$self->{TopNumber}/;
@@ -2717,11 +2718,6 @@ sub _print_top_domain_stat
 			print $out $self->_print_title($t1, $stat_date);
 
 			my %data = ();
-			my $total_hits = 0;
-			foreach my $dom (keys %perdomain) {
-				$total_hits += $perdomain{$dom}{hits};
-			}
-			$total_hits ||= 1;
 			foreach my $dom (keys %perdomain) {
 				if (($perdomain{$dom}{hits}/$total_hits)*100 > $self->{MinPie}) {
 					$data{$dom} = $perdomain{$dom}{hits};
@@ -2734,19 +2730,14 @@ sub _print_top_domain_stat
 			print $out qq{<table class="graphs"><tr><td>$domain_hits</td>};
 			$domain_hits = '';
 			%data = ();
-			my $total_bytes = 0;
-			foreach my $dom (keys %perdomain) {
-				$total_bytes += $perdomain{$dom}{bytes};
-			}
-			$total_bytes ||= 1;
 			foreach my $dom (keys %perdomain) {
 				if (($perdomain{$dom}{bytes}/$total_bytes)*100 > $self->{MinPie}) {
-					$data{$dom} = int($perdomain{$dom}{bytes}/1000000);
+					$data{$dom} = $perdomain{$dom}{bytes};
 				} else {
 					$data{'others'} += $perdomain{$dom}{bytes};
 				}
 			}
-			$data{'others'} = int($data{'others'}/1000000);
+			$data{'others'} = $data{'others'};
 			$title = "$Translate{'Domain_graph_bytes_title'} $stat_date";
 			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, '', %data);
 			print $out qq{<td>$domain_bytes</td></tr></table>};
