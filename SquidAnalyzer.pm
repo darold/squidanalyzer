@@ -1420,12 +1420,12 @@ sub _print_cache_stat
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal);
-
-	# Print title and calendar view
-	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
-
-	if ( $self->{no_year_stat} && ($type eq 'month') ) {
+	if ( !$self->{no_year_stat} || ($type ne 'month') ) {
+		$self->_print_header(\$out, $self->{menu}, $cal);
+		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
+	} else {
+		$self->_print_header(\$out, $self->{menu3}, $cal);
+		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
 		%code_stat = ();
 		$self->_print_footer(\$out);
 		$out->close();
