@@ -331,7 +331,7 @@ Set this to your locale to display generated date in your language. Default
 is to use the current locale of the system. If you want date in German for
 example, set it to de_DE.
 
-	Rapport généré le mardi 11 décembre 2012, 15:13:09 (UTC+0100).
+	Rapport genere le mardi 11 decembre 2012, 15:13:09 (UTC+0100).
 
 with a Locale set to fr_FR.
 
