@@ -1,5 +1,80 @@
 Revision history for SquidAnalyzer
 
+5.2 - Sun Sep  1 21:17:53 CET 2013
+
+This is release fixes lot of minor bugs and adds support to CIDR notation in
+network-alias and exclude files as well as some code rewriting and options to
+improve speed. New feature to show the top N users that look at an url or a
+domain. Adds a new configuration directive, TopUrlUser, to control the number
+of users to show in reports.
+
+	- Fix pod2man error with perl 5.18 about non-ascii character. Thanks to
+	  David Walser for the report.
+	- Skip some unwanted code execution when --no-year-stat is enabled.
+	- Fix graphs on domain statistics reports.
+	- Fix badly ordered check on squid log file to parse. Thanks to wordelle
+	  for the report.
+	- Fix issue where squid-analyzer use default configuration file even if
+	  a custom one is specified with the -c option. Thanks to Thibaud Aubert
+	  for the report.
+	- Add --no-year-stat to disable year statistics, reports will start from
+	  month level only. This allow to save time during reports generation.
+	- Allow composed top level domain statistics in Top Domain report, like
+	  co.uk. Thanks to Thibaut Aubert for the feature request.
+	- Add support to CIDR notation in network-alias file. Thanks to Thibaud
+	  Aubert for the feature request.
+	- Fix issue in Domain report where domain of top url was not found in
+	  the domain report even if the download was bigger than those reported.
+	  Thanks to Aubert Thibaud for the report.
+	- Fix bug in last/first hour of a day data storage that mixed collected
+	  data over the two days and stored false first and last visit time.
+	- Fix translation for user and count strings.
+	- Add -b | --build_date command line option to limit rebuilt to a given
+	  date, the format of its value can be yyyy-mm-dd, yyyy-mm or yyyy. This
+	  should be used to prevent rebuilding html files from all data files.
+	- New feature to show the top N users that look at an url or a domain.
+	  Add a new configuration directive, TopUrlUser, to control the number
+	  of users to show. Thanks to Mr-Ed for the feature resquest.
+	- Fix first and last visit that was displayed in random order. Thanks
+	  to MangOuste for the report.
+	- Allow CIDR notation in exclude file to skip line matching the given
+	  xxx.xxx.xxx.xxx/n network. Thanks to the MangOuste for the patch.
+	- Add WriteDelay configuration directive (default to 3600 - stores one
+	  hour of statistics from log file) to be able to save resources on huge
+	  log files. On small log file it is not a good idea to set a lower
+	  value as SquidAnalyzer will spend his time to write and read from
+	  disk. This is a first attempt to speedup statistic reports, especially	  with year and month, but do not expect lot of performances gain.
+	- Add regex checker for alias file and improve speed for network and
+	  alias replacement. Thanks to jcputter for the report.
+	- Fix unwanted message display in quiet mode.
+	- Call localtime as little time as possible. Thanks to ammdispose for
+	  the patch.
+	- Remove the use of backstick to call system command in loop to gain
+	  some speed. Thanks to ammdispose for the patch.
+	- Revome the call to date and iconv system command each time a HTML file
+	  is genrated, call it just one time if directive Locale is defined at
+	  initialisation. Thanks to ammdispose for the report.
+	- Fix some print statements were outputting to STDOUT instead of STDERR.
+	  Thanks to ammdispose for the patch.
+	- Allow peer SIBLING_HIT to be added to HIT counters. Thanks to Maher
+	  Kassem forn the patch.
+	- Recode initial column sorted by default to fix pending sort issues.
+	- Fix bug on ordering column with sorttable. Thanks to David Walser for
+	 the report.
+	- Fix support to regex with coma in user and network alias file. Regex
+	  like "1stFloor 192.168.1.1\d{0,2}" in user-aliases and network-aliases	  was not permitted. Thanks to Steffen Junick for the report.
+	- Fix issue with log file provided at command line (option -l) and non
+	  existant LogFile in squidanalyzer.conf. Thanks to Kalin Kozhuharov for
+	  the report.
+	- Fix test to exclude old months and days from the statistics builder.
+	  Thanks to ammdispose for the patch.
+	- Fix some code comment about month obsolescence. Thanks to ammdispose
+	  for the patch.
+	- Change code to remove obsolete statistics to more stable code with
+	  less iterations. Thanks to ammdispose for the patch.
+	- Fix install of configuration files. Thanks to David Wasler for the
+	  patch.
+
 5.1 - Wed Jan 30 00:11:57 CET 2013
 
 This release adds more graphs, fixes several major issues and allow automatic

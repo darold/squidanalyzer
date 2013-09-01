@@ -20,7 +20,7 @@ BEGIN {
 	use IO::File;
 
 	# Set all internal variable
-	$VERSION = '5.1';
+	$VERSION = '5.2';
 	$COPYRIGHT = 'Copyright (c) 2001-2013 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
