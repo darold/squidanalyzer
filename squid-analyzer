@@ -106,6 +106,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
     -v | version               : show version and exit.
+    --no-year-stat             : disable years statistics, reports will start
+                                 from month level only.
 
 };
 

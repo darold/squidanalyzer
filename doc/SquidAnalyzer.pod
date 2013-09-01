@@ -151,6 +151,8 @@ script. Here are authorized usage:
 	-r | --rebuild             : use this option to rebuild all html and graphs
 				     output from all data files.
 	-v | version               : show version and exit.
+	--no-year-stat             : disable years statistics, reports will
+				     start from month level only.
 
 
 There is special options like --rebuild that force SquidAnalyzer to rebuild all
