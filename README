@@ -182,6 +182,13 @@ CONFIGURATION
     LogFile squid_access_log_file
         Set the path to the Squid log file.
 
+    UseClientDNSName 0
+        If you want to use DNS name instead of client Ip address as username
+        enable thisÂ directive. When you don't have authentication, the
+        username is set to the client ip address, this allow you to use the
+        DNS name instead. Note that you must have a working DNS resolution
+        and that it can really slow down the generation of reports.
+
     NetworkAlias network-aliases_file
         Set path to the file containing network alias name. Network are show
         as Ip addresses so if you want to display name instead create a file
@@ -203,7 +210,7 @@ CONFIGURATION
             FULL_USERNAME IP_ADDRESS
 
         If you have auth_proxy enable but want to replace login name by full
-        user name, create a file with this format:
+        user name for example, create a file with this format:
 
             FULL_USERNAME LOGIN_NAME
 
@@ -211,6 +218,9 @@ CONFIGURATION
 
         You can use regex to match and group some user login or ip
         addresses. See user-aliases file for examples.
+
+        You can also replace default ip address by his DNS name by enabling
+        directive 'UseClientDNSName'.
 
     AnonymizeLogin 0
         Set this to 1 if you want to anonymize all user login. The username

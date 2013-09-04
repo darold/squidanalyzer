@@ -18,6 +18,7 @@ BEGIN {
 	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
 	use POSIX qw/ strftime /;
 	use IO::File;
+	use Socket;
 
 	# Set all internal variable
 	$VERSION = '5.2';
@@ -259,6 +260,7 @@ sub parseFile
 				$login =~ s/\%20//g;
 
 				my $found = 0;
+				# Set default user login to client ip address
 				my $id = $client_ip || '';
 				if ($login ne '-') {
 					$id = $login;
@@ -446,6 +448,7 @@ sub _init
 	$self->{WriteDelay} = $options{WriteDelay} || 3600;
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
+	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
 	
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -600,6 +603,9 @@ sub _parseData
 {
 	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type) = @_;
 
+	# Save original IP address for dns resolving
+	my $client_ip_addr = $client;
+
 	# Get the current year and month
 	my ($sec,$min,$hour,$day,$month,$year,$wday,$yday,$isdst) = localtime($time);
 	$year += 1900;
@@ -623,6 +629,17 @@ sub _parseData
 	$dest =~ s#^[^\/]*\/\/##;
 	$dest =~ s#\/.*##;
 	$dest =~ s#:\d+$##;
+
+	# Replace username by his dnsname if there's no username
+	# (login is equal to ip) and if client is an ip address
+	if ( ($id eq $client) && $self->{UseClientDNSName}) {
+		if ($client =~ /^\d+\.\d+\.\d+\.\d+$/) {
+			my $dnsname = gethostbyaddr(inet_aton($client), AF_INET);
+			if ($dnsname) {
+				$id = $dnsname;
+			}
+		}
+	}
 
 	# Replace network by his aliases if any
 	my $network = '';
