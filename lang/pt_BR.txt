@@ -48,7 +48,7 @@ Days_graph			Dias
 Hit_graph			Hit
 Miss_graph			Miss
 Total_graph			Total
-Domains_graph			Domínios
+Domains_graph			Dom&iacute;nios
 Users_help			N&uacute;mero total de usu&aacute;rios distintos neste per&iacute;odo.
 Sites_help			N&uacute;mero total de sites distintos visitados neste per&iacute;odo.
 Domains_help			N&uacute;mero total de dom&iacute;nios de segundo n&iacute;vel distintos visitados neste per&iacute;odo.
@@ -71,7 +71,7 @@ Hourly				por Hora
 Hours				Horas
 Daily				por Dia
 Days				Dias
-Monthly				por Mês
+Monthly				por M&ecirc;s
 Months				Meses
 Mime_title			Estat&iacute;sticas de tipo MIME em
 Mime_number			N&uacute;mero de tipos MIME
@@ -91,11 +91,11 @@ Domain_Hits_title		Os Top %d dom&iacute;nios por n&uacute;mero de acessos em
 Domain_Bytes_title		Os Top %d dom&iacute;nios por bytes transferidos em
 Domain_Duration_title		Os Top %d dom&iacute;nios por tempo de transfer&ecirc;ncia em
 Domain_number			N&uacute;mero de dom&iacute;nios
-Domain_graph_hits_title		Acessos a Domínios em
-Domain_graph_bytes_title	Bytes Transferidos de Domínios em
+Domain_graph_hits_title		Acessos a Dom&iacute;nios em
+Domain_graph_bytes_title	Bytes Transferidos de Dom&iacute;nios em
 First_visit			Primeira visita
 Last_visit			Ultima visita
-Globals_Statistics		Estatísticas globais
+Globals_Statistics		Estat&iacute;sticas globais
 Legend				Legenda
 File_Generated			Gerado pela
 Up_link				Up
