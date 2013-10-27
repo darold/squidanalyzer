@@ -11,6 +11,7 @@
 #
 # Author: Alexandre Sieira <alexandre.sieira@ciphersec.com.br>
 # Last change: May 7th, 2004.
+# Revision: Joseh-Henrique Caetano de Brito e Silva <jhcbs@ig.com.br>
 #------------------------------------------------------------------------------
 CharSet				iso-8859-15
 01				Jan
