@@ -273,7 +273,7 @@ sub parseFile
 							$found = 1;
 							last;
 						}
-					} 
+					}
 					next if ($found);
 				}
 				# check for client exclusion
@@ -283,7 +283,7 @@ sub parseFile
 							$found = 1;
 							last;
 						}
-					} 
+					}
 					next if ($found);
 				}
 				# check for URL exclusion
@@ -449,7 +449,7 @@ sub _init
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
-	
+
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
@@ -508,7 +508,7 @@ sub _init
 		} elsif (uc($self->{TransfertUnit}) eq 'GB') {
 			$self->{TransfertUnitValue} = 1024*1024*1024;
 		}
-	} 
+	}
 
 	# Init statistics storage hashes
 	$self->_clear_stats();
@@ -820,7 +820,7 @@ sub _save_stat
 	foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
 		my $name = $id;
 		$name =~ s/\s+//g;
-		$dat_file_user->print("$name hits_$type="); 
+		$dat_file_user->print("$name hits_$type=");
 		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
 			$dat_file_user->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{hits} . ",");
 		}
@@ -844,7 +844,7 @@ sub _save_stat
 	$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
 		or die "ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n";
 	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_network_$type"}}) {
-		$dat_file_network->print("$net\thits_$type="); 
+		$dat_file_network->print("$net\thits_$type=");
 		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
 			$dat_file_network->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{hits} . ",");
 		}
@@ -977,9 +977,9 @@ sub _read_stat
 					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $5;
 					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $6;
 				}
-				$hits =~ s/,$//;	
-				$bytes =~ s/,$//;	
-				$duration =~ s/,$//;	
+				$hits =~ s/,$//;
+				$bytes =~ s/,$//;
+				$duration =~ s/,$//;
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
 					if ($key ne '') { $k = $key; } else { $k = $tmp; }
@@ -1054,9 +1054,9 @@ sub _read_stat
 					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_size} = $4;
 					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_url} = $5;
 				}
-				$hits =~ s/,$//;	
-				$bytes =~ s/,$//;	
-				$duration =~ s/,$//;	
+				$hits =~ s/,$//;
+				$bytes =~ s/,$//;
+				$duration =~ s/,$//;
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
 					if ($key ne '') { $k = $key; } else { $k = $tmp; }
@@ -1124,8 +1124,8 @@ sub _read_stat
 				my $code = $1;
 				my $hits = $2 || '';
 				my $bytes = $3 || '';
-				$hits =~ s/,$//;	
-				$bytes =~ s/,$//;	
+				$hits =~ s/,$//;
+				$bytes =~ s/,$//;
 				my %hits_tmp = split(/[:,]/, $hits);
 				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
 					if ($key ne '') { $k = $key; } else { $k = $tmp; }
@@ -1767,9 +1767,9 @@ sub _print_network_stat
 		my $duration = $3 || '';
 		$network_stat{$network}{largest_file} = $4;
 		$network_stat{$network}{url} = $5;
-		$hits =~ s/,$//;	
-		$bytes =~ s/,$//;	
-		$duration =~ s/,$//;	
+		$hits =~ s/,$//;
+		$bytes =~ s/,$//;
+		$duration =~ s/,$//;
 		my %hits_tmp = split(/[:,]/, $hits);
 		foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
 			$detail_network_stat{$network}{$tmp}{hits} = $hits_tmp{$tmp};
@@ -2137,6 +2137,7 @@ sub _print_user_stat
 				last;
 			}
 		}
+		$show =~ s/_/ /g;
 		my $url = &escape($usr);
 		my $comma_bytes = $self->format_bytes($user_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
@@ -2406,7 +2407,7 @@ sub _print_user_detail
 </thead>
 <tbody>
 };
-	
+
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($url_stat{$url}{hits}/$total_hit) * 100) if ($total_hit);
@@ -2585,7 +2586,7 @@ sub _print_top_url_stat
 				}
 			}
 			print $out "<tr><td>\n";
-			if (exists $url_stat{$u}{users}) { 
+			if (exists $url_stat{$u}{users}) {
 				print $out qq{
 <div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
 <table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
@@ -2816,7 +2817,7 @@ sub _print_top_domain_stat
 				}
 			}
 			print $out "<tr><td>\n";
-			if (exists $domain_stat{$u}{users}) { 
+			if (exists $domain_stat{$u}{users}) {
 				my $dname = "*.$u";
 				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown'));
 				print $out qq{
@@ -2985,7 +2986,7 @@ sub parse_config
 	open(CONF, $file) or die "ERROR: can't open file $file, $!\n";
 	while (my $l = <CONF>) {
 		chomp($l);
-		next if (!$l || ($l =~ /^[\s\t]*#/)); 
+		next if (!$l || ($l =~ /^[\s\t]*#/));
 		my ($key, $val) = split(/[\s\t]+/, $l, 2);
 		$opt{$key} = $val;
 	}
@@ -3068,7 +3069,7 @@ sub parse_user_aliases
 	while (my $l = <ALIAS>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/)); 
+		next if (!$l || ($l =~ /^[\s\t]*#/));
 		my @data = split(/\t+/, $l, 2);
 		$data[0] =~ s/\s+/_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
@@ -3100,9 +3101,9 @@ sub parse_exclusion
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/)); 
+		next if (!$l || ($l =~ /^[\s\t]*#/));
 		# remove comments at end of line
-		$l =~ s/[\s\t]*#.*//; 
+		$l =~ s/[\s\t]*#.*//;
 		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)[\s\t]+(.*)#) {
 			my $lbl = lc($1) . 's';
 			my @rg =  split(m#[\s\t]+#, $2);
@@ -3567,4 +3568,3 @@ sub _gen_year_summary
 1;
 
 __END__
-
