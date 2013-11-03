@@ -2137,7 +2137,7 @@ sub _print_user_stat
 				last;
 			}
 		}
-		$show =~ s/_/ /g;
+		$show =~ s/_SPC_/ /g;
 		my $url = &escape($usr);
 		my $comma_bytes = $self->format_bytes($user_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
@@ -2312,6 +2312,7 @@ sub _print_netuser_stat
 				last;
 			}
 		}
+		$show =~ s/_SPC_/ /g;
 		my $url = &escape($usr);
 		my $comma_bytes = $self->format_bytes($netuser_stat{$usr}{bytes});
 		if ($self->{UrlReport}) {
@@ -3071,7 +3072,7 @@ sub parse_user_aliases
 		$i++;
 		next if (!$l || ($l =~ /^[\s\t]*#/));
 		my @data = split(/\t+/, $l, 2);
-		$data[0] =~ s/\s+/_/g; # Replace space, they are not allowed
+		$data[0] =~ s/\s+/_SPC_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
 			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
