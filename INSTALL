@@ -2,24 +2,9 @@ NAME
     SquidAnalyzer - Squid access log report generation tool
 
 REQUIREMENT
-    perl 5.005_03 or higher and the following Perl modules:
-
-            GD
-            GD::Graph
-            GD::TextUtil
-            GD::Graph::bars3d;
-
-    See GD and GD::Graph requirements for other needed libraries.
-
-    If they are not yet include in your OS distribution you can always find
-    them at http://search.cpan.org/
-
-    If you have Internet access from your server, you can execute the
-    following command to install GD::Graph::bars3d and all its dependencies.
-
-            perl -MCPAN -e 'install GD::Graph::bars3d'
-
-    Images output format is PNG so libgd must be compiled with libpng.
+    Nothing is required than a modern perl version 5.8 or higher. Graphics
+    are based on the Flotr2 Javascript library so they are drawn at your
+    browser side without extra installation required.
 
 INSTALLATION
   Generic install
@@ -42,15 +27,15 @@ INSTALLATION
     On FreeBSD, if make install is freezing and you have the following
     messages:
 
-        FreeBSD: Registering installation in the package database
-        FreeBSD: Cannot determine short module description
-        FreeBSD: Cannot determine module description
+            FreeBSD: Registering installation in the package database
+            FreeBSD: Cannot determine short module description
+            FreeBSD: Cannot determine module description
 
     please proceed as follow:
 
-        perl Makefile.PL INSTALLDIRS=site
-        make
-        make install
+            perl Makefile.PL INSTALLDIRS=site
+            make
+            make install
 
     as the issue is related to an install into the default Perl vendor
     installdirs it will then use Perl site installdirs.
@@ -129,6 +114,44 @@ INSTALLATION
 
     See the file squidanalyzer.conf to customized your output statistics and
     match your network and file system configuration.
+
+USAGE
+    SquidAnalyzer can be run manually or by cron job using the
+    squid-analyzer Perl script. Here are authorized usage:
+
+        Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+
+            -c | --configfile filename : path to the SquidAnalyzer configuration file.
+                                         By default: /etc/squidanalyzer.conf
+            -b | --build_date date     : set the day to be rebuilt, format: yyyy-mm-dd,
+                                         yyyy-mm or yyyy. Used with -r or --rebuild.
+            -d | --debug               : show debug informations.
+            -h | --help                : show this message and exit.
+            -l | --logfile filename    : path to the Squid logfile to parse.
+                                         By default: /var/log/squid/access.log
+            -p | --preserve number     : used to set the statistic obsolescence in
+                                         number of month. Older stats will be removed.
+            -r | --rebuild             : use this option to rebuild all html and graphs
+                                         output from all data files.
+            -v | version               : show version and exit.
+            --no-year-stat             : disable years statistics, reports will
+                                         start from month level only.
+
+    There is special options like --rebuild that force SquidAnalyzer to
+    rebuild all HTML reports, useful after an new feature or a bug fix. If
+    you want to limit the rebuild to a single day, a single month or year,
+    you can use the --build_date option by specifying the date part to
+    rebuild, format: yyyy-mm-dd, yyyy-mm or yyyy.
+
+    The --preserve option should be used if you want to rotate your
+    statistics and data. The value is the number of months to keep, older
+    reports and data will be removed from the filesystem. Useful to preserve
+    space, for example:
+
+            squid-analyzer -p 6 -c /etc/squidanalyzer/squidanalyzer.conf
+
+    will only preserve six month of statistics from the last run of
+    squidanalyzer.
 
 CONFIGURATION
     See README file.
