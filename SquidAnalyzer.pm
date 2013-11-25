@@ -1174,12 +1174,10 @@ sub _print_header
 
 	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", localtime);
 	$sortpos ||= 2;
-
+	my $sorttable = '';
+	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);" if ($sortpos != 100);
 	print $$fileout qq{
-<!DOCTYPE html
-	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<html>
 <head>
 <meta NAME="robots" CONTENT="noindex,nofollow" />
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache" />
@@ -1196,7 +1194,7 @@ sub _print_header
 <script type="text/javascript" src="$self->{WebUrl}flotr2.js"></script>
 <script  type="text/javascript" >sortpos = $sortpos;</script>
 </head>
-<body onload="var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);">
+<body onload="$sorttable">
 <div id="conteneur">
 <a name="atop"></a>
 	<div id="header">
@@ -2524,7 +2522,7 @@ sub _print_top_url_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
+	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
@@ -2603,6 +2601,8 @@ sub _print_top_url_stat
 				print $out "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>\n";
 			}
 			print $out qq{
+</div></div>
+</td>
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
@@ -2724,7 +2724,7 @@ sub _print_top_domain_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
-	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
+	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
 	$total_hits ||= 1;
@@ -2836,6 +2836,7 @@ sub _print_top_domain_stat
 				print $out "*.$u\n";
 			}
 			print $out qq{
+</div></div>
 </td>
 <td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
