@@ -119,6 +119,8 @@ my %Translate = (
 	'Domain_number' => 'Number of domain',
 	'Domain_graph_hits_title' => 'Domain Hits Statistics on',
 	'Domain_graph_bytes_title' => 'Domain Bytes Statistiques on',
+	'Second_domain_graph_hits_title' => 'Second level Hits Statistics on',
+	'Second_domain_graph_bytes_title' => 'Second level Bytes Statistiques on',
 	'First_visit' => 'First visit',
 	'Last_visit' => 'Last visit',
 	'Globals_Statistics' => 'Globals Statistics',
@@ -2734,6 +2736,8 @@ sub _print_top_domain_stat
 		$t1 =~ s/\%d/$self->{TopNumber}/;
 
 		if ($tpe eq 'Hits') {
+				$domain_stat{"$1$2"}{hits} += $hits;
+				$domain_stat{"$1$2"}{bytes} += $bytes;
 			print $out $self->_print_title($t1, $stat_date);
 
 			my %data = ();
@@ -2746,8 +2750,19 @@ sub _print_top_domain_stat
 			}
 			my $title = "$Translate{'Domain_graph_hits_title'} $stat_date";
 			my $domain_hits = $self->flotr2_piegraph(1, 'domain_hits', $title, $Translate{'Domains_graph'}, '', %data);
-			print $out qq{<table class="graphs"><tr><td>$domain_hits</td>};
+			%data = ();
+			foreach my $dom (keys %domain_stat) {
+				if (($domain_stat{$dom}{hits}/$total_hits)*100 > $self->{MinPie}) {
+					$data{$dom} = $domain_stat{$dom}{hits};
+				} else {
+					$data{'others'} += $domain_stat{$dom}{hits};
+				}
+			}
+			my $title2 = "$Translate{'Second_domain_graph_hits_title'} $stat_date";
+			my $domain2_hits = $self->flotr2_piegraph(1, 'second_domain_hits', $title2, $Translate{'Domains_graph'}, '', %data);
+			print $out qq{<table class="graphs"><tr><td>$domain_hits</td><td>$domain2_hits</td></tr>};
 			$domain_hits = '';
+			$domain2_hits = '';
 			%data = ();
 			foreach my $dom (keys %perdomain) {
 				if (($perdomain{$dom}{bytes}/$total_bytes)*100 > $self->{MinPie}) {
@@ -2756,11 +2771,21 @@ sub _print_top_domain_stat
 					$data{'others'} += $perdomain{$dom}{bytes};
 				}
 			}
-			$data{'others'} = $data{'others'};
 			$title = "$Translate{'Domain_graph_bytes_title'} $stat_date";
 			my $domain_bytes = $self->flotr2_piegraph(1, 'domain_bytes', $title, $Translate{'Domains_graph'}, '', %data);
-			print $out qq{<td>$domain_bytes</td></tr></table>};
+			%data = ();
+			foreach my $dom (keys %domain_stat) {
+				if (($domain_stat{$dom}{bytes}/$total_bytes)*100 > $self->{MinPie}) {
+					$data{$dom} = $domain_stat{$dom}{bytes};
+				} else {
+					$data{'others'} += $domain_stat{$dom}{bytes};
+				}
+			}
+			$title2 = "$Translate{'Second_domain_graph_bytes_title'} $stat_date";
+			my $domain2_bytes = $self->flotr2_piegraph(1, 'second_domain_bytes', $title2, $Translate{'Domains_graph'}, '', %data);
+			print $out qq{<tr><td>$domain_bytes</td><td>$domain2_bytes</td></tr></table>};
 			$domain_bytes = '';
+			$domain2_bytes = '';
 			%data = ();
 		} else {
 			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
