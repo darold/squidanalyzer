@@ -199,6 +199,12 @@ the client ip address, this allow you to use the DNS name instead.
 Note that you must have a working DNS resolution and that it can really slow
 down the generation of reports.
 
+=item DNSLookupTimeout        1
+
+If you have enabled UseClientDNSName and have lot of ip addresses that do not
+resolve you may want to increase the DNS lookup timeout. By default SquidAnalyzer
+will stop to lookup a DNS name after one second.
+
 =item NetworkAlias network-aliases_file
 
 Set path to the file containing network alias name. Network are

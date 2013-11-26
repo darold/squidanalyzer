@@ -189,6 +189,12 @@ CONFIGURATION
         DNS name instead. Note that you must have a working DNS resolution
         and that it can really slow down the generation of reports.
 
+    DNSLookupTimeout 1
+        If you have enabled UseClientDNSName and have lot of ip addresses
+        that do not resolve you may want to increase the DNS lookup timeout.
+        By default SquidAnalyzer will stop to lookup a DNS name after one
+        second.
+
     NetworkAlias network-aliases_file
         Set path to the file containing network alias name. Network are show
         as Ip addresses so if you want to display name instead create a file

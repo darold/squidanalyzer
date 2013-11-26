@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2013-09-04" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2013-11-26" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -330,6 +330,11 @@ thisA\*^\ directive. When you don't have authentication, the username is set to
 the client ip address, this allow you to use the \s-1DNS\s0 name instead.
 Note that you must have a working \s-1DNS\s0 resolution and that it can really slow
 down the generation of reports.
+.IP "DNSLookupTimeout        1" 4
+.IX Item "DNSLookupTimeout        1"
+If you have enabled UseClientDNSName and have lot of ip addresses that do not
+resolve you may want to increase the \s-1DNS\s0 lookup timeout. By default SquidAnalyzer
+will stop to lookup a \s-1DNS\s0 name after one second.
 .IP "NetworkAlias network\-aliases_file" 4
 .IX Item "NetworkAlias network-aliases_file"
 Set path to the file containing network alias name. Network are

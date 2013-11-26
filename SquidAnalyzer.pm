@@ -36,6 +36,9 @@ $ZCAT_PROG = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
 $RM_PROG  = "/bin/rm";
 
+# DNS Cache
+my %CACHE = {};
+
 # Default translation srings
 my %Translate = (
 	'CharSet' => 'utf-8',
@@ -451,6 +454,7 @@ sub _init
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
+	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 1;
 
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -601,6 +605,32 @@ sub _init
 
 }
 
+sub _gethostbyaddr
+{
+	my ($self, $ip) = @_;
+
+	return $ip unless $ip=~/\d+\.\d+\.\d+\.\d+/;
+
+	my $host = undef;
+	unless(exists $CACHE{$ip}) {
+		eval {
+			local $SIG{ALRM} = sub { die "timeout\n" };
+			alarm $self->{DNSLookupTimeout};
+			$host = gethostbyaddr(inet_aton($ip), AF_INET);
+			alarm 0;
+		};
+		if ($@) {
+			$CACHE{$ip} = undef;
+			#printf "_gethostbyaddr timeout : %s\n", $ip;
+		}
+		else {
+			$CACHE{$ip} = $host;
+			#printf "_gethostbyaddr success : %s (%s)\n", $ip, $host;
+		}
+	}
+	return $CACHE{$ip} || $ip;
+}
+
 sub _parseData
 {
 	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type) = @_;
@@ -636,7 +666,7 @@ sub _parseData
 	# (login is equal to ip) and if client is an ip address
 	if ( ($id eq $client) && $self->{UseClientDNSName}) {
 		if ($client =~ /^\d+\.\d+\.\d+\.\d+$/) {
-			my $dnsname = gethostbyaddr(inet_aton($client), AF_INET);
+			my $dnsname = $self->_gethostbyaddr($client);
 			if ($dnsname) {
 				$id = $dnsname;
 			}
