@@ -2766,8 +2766,8 @@ sub _print_top_domain_stat
 		$t1 =~ s/\%d/$self->{TopNumber}/;
 
 		if ($tpe eq 'Hits') {
-				$domain_stat{"$1$2"}{hits} += $hits;
-				$domain_stat{"$1$2"}{bytes} += $bytes;
+		#		$domain_stat{"$1$2"}{hits} += $hits;
+		#		$domain_stat{"$1$2"}{bytes} += $bytes;
 			print $out $self->_print_title($t1, $stat_date);
 
 			my %data = ();
