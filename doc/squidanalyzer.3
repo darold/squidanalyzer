@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2013-11-26" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2013-12-01" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -254,11 +254,21 @@ properly.
 4. Setup a cronjob to run squid-analyzer daily or more often:
 .PP
 .Vb 2
-\&     # SquidAnalyzer log reporting daily
-\&     0 2 * * * /usr/local/bin/squid\-analyzer > /dev/null 2>&1
+\&        # SquidAnalyzer log reporting daily
+\&        0 2 * * * /usr/local/bin/squid\-analyzer > /dev/null 2>&1
 .Ve
 .PP
 or run it manually. For more information, see \s-1README\s0 file.
+.PP
+If your squid logfiles are rotated then cron isn't going to give the expected
+result as there exists a time between when the cron is run and the logfiles
+are rotated. It would be better to call squid-analyzer from logrotate, eg:
+.PP
+.Vb 3
+\&        prerotate
+\&                /usr/local/bin/squid\-analyzer
+\&        endscript
+.Ve
 .PP
 You can use network name instead of network ip addresses by using the
 network-aliases file. Also if you don't have authentication enable and
@@ -330,11 +340,11 @@ thisA\*^\ directive. When you don't have authentication, the username is set to
 the client ip address, this allow you to use the \s-1DNS\s0 name instead.
 Note that you must have a working \s-1DNS\s0 resolution and that it can really slow
 down the generation of reports.
-.IP "DNSLookupTimeout        1" 4
-.IX Item "DNSLookupTimeout        1"
+.IP "DNSLookupTimeout        0.0001" 4
+.IX Item "DNSLookupTimeout        0.0001"
 If you have enabled UseClientDNSName and have lot of ip addresses that do not
 resolve you may want to increase the \s-1DNS\s0 lookup timeout. By default SquidAnalyzer
-will stop to lookup a \s-1DNS\s0 name after one second.
+will stop to lookup a \s-1DNS\s0 name after 0.0001 second (100 ms).
 .IP "NetworkAlias network\-aliases_file" 4
 .IX Item "NetworkAlias network-aliases_file"
 Set path to the file containing network alias name. Network are

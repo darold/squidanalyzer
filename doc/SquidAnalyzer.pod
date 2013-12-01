@@ -118,10 +118,18 @@ properly.
 
 4. Setup a cronjob to run squid-analyzer daily or more often:
 
-     # SquidAnalyzer log reporting daily
-     0 2 * * * /usr/local/bin/squid-analyzer > /dev/null 2>&1
+	# SquidAnalyzer log reporting daily
+	0 2 * * * /usr/local/bin/squid-analyzer > /dev/null 2>&1
 
 or run it manually. For more information, see README file.
+
+If your squid logfiles are rotated then cron isn't going to give the expected
+result as there exists a time between when the cron is run and the logfiles
+are rotated. It would be better to call squid-analyzer from logrotate, eg:
+
+	prerotate
+		/usr/local/bin/squid-analyzer
+	endscript
 
 You can use network name instead of network ip addresses by using the
 network-aliases file. Also if you don't have authentication enable and
