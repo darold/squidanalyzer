@@ -173,6 +173,7 @@ my @TLD1 = (
 	'\.sc\.cn','\.sd\.cn','\.sh\.cn','\.sn\.cn','\.sx\.cn','\.tj\.cn','\.tw\.cn','\.xj\.cn',
 	'\.xz\.cn','\.yn\.cn','\.zj\.cn','\.com\.co','\.org\.co','\.edu\.co','\.gov\.co',
 	'\.net\.co','\.mil\.co','\.nom\.co','\.ac\.cr','\.co\.cr','\.ed\.cr','\.fi\.cr','\.go\.cr',
+	'\.com\.cu','\.edu\.cu','\.gov\.cu','\.net\.cu','\.org\.cu',
 	'\.or\.cr','\.sa\.cr','\.cr','\.ac\.cy','\.net\.cy','\.gov\.cy','\.org\.cy',
 	'\.pro\.cy','\.name\.cy','\.ekloges\.cy','\.tm\.cy','\.ltd\.cy','\.biz\.cy','\.press\.cy',
 	'\.parliament\.cy','\.com\.cy','\.edu\.do','\.gob\.do','\.gov\.do','\.com\.do','\.sld\.do',
@@ -2914,15 +2915,25 @@ sub _print_top_domain_stat
 		}
 		my $done = 0;
 		if ($url !~ /\.\d+$/) {
-			if (($url =~ $tld_pattern1) || ($url =~ $tld_pattern2)) {
+			if ($url =~ $tld_pattern1) {
 				$domain_stat{"$1$2"}{hits} += $hits;
 				$domain_stat{"$1$2"}{bytes} += $bytes;
 				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
-				$perdomain{"$1$2"}{hits} += $hits;
-				$perdomain{"$1$2"}{bytes} += $bytes;
+				$perdomain{"$2"}{hits} += $hits;
+				$perdomain{"$2"}{bytes} += $bytes;
+				$done = 1;
+			} elsif ($url =~ $tld_pattern2) {
+				$domain_stat{"$1$2"}{hits} += $hits;
+				$domain_stat{"$1$2"}{bytes} += $bytes;
+				$domain_stat{"$1$2"}{duration} += $duration;
+				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
+				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
+				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$perdomain{"$2"}{hits} += $hits;
+				$perdomain{"$2"}{bytes} += $bytes;
 				$done = 1;
 			}
 		}
