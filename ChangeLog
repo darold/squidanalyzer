@@ -1,5 +1,39 @@
 Revision history for SquidAnalyzer
 
+5.3 - Sun Dec  1 16:36:52 CET 2013
+
+This release fixes several bugs and adds two new pie charts about the most use
+top second level domains. It is also possible to do DNS lookup of Ip addresses
+inside SquidAnalyzer, see UseClientDNSName new configuration directive. This can
+slow down dramatically the squid-analyzer performances but you can adjust the
+DNS lookup timeout to prevent waiting slow DNS server, See DNSLookupTimeout new
+configuration directive.
+
+	- Update and fix first and second top level domain name. Thanks to Luis
+	  Armando Roca Fumero for the report.
+	- Add new directive DNSLookupTimeout to change the default timeout for
+	  DNS lookup. Add 0.0001 second timeout when SquidAnalyzer look for a DNS
+	  name and can't find a name server. Thanks to alex for the patch.
+	- Add pie chart of top second level domains. Thanks to Jeetendra Poojari
+	  for the feature request.
+	- Fix some HTML tag issues and table ordering on Top domain hits and Top
+	  url hits. Thanks to Jeetendra Poojari for the report.
+	- Update INSTALL file to remove GD::Graph requirements.
+	- Change underscore used to replace space in user name by the special
+	  string _SPC_ so that underscore will not be wrongly replaced on HTML
+	  output.
+	- Fix pt_BR translation with charset to utf-8 and a few words with
+	  accentuation fix. Thanks to Joseh-Henrique for the fix.
+	- Allow Ip addresses on user names to be replaced by their DNS name, this
+	  feature is activated by a new directive: UseClientDNSName. Thanks to
+	  Pfisztner Tamas for the patch.
+	- Add missing description of --no-year-stat option to documentation and
+	  squid-analyzer usage.
+
+UPDATE: you must override all your installation, Perl scripts, configuration file,
+CSS and Javascript files. Backward compatibility with data files is fully preserved.
+Note that if you run a Perl version < 5.8 you may need the CPAN module Time::HiRes.
+
 5.2 - Sun Sep  1 21:17:53 CET 2013
 
 This is release fixes lot of minor bugs and adds support to CIDR notation in
