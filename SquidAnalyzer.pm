@@ -19,6 +19,7 @@ BEGIN {
 	use POSIX qw/ strftime /;
 	use IO::File;
 	use Socket;
+	use Time::HiRes qw/ualarm/;
 
 	# Set all internal variable
 	$VERSION = '5.3';
@@ -652,7 +653,8 @@ sub _init
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
-	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 1;
+	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
+	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
 
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -807,15 +809,13 @@ sub _gethostbyaddr
 {
 	my ($self, $ip) = @_;
 
-	return $ip unless $ip=~/\d+\.\d+\.\d+\.\d+/;
-
 	my $host = undef;
 	unless(exists $CACHE{$ip}) {
 		eval {
-			local $SIG{ALRM} = sub { die "timeout\n" };
-			alarm $self->{DNSLookupTimeout};
+			local $SIG{ALRM} = sub { die "DNS lookup timeout.\n"; };
+			ualarm $self->{DNSLookupTimeout};
 			$host = gethostbyaddr(inet_aton($ip), AF_INET);
-			alarm 0;
+			ualarm 0;
 		};
 		if ($@) {
 			$CACHE{$ip} = undef;
