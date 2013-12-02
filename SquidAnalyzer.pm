@@ -3702,7 +3702,7 @@ sub flotr2_piegraph
         },
         mouse: {
             track: true,
-	    trackFormatter: function(obj){ return obj.y },
+	    trackFormatter: function(obj){ return obj.series.label  +' (' + obj.y +')'; },
         },
         legend: {
             position: "sw",
