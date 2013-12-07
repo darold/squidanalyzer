@@ -48,9 +48,9 @@ Hit_graph			Cachespeicher
 Miss_graph			Internet
 Total_graph			Gesamt
 Domains_graph			Domains
-Users_help			Anzahl verschiedene Benutzer in diesem Zeitraum
-Sites_help			Anzahl verschiedene besuchte Seiten in diesem Zeitraum
-Domains_help			Anzahl verschiedene besuchte Subdomains in diesem Zeitraum
+Users_help			Anzahl der verschiedenen Benutzer in diesem Zeitraum
+Sites_help			Anzahl der verschiedenen besuchten Seiten in diesem Zeitraum
+Domains_help			Anzahl der verschiedenen besuchten Subdomains in diesem Zeitraum
 Hit_help			Objekte die im Cachespeicher gefunden wurden
 Miss_help			Objekte die im Cachespeicher nicht gefunden wurden
 Cost_help			1 Mega Byte =
@@ -66,9 +66,9 @@ Top_domain_link			Top Domains
 Back_link			Zur&uuml;ck
 Graph_cache_hit_title		%s Zugriffstatistik
 Graph_cache_byte_title		%s Megabytes Statistik
-Hourly				Stuendliche
+Hourly				Stunden genaue
 Hours				Stunden
-Daily				Taegliche
+Daily				Tages genaue
 Days				Tage
 Monthly				Monatliche
 Months				Monate
