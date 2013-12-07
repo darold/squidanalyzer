@@ -3661,7 +3661,7 @@ sub flotr2_piegraph
 	my @datadef = ();
 	my @contdef = ();
 	my $i       = 1;
-	foreach my $k (sort keys %data) {
+	foreach my $k (sort {$data{$b} <=> $data{$a} } keys %data) {
 		push(@datadef, "var d$i = [ [0,$data{$k}] ];\n");
 		push(@contdef, "{ data: d$i, label: \"$k\" },\n");
 		$i++;
