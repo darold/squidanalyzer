@@ -90,10 +90,10 @@ Domain_Hits_title		Top %d Domain Treffer
 Domain_Bytes_title		Top %d Domain Bytes
 Domain_Duration_title		Top %d Domain Dauer
 Domain_number			Anzahl der Domains
-Domain_graph_hits_title		Domain Treffer Statistik
-Domain_graph_bytes_title	Domain Bytes Statistik
-Second_domain_graph_hits_title	Second level Hits Statistics on
-Second_domain_graph_bytes_title	Second level Bytes Statistiques on
+Domain_graph_hits_title		Top Level Domain Treffer Statistik
+Domain_graph_bytes_title	Top Level Domain Bytes Statistik
+Second_domain_graph_hits_title	Domain Treffer Statistik
+Second_domain_graph_bytes_title	Domain Bytes Statistik
 First_visit			Erster Besuch
 Last_visit			Letzter Besuch
 Globals_Statistics		&Uuml;bersicht Statistiken
