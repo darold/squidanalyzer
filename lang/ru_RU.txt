@@ -1,0 +1,108 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Author: Gilles Darold
+# Russian translation by oxygen121. Version 1.0
+#------------------------------------------------------------------------------
+CharSet				utf-8
+01				Янв
+02				Фев
+03				Мрт
+04				Апр
+05				Май
+06				Июн
+07				Июл
+08				Авг
+09				Сен
+10				Окт
+11				Ноя
+12				Дек
+KB				Килобайт
+MB				Мегабайт
+GB				Гигабайт
+Requests			Запросы
+Bytes				Байты
+Megabytes			Мегабайты
+Total				Всего
+Years				Год
+Months				Месяца
+Days				Дни
+Hit				Hit
+Miss				Miss
+Cost				Стоимось
+Users				Пользователи
+Sites				Сайты
+Domains				Домены
+Requests_graph			Запросы
+Megabytes_graph			Магабайты
+Months_graph			Месяца
+Days_graph			Дни
+Hit_graph			Hit
+Miss_graph			Miss
+Total_graph			Всего
+Domains_graph			Домены
+Users_help			Статистика по пользователям за выбранный период
+Sites_help			Статистика по Сайтам за выбранный период
+Domains_help			Статистика по Доменам за выбранный период
+Hit_help			Объекты, найденные в кэше
+Miss_help			Объекты, не найденные в кэше
+Cost_help			1 Мега байт =
+Generation			Дата создания отчета
+Main_cache_title		Статистика Прокси
+Cache_title			Статистика Прокси
+Stat_label			Статистика
+Mime_link			MIME-Типы
+Network_link			Подсети
+User_link			Пользователи
+Top_url_link			Топ URL
+Top_domain_link			Топ Домены
+Back_link			Назад
+Graph_cache_hit_title		%s Статистика запросов за
+Graph_cache_byte_title		%s Статистика в Мегабайтах за
+Hourly				Почасовая
+Hours				Время
+Daily				Посуточная
+Days				Число
+Monthly				Помесячная
+Months				месяцев
+Mime_title			MIME-Типы Статистика за
+Mime_number			Количество MIME-Типов
+Network_title			Статистика по Подсетям за
+Network_number			Кол-во Подсетей
+Duration			Продолжительность
+Time				Время
+Largest				Наибольший
+Url				URL
+User_title			Статистика по Пользователям за
+User_number			Количество Пользователей
+Url_Hits_title			Top %d URL запросов за
+Url_Bytes_title			Top %d URL траффик за
+Url_Duration_title		Top %d URL продолжительность за
+Url_number			Количество URL
+Domain_Hits_title		Top %d запросов по Доменам за
+Domain_Bytes_title		Top %d траффик по Доменам за
+Domain_Duration_title		Top %d продолжительность по Доменам за
+Domain_number			Кол-во Доменов
+Domain_graph_hits_title		Статистика запросов по Доменам за
+Domain_graph_bytes_title	Статистика траффика по Доменам за
+Second_domain_graph_hits_title	Статистика запросов по Доменам второго уровня за
+Second_domain_graph_bytes_title	Статистика траффика по Доменам второго уровня за
+First_visit			Первое посещение
+Last_visit			Последнее посещение
+Globals_Statistics		Глобальная Статистика
+Legend				Подсказка
+File_Generated			Отчет был сгенерирован с помощью
+Up_link				Вверх
+Click_year_stat			Нажмите на готовую статистику для получения подробной информации
+Mime_graph_hits_title		MIME-Типы запросы за
+Mime_graph_bytes_title		MIME-Типы траффик за
+User				Пользователь
+Count				Считать
