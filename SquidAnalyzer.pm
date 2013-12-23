@@ -40,6 +40,9 @@ $RM_PROG  = "/bin/rm";
 # DNS Cache
 my %CACHE = {};
 
+# Color used to draw grpahs
+my @GRAPH_COLORS = ('#6e9dc9', '#f4ab3a', '#ac7fa8', '#8dbd0f');
+
 # Default translation srings
 my %Translate = (
 	'CharSet' => 'utf-8',
@@ -3545,83 +3548,55 @@ sub flotr2_bargraph
 {
 	my ($self, $buttonid, $divid, $xtype, $title, $xtitle, $ytitle, $data1, $legend1, $data2, $legend2, $data3, $legend3, $data4, $legend4) = @_;
 
-	$data1 = "var d1 = [$data1];" if ($data1);
-	$data2 = "var d2 = [$data2];";
-	$data3 = "var d3 = [$data3];";
-	$data4 = "var d4 = [$data4];";
+        my @legend = ();
+        my @data = ();
 
+	my $i = 0;
+	push(@data, "var d1 = [$data1];\n") if ($data1);
+	push(@legend, "{ data: d1, label: \"$legend1\", color: \"$GRAPH_COLORS[$i++]\", mouse:{track:true} },\n") if ($data1);
+	push(@data, "var d2 = [$data2];\n") if ($data2);
+	push(@legend, "{ data: d2, label: \"$legend2\", color: \"$GRAPH_COLORS[$i++]\", mouse:{track:true} },\n") if ($data2);
+	push(@data, "var d3 = [$data3];\n") if ($data3);
+	push(@legend, "{ data: d3, label: \"$legend3\", color: \"$GRAPH_COLORS[$i++]\", mouse:{track:true} },\n") if ($data3);
+	push(@data, "var d4 = [$data4];\n") if ($data4);
+	push(@legend, "{ data: d4, label: \"$legend4\", color: \"$GRAPH_COLORS[$i++]\", mouse:{track:true} },\n") if ($data4);
+
+
+	my $month_array = '';
 	my $xlabel = '';
 	my $numticks = 0;
 	if ($xtype eq 'month') {
-		$xlabel = qq{var months = [ "$Translate{'01'}", "$Translate{'02'}", "$Translate{'03'}", "$Translate{'04'}", "$Translate{'05'}", "$Translate{'06'}", "$Translate{'07'}", "$Translate{'08'}", "$Translate{'09'}", "$Translate{'10'}", "$Translate{'11'}", "$Translate{'12'}" ];
-		return months[(x -1) % 12];
+		$month_array = qq{var months = [ '$Translate{"01"}', '$Translate{"02"}', '$Translate{"03"}', '$Translate{"04"}', '$Translate{"05"}', '$Translate{"06"}', '$Translate{"07"}', '$Translate{"08"}', '$Translate{"09"}', '$Translate{"10"}', '$Translate{"11"}', '$Translate{"12"}' ];
 };
+		$xlabel = qq{return months[(pos -1) % 12];};
 		$numticks = 12;
 	} elsif ($xtype eq 'day') {
 		$xlabel = qq{var days = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
-		return days[(x - 1) % 31];
+		return days[(pos - 1) % 31];
 };
 		$numticks = 31;
 	} else  {
 		$xlabel = qq{var hours = [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
-		return hours[x % 24];
+		return hours[pos % 24];
 };
 		$numticks = 24;
 	}
 	return <<EOF;
 <div id="$divid"></div>
 <script type="text/javascript">
+$month_array
 (function mouse_zoom(container) {
 
 //document.writeln('<table class="tbbutton"><tr><td><input type="button" class="dldButton" value="To Image" id="toimage$buttonid" onclick="return false;">'+
 //	'<input type="button" class="dldButton" value="Download" id="download$buttonid" onclick="return false;">' +
 //	'<input type="button" class="dldButton" value="Reset" id="reset$buttonid" onclick="return false;"></td></tr><tr><td>&nbsp;</td></tr></table>'
 //	);
-    $data1
-    $data2
-    $data3
-    $data4
-    var bars = {
-        data: d1,
-        label: "$legend1",
-        bars: {
-            show: true,
-            barWidth: 0.8,
-            shadowSize: 5,
-            lineWidth: 1,
-            fillColor: {
-                colors: ["#76add2", "#fff"],
-                start: "top",
-                end: "bottom"
-            },
-            fillOpacity: 0.8
-        }
-    },
-    lines1 = {
-        data: d2,
-        label: "$legend2",
-        lines: {
-            show: true,
-        }
-    },
-    lines2 = {
-        data: d3,
-        label: "$legend3",
-        lines: {
-            show: true,
-        }
-    };
-    lines3 = {
-        data: d4,
-        label: "$legend4",
-        lines: {
-            show: true,
-        }
-    };
+    @data
     var options = {
         mouse: {
             track: true,
-            relative: true
+            relative: true,
+	    trackFormatter: function(obj){ return dateTracker(obj,'$xtype') },
         },
         yaxis: {
             min: 0,
@@ -3633,7 +3608,7 @@ sub flotr2_bargraph
             mode: "normal",
             noTicks: $numticks,
             tickFormatter: function(x) {
-                var x = parseInt(x);
+                var pos = parseInt(x);
 		$xlabel
             },
             title: "$xtitle",
@@ -3652,10 +3627,7 @@ sub flotr2_bargraph
         return Flotr.draw(
         	container,
         	[
-        		bars,
-        		lines1,
-        		lines2,
-        		lines3
+@legend
     		],
     		o
     	);
@@ -3756,7 +3728,8 @@ sub flotr2_piegraph
         },
         mouse: {
             track: true,
-	    trackFormatter: function(obj){ return obj.series.label  +' (' + obj.y +')'; },
+	    trackFormatter: function(obj){ return pieTracker(obj) },
+	    relative: true
         },
         legend: {
             position: "sw",
