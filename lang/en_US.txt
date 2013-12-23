@@ -36,6 +36,7 @@ Months				Months
 Days				Days
 Hit				Hit
 Miss				Miss
+Denied				Denied
 Cost				Cost
 Users				Users
 Sites				Sites
@@ -46,6 +47,7 @@ Months_graph			Months
 Days_graph			Days
 Hit_graph			Hit
 Miss_graph			Miss
+Denied_graph			Denied
 Total_graph			Total
 Domains_graph			Domains
 Users_help			Total number of different users for this period
@@ -53,6 +55,7 @@ Sites_help			Total number of different visited sites for this period
 Domains_help			Total number of different second level visited domain for this period
 Hit_help			Objects found in cache
 Miss_help			Objects not found in cache
+Denied_help			Objects with denied access
 Cost_help			1 Mega byte =
 Generation			Report generated on
 Main_cache_title		Cache Statistics

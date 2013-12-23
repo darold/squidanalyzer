@@ -70,6 +70,7 @@ my %Translate = (
 	'Days' => 'Days',
 	'Hit' => 'Hit',
 	'Miss' => 'Miss',
+	'Denied' => 'Denied',
 	'Domains' => 'Domains',
 	'Requests_graph' => 'Requests',
 	'Megabytes_graph' => 'Mega bytes',
@@ -77,6 +78,7 @@ my %Translate = (
 	'Days_graph' => 'Days',
 	'Hit_graph' => 'Hit',
 	'Miss_graph' => 'Miss',
+	'Denied_graph' => 'Denied',
 	'Total_graph' => 'Total',
 	'Domains_graph' => 'Domains',
 	'Users_help' => 'Total number of different users for this period',
@@ -84,6 +86,7 @@ my %Translate = (
 	'Domains_help' => 'Total number of different second level visited domain for this period',
 	'Hit_help' => 'Objects found in cache',
 	'Miss_help' => 'Objects not found in cache',
+	'Denied_help' => 'Objects with denied access',
 	'Cost_help' => '1 Mega byte =',
 	'Generation' => 'Report generated on',
 	'Main_cache_title' => 'Cache Statistics',
@@ -451,6 +454,8 @@ sub parseFile
 				$code = 'HIT';
 			} elsif ($code =~ m#MISS|MODIFIED/#) {
 				$code = 'MISS';
+			} elsif ($code =~ m#DENIED/#) {
+				$code = 'DENIED';
 			} else {
 				next;
 			}
@@ -471,6 +476,7 @@ sub parseFile
 					$id = $login;
 				}
 				next if (!$id || !$bytes);
+
 				# check for user exclusion
 				if (exists $self->{Exclude}{users}) {
 					foreach my $e (@{$self->{Exclude}{users}}) {
@@ -481,6 +487,7 @@ sub parseFile
 					}
 					next if ($found);
 				}
+
 				# check for client exclusion
 				if (exists $self->{Exclude}{clients}) {
 					foreach my $e (@{$self->{Exclude}{clients}}) {
@@ -491,6 +498,7 @@ sub parseFile
 					}
 					next if ($found);
 				}
+
 				# check for URL exclusion
 				if (exists $self->{Exclude}{uris}) {
 					foreach my $e (@{$self->{Exclude}{uris}}) {
@@ -501,6 +509,7 @@ sub parseFile
 					}
 					next if ($found);
 				}
+
 				# check for Network exclusion
 				if (exists $self->{Exclude}{networks}) {
 					foreach my $e (@{$self->{Exclude}{networks}}) {
@@ -511,6 +520,7 @@ sub parseFile
 					}
 					next if ($found);
 				}
+
 				# Anonymize all users
 				if ($self->{AnonymizeLogin} && ($client_ip ne $id)) {
 					if (!exists $self->{AnonymizedId}{$id}) {
@@ -518,9 +528,11 @@ sub parseFile
 					}
 					$id = $self->{AnonymizedId}{$id};
 				}
+
 				# Now parse data and generate statistics
 				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type);
 				$line_stored_count++;
+
 			}
 			$line_processed_count++;
 		}
@@ -919,6 +931,15 @@ sub _parseData
 	$self->{first_month} ||= $self->{last_month};
 	$self->{tmp_saving} = $time if (!$self->{tmp_saving});
 
+	#### Store access denied statistics
+	if ($code eq 'DENIED') {
+		$self->{stat_code_hour}{$code}{$hour}{hits}++;
+		$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
+		$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
+		$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+		return;
+	}
+	
 	#### Store client statistics
 	$self->{stat_user_hour}{$id}{$hour}{hits}++;
 	$self->{stat_user_hour}{$id}{$hour}{bytes} += $bytes;
@@ -1660,6 +1681,7 @@ sub _print_cache_stat
 	}
 	my $total_request =  $code_stat{HIT}{request} + $code_stat{MISS}{request};
 	my $total_bytes = $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes};
+	my $total_denied =  $code_stat{DENIED}{request} + $code_stat{DENIED}{request};
 
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
@@ -1682,6 +1704,7 @@ sub _print_cache_stat
 	my $comma_bytes = $self->format_bytes($total_bytes);
 	my $hit_bytes = $self->format_bytes($code_stat{HIT}{bytes});
 	my $miss_bytes = $self->format_bytes($code_stat{MISS}{bytes});
+	my $denied_bytes = $self->format_bytes($code_stat{DENIED}{bytes});
 	my $colspn = 5;
 	$colspn = 6 if ($self->{CostPrice});
 
@@ -1702,6 +1725,7 @@ sub _print_cache_stat
 	}
 	my @hit = ();
 	my @miss = ();
+	my @denied = ();
 	my @total = ();
 	for ("$first" .. "$last") {
 		my $tot = 0;
@@ -1717,9 +1741,15 @@ sub _print_cache_stat
 		} else {
 			push(@miss, "[ $_, 0 ]");
 		}
+		if (exists $detail_code_stat{DENIED}{$_}{request}) {
+			push(@denied, "[ $_, $detail_code_stat{DENIED}{$_}{request} ]");
+		} else {
+			push(@denied, "[ $_, 0 ]");
+		}
 		push(@total, "[ $_, $tot ]");
 		delete $detail_code_stat{HIT}{$_}{request};
 		delete $detail_code_stat{MISS}{$_}{request};
+		delete $detail_code_stat{DENIED}{$_}{request};
 	}
 
 	my $t1 = $Translate{'Graph_cache_hit_title'};
@@ -1728,11 +1758,13 @@ sub _print_cache_stat
 	my $xlabel = $unit || '';
 	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
 	my $code_requests = $self->flotr2_bargraph(1, 'code_requests', $type, $t1, $xlabel, $ylabel,
-				join(',', @total), $Translate{'Total_graph'},
+				join(',', @total), $Translate{'Total_graph'} . " ($Translate{'Hit_graph'}+$Translate{'Miss_graph'})",
 				join(',', @hit), $Translate{'Hit_graph'},
-				join(',', @miss), $Translate{'Miss_graph'} );
+				join(',', @miss), $Translate{'Miss_graph'},
+				join(',', @denied), $Translate{'Denied_graph'} );
 	@hit = ();
 	@miss = ();
+	@denied = ();
 	@total = ();
 
 	for ("$first" .. "$last") {
@@ -1749,6 +1781,11 @@ sub _print_cache_stat
 		} else {
 			push(@miss, "[ $_, 0 ]");
 		}
+		if (exists $detail_code_stat{DENIED}{$_}{bytes}) {
+			push(@denied, "[ $_, " . int($detail_code_stat{DENIED}{$_}{bytes}/1000000) . " ]");
+		} else {
+			push(@denied, "[ $_, 0 ]");
+		}
 		push(@total, "[ $_, " . int($tot/1000000) . " ]");
 	}
 	%detail_code_stat = ();
@@ -1757,25 +1794,29 @@ sub _print_cache_stat
 	$t1 = "$t1 $stat_date";
 	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
 	my $code_bytes = $self->flotr2_bargraph(2, 'code_bytes', $type, $t1, $xlabel, $ylabel,
-				join(',', @total), $Translate{'Total_graph'},
+				join(',', @total), $Translate{'Total_graph'} . " ($Translate{'Hit_graph'}+$Translate{'Miss_graph'})",
 				join(',', @hit), $Translate{'Hit_graph'},
-				join(',', @miss), $Translate{'Miss_graph'} );
+				join(',', @miss), $Translate{'Miss_graph'},
+				join(',', @denied), $Translate{'Denied_graph'});
 	@hit = ();
 	@miss = ();
+	@denied = ();
 	@total = ();
 
 	print $out qq{
 <table class="stata">
 <tr>
-<th colspan="2" class="headerBlack">$Translate{'Requests'}</th>
-<th colspan="2" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
+<th colspan="3" class="headerBlack">$Translate{'Requests'}</th>
+<th colspan="3" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
 <th colspan="$colspn" class="headerBlack">$Translate{'Total'}</th>
 </tr>
 <tr>
 <th>$Translate{'Hit'}</th>
 <th>$Translate{'Miss'}</th>
+<th>$Translate{'Denied'}</th>
 <th>$Translate{'Hit'}</th>
 <th>$Translate{'Miss'}</th>
+<th>$Translate{'Denied'}</th>
 <th>$Translate{'Requests'}</th>
 <th>$Translate{$self->{TransfertUnit}}</th>
 <th>$Translate{'Users'}</th>
@@ -1790,8 +1831,10 @@ sub _print_cache_stat
 <tr>
 <td>$code_stat{HIT}{request}</td>
 <td>$code_stat{MISS}{request}</td>
+<td>$code_stat{DENIED}{request}</td>
 <td>$hit_bytes</td>
 <td>$miss_bytes</td>
+<td>$denied_bytes</td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
 <td>$nuser</td>
@@ -1812,6 +1855,7 @@ sub _print_cache_stat
 	<div class="displayLegend">
 	<span class="legendeTitle">$Translate{'Hit'}:</span> <span class="descLegend">$Translate{'Hit_help'}</span><br/>
 	<span class="legendeTitle">$Translate{'Miss'}:</span> <span class="descLegend">$Translate{'Miss_help'}</span><br/>
+	<span class="legendeTitle">$Translate{'Denied'}:</span> <span class="descLegend">$Translate{'Denied_help'}</span><br/>
 	<span class="legendeTitle">$Translate{'Users'}:</span> <span class="descLegend">$Translate{'Users_help'}</span><br/>
 	<span class="legendeTitle">$Translate{'Sites'}:</span> <span class="descLegend">$Translate{'Sites_help'}</span><br/>
 	<span class="legendeTitle">$Translate{'Domains'}:</span> <span class="descLegend">$Translate{'Domains_help'}</span><br/>
@@ -3499,11 +3543,12 @@ sub anonymize_id
 
 sub flotr2_bargraph
 {
-	my ($self, $buttonid, $divid, $xtype, $title, $xtitle, $ytitle, $data1, $legend1, $data2, $legend2, $data3, $legend3) = @_;
+	my ($self, $buttonid, $divid, $xtype, $title, $xtitle, $ytitle, $data1, $legend1, $data2, $legend2, $data3, $legend3, $data4, $legend4) = @_;
 
 	$data1 = "var d1 = [$data1];" if ($data1);
 	$data2 = "var d2 = [$data2];";
 	$data3 = "var d3 = [$data3];";
+	$data4 = "var d4 = [$data4];";
 
 	my $xlabel = '';
 	my $numticks = 0;
@@ -3535,6 +3580,7 @@ sub flotr2_bargraph
     $data1
     $data2
     $data3
+    $data4
     var bars = {
         data: d1,
         label: "$legend1",
@@ -3561,6 +3607,13 @@ sub flotr2_bargraph
     lines2 = {
         data: d3,
         label: "$legend3",
+        lines: {
+            show: true,
+        }
+    };
+    lines3 = {
+        data: d4,
+        label: "$legend4",
         lines: {
             show: true,
         }
@@ -3601,7 +3654,8 @@ sub flotr2_bargraph
         	[
         		bars,
         		lines1,
-        		lines2
+        		lines2,
+        		lines3
     		],
     		o
     	);

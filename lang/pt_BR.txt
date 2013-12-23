@@ -38,6 +38,7 @@ Months				Meses
 Days				Dias
 Hit				Hit
 Miss				Miss
+Denied				Denied
 Cost				Custo
 Users				Usu&aacute;rios
 Sites				Sites
@@ -48,6 +49,7 @@ Months_graph			Meses
 Days_graph			Dias
 Hit_graph			Hit
 Miss_graph			Miss
+Denied_graph			Denied
 Total_graph			Total
 Domains_graph			Domínios
 Users_help			N&uacute;mero total de usu&aacute;rios distintos neste per&iacute;odo.
@@ -55,6 +57,7 @@ Sites_help			N&uacute;mero total de sites distintos visitados neste per&iacute;o
 Domains_help			N&uacute;mero total de dom&iacute;nios de segundo n&iacute;vel distintos visitados neste per&iacute;odo.
 Hit_help			Objetos presentes no proxy.
 Miss_help			Objetos n&atilde;o encontrados no proxy e buscados externamente.
+Denied_help			Object with access denied
 Cost_help			1 Mbyte =
 Generation			Relat&oacute;rio gerado em
 Main_cache_title		Estat&iacute;sticas do Proxy

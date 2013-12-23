@@ -37,6 +37,7 @@ Months				Месяца
 Days				Дни
 Hit				Hit
 Miss				Miss
+Denied				Denied
 Cost				Стоимось
 Users				Пользователи
 Sites				Сайты
@@ -47,6 +48,7 @@ Months_graph			Месяца
 Days_graph			Дни
 Hit_graph			Hit
 Miss_graph			Miss
+Denied_graph			Denied
 Total_graph			Всего
 Domains_graph			Домены
 Users_help			Статистика по пользователям за выбранный период
@@ -54,6 +56,7 @@ Sites_help			Статистика по Сайтам за выбранный пе
 Domains_help			Статистика по Доменам за выбранный период
 Hit_help			Объекты, найденные в кэше
 Miss_help			Объекты, не найденные в кэше
+Denied_help			Object with access denied
 Cost_help			1 Мега байт =
 Generation			Дата создания отчета
 Main_cache_title		Статистика Прокси
