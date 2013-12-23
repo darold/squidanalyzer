@@ -60,7 +60,7 @@ table.stata td a:hover { color: #76add2; }
 /*   Graphs   */
 /**************/
 
-#code_requests, #code_bytes, #network_hits, #network_bytes, #user_hits, #user_bytes, #domain_hits, #second_domain_hits, #domain_bytes, #second_domain_bytes {
+#code_requests, #code_bytes, #network_hits, #network_bytes, #user_hits, #user_bytes, #domain_hits, #second_domain_hits, #domain_bytes, #second_domain_bytes, #mime_hits, #mime_bytes {
      width : 550px;
      height: 300px;
      background:#F3F2ED;
