@@ -67,7 +67,7 @@ if [ ! -d "$DESTDIR$MANDIR" ]; then
 	mkdir -p $DESTDIR$MANDIR
 fi
 # Copy files that must not be overriden 
-for file in squidanalyzer.conf network-aliases user-aliases excluded; do
+for file in squidanalyzer.conf network-aliases user-aliases excluded included; do
 if [ -e $DESTDIR$CONFDIR/\$file ]; then
 	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file.sample
 else

@@ -472,7 +472,6 @@ sub parseFile
 				# Remove extra space character in username
 				$login =~ s/\%20//g;
 
-				my $found = 0;
 				# Set default user login to client ip address
 				my $id = $client_ip || '';
 				if ($login ne '-') {
@@ -480,6 +479,50 @@ sub parseFile
 				}
 				next if (!$id || !$bytes);
 
+				my $found = 0;
+
+				#####
+				# If there's some mandatory inclusion, check the entry against the definitions
+				#####
+				if (exists $self->{Include}{users} || exists $self->{Include}{clients} || exists $self->{Include}{networks}) {
+					# check for user inclusion
+					if (exists $self->{Include}{users}) {
+						foreach my $e (@{$self->{Include}{users}}) {
+							if ($login =~ m#^$e$#i) {
+								$found = 1;
+								last;
+							}
+						}
+					}
+
+					# check for client inclusion
+					if (exists $self->{Include}{clients}) {
+						foreach my $e (@{$self->{Include}{clients}}) {
+							if ($client_ip =~ m#^$e$#i) {
+								$found = 1;
+								last;
+							}
+						}
+					}
+
+					# check for Network inclusion
+					if (exists $self->{Include}{networks}) {
+						foreach my $e (@{$self->{Include}{networks}}) {
+							if (&check_ip($client_ip, $e)) {
+								$found = 1;
+								last;
+							}
+						}
+					}
+					# The entry is not allowed in included file so skip it
+					next if (!$found);
+					$found = 0;
+				}
+
+				#####
+				# Check the entry against the exclusion definitions. The entry
+				# is skipped directly when it match an exclusion definition.
+				#####
 				# check for user exclusion
 				if (exists $self->{Exclude}{users}) {
 					foreach my $e (@{$self->{Exclude}{users}}) {
@@ -502,10 +545,10 @@ sub parseFile
 					next if ($found);
 				}
 
-				# check for URL exclusion
-				if (exists $self->{Exclude}{uris}) {
-					foreach my $e (@{$self->{Exclude}{uris}}) {
-						if ($url =~ m#^$e$#i) {
+				# check for Network exclusion
+				if (exists $self->{Exclude}{networks}) {
+					foreach my $e (@{$self->{Exclude}{networks}}) {
+						if (&check_ip($client_ip, $e)) {
 							$found = 1;
 							last;
 						}
@@ -513,10 +556,10 @@ sub parseFile
 					next if ($found);
 				}
 
-				# check for Network exclusion
-				if (exists $self->{Exclude}{networks}) {
-					foreach my $e (@{$self->{Exclude}{networks}}) {
-						if (&check_ip($client_ip, $e)) {
+				# check for URL exclusion
+				if (exists $self->{Exclude}{uris}) {
+					foreach my $e (@{$self->{Exclude}{uris}}) {
+						if ($url =~ m#^$e$#i) {
 							$found = 1;
 							last;
 						}
@@ -712,6 +755,7 @@ sub _init
 	%{$self->{NetworkAlias}} = &parse_network_aliases($options{NetworkAlias} || '');
 	%{$self->{UserAlias}}    = &parse_user_aliases($options{UserAlias} || '');
 	%{$self->{Exclude}}      = &parse_exclusion($options{Exclude} || '');
+	%{$self->{Include}}      = &parse_inclusion($options{Include} || '');
 
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
@@ -3432,6 +3476,39 @@ sub parse_exclusion
 	close(EXCLUDED);
 
 	return %exclusion;
+}
+
+sub parse_inclusion
+{
+	my ($file) = @_;
+
+	return if (!$file || !-f $file);
+
+	my %inclusion = ();
+	open(INCLUDED, $file) or die "ERROR: can't open inclusion file $file, $!\n";
+	my $i = 0;
+	while (my $l = <INCLUDED>) {
+		chomp($l);
+		$i++;
+		next if (!$l || ($l =~ /^[\s\t]*#/));
+		# remove comments at end of line
+		$l =~ s/[\s\t]*#.*//;
+		if ($l =~ m#^(USER|CLIENT|NETWORK)[\s\t]+(.*)#) {
+			my $lbl = lc($1) . 's';
+			my @rg =  split(m#[\s\t]+#, $2);
+			foreach my $r (@rg) {
+				next if ($lbl eq 'networks');
+				&check_regex($r, "$file at line $i");
+			}
+			push(@{$inclusion{$lbl}}, @rg);
+		} else {
+			# backward compatibility is not more supported
+			die "ERROR: wrong line format in file $file at line $i\n";
+		}
+	}
+	close(INCLUDED);
+
+	return %inclusion;
 }
 
 # User URL-encode

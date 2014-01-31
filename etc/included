@@ -1,0 +1,18 @@
+#------------------------------------------------------------------------------
+# File used to defined which client ip address, network with netmask, network
+# regex address, auth login and URI to include in the report. All other entries
+# will be exclude, this is the opposite of the excluded file.
+#
+# You can define one by line inclusion by specifying first the type of the
+# inclusion (USER or CLIENT) and a space separated list of valid regex.
+# You can also use the NETWORK type to define network address with netmask
+# using the CIDR notation: xxx.xxx.xxx.xxx/n
+#
+# See example bellow:
+#------------------------------------------------------------------------------
+#NETWORK	192.168.1.0/24 10.10.0.0/16
+#CLIENT		192\.168\.1\.2 
+#CLIENT		10\.169\.1\.\d+ 192\.168\.10\..*
+#USER		myloginstr
+#USER		guestlogin\d+ guestdemo
+
