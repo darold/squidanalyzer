@@ -146,3 +146,16 @@ div.tooltipLink div.tooltip th { font-size:10px; }
 div.tooltipLink div.tooltip td { font-size:9px; font-weight:normal; padding:1px; }
 div.tooltipLink:hover div.tooltip { display:block; z-index:20; position:absolute; top:1.5em; left:2em; }
 
+.mfigure {
+        font-weight: bold;
+        font-size: 1.2em;
+        /*color:#d26115;*/
+        color:#76add2;
+}
+
+.mfigure small {
+        font-weight: bold;
+        font-size: 0.6em;
+        color:#ffffff;
+}
+

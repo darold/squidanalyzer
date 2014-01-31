@@ -3581,6 +3581,17 @@ sub flotr2_bargraph
 };
 		$numticks = 24;
 	}
+
+	my $dateTracker_lblopts = '';
+	map { if (/label: "([^"]+)"/) { $dateTracker_lblopts .= "'$1',"; } } @legend;
+	$dateTracker_lblopts =~ s/,$//;
+	$dateTracker_lblopts = "[$dateTracker_lblopts]";
+
+	my $dateTracker_dataopts = '';
+	map { if (/var (d\d+) =/) { $dateTracker_dataopts .= "$1,"; } } @data;
+	$dateTracker_dataopts =~ s/,$//;
+	$dateTracker_dataopts = "[$dateTracker_dataopts]";
+
 	return <<EOF;
 <div id="$divid"></div>
 <script type="text/javascript">
@@ -3596,7 +3607,7 @@ $month_array
         mouse: {
             track: true,
             relative: true,
-	    trackFormatter: function(obj){ return dateTracker(obj,'$xtype') },
+	    trackFormatter: function(obj){ return dateTracker(obj,'$xtype',$dateTracker_lblopts,$dateTracker_dataopts) },
         },
         yaxis: {
             min: 0,
