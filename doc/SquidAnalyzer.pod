@@ -324,6 +324,30 @@ See example bellow:
 
 you can have multiple line of the same exclusion type.
 
+=item Include inclusion_file
+
+Used to set client ip addresses, network addresses or auth login
+to include into the report. All others will not be included. It
+works as the opposite of the Include parameter.
+
+You can define one by line inclusion by specifying first the type of the
+inclusion (USER or CLIENT) and a space separated list of valid regex.
+
+You can also use the NETWORK type to define network address with netmask
+using the CIDR notation: xxx.xxx.xxx.xxx/n
+
+See example bellow:
+
+	NETWORK        192.168.1.0/24 10.10.0.0/16
+	CLIENT         192\.168\.1\.2 
+	CLIENT         10\.169\.1\.\d+ 192\.168\.10\..*
+	USER           myloginstr
+	USER           guestlogin\d+ guestdemo
+	URI            http:\/\/myinternetdomain.dom.*
+	URI            .*\.webmail\.com\/.*\/login\.php.*
+
+you can have multiple line of the same inclusion type.
+
 =item Lang language_file
 
 Used to set the translation file to be used. Value must be set to
