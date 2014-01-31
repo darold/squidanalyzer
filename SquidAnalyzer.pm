@@ -3617,7 +3617,7 @@ sub _get_calendar
 
 			if ($wd == 7) {
 				my $week = "<th>" . ($wn+1) . "</th>";
-				$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+				#$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
 				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
 				$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 				@currow = ('','','','','','','');
@@ -3628,7 +3628,7 @@ sub _get_calendar
 		my $wn = &get_week_number($year,$month,28);
 		if (($wn == $old_week) || grep(/href/, @currow)) {
 			my $week = "<th>" . ($wn+1) . "</th>";
-			$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+			#$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
 			$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 		}
 		$para .= "</table>\n";
