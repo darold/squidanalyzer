@@ -142,6 +142,7 @@ my %Translate = (
 	'Mime_graph_bytes_title' => 'Mime Type Bytes Statistiques on',
 	'User' => 'User',
 	'Count' => 'Count',
+	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 );
 
 my @TLD1 = (
@@ -3579,30 +3580,73 @@ sub _get_calendar
 	my $para = "<div id=\"calendar\">\n";
 	if ($type eq 'day') {
 		$para .= "<table><tr><th colspan=\"8\">$stat_date</th></tr>\n";
-		for my $i ('01' .. '32') {
-			$para .= "<tr>" if (grep(/^$i$/, '01', '09', '17','25'));
-			if ($i == 32) {
-				$para .= "<td>&nbsp;</td>";
-			} elsif (-f "$outdir/$i/index.html") {
-				$para .= "<td><a href=\"$prefix$i/index.html\">$i</a></td>";
-			} else {
-				$para .= "<td>$i</td>";
+		my @wday = qw(Mo Tu We Th Fr Sa Su);
+		my @std_day = qw(Su Mo Tu We Th Fr Sa);
+		my %day_lbl = ();
+		if (exists $Translate{WeekDay}) {
+			my @tmpwday = split(/\s+/, $Translate{WeekDay});
+			for (my $i = 0; $i <= $#std_day; $i++) {
+				$day_lbl{$std_day[$i]} = $tmpwday[$i];
 			}
-			$para .= "</tr>\n" if (grep(/^$i$/, '08', '16', '24', '32'));
+		} else {
+			for (my $i = 0; $i <= $#wday; $i++) {
+				$day_lbl{$wday[$i]} = $wday[$i];
+			}
+		}
+		$para .= "<tr><td>&nbsp;</td>";
+		map { $para .= '<td align="center">' . $day_lbl{$_} . '</td>'; } @wday;
+		$para .= "</tr>\n";
+
+		$stat_date =~ /^(\d+)-(\d+)$/;
+		my $year = $1 || '';
+		my $month = $2 || '';
+
+		my @currow = ('','','','','','','');
+		my $old_week = 0;
+		my $d = '';
+		for $d ("01" .. "31") {
+			my $wd = &get_day_of_week($year,$month,$d);
+			my $wn =  &get_week_number($year,$month,$d);
+			next if ($wn == -1);
+			$old_week = $wn;
+			if (-f "$outdir/$d/index.html") {
+				$currow[$wd-1] = "<td><a href=\"$prefix$d/index.html\">$d</a></td>";
+			} else {
+				$currow[$wd-1] = "<td>$d</td>";
+			}
+
+			if ($wd == 7) {
+				my $week = "<th>" . ($wn+1) . "</th>";
+				$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
+				$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
+				@currow = ('','','','','','','');
+			}
+		}
+		map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
+		my $date = $year . $month . $d;
+		my $wn = &get_week_number($year,$month,28);
+		if (($wn == $old_week) || grep(/href/, @currow)) {
+			my $week = "<th>" . ($wn+1) . "</th>";
+			$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+			$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 		}
 		$para .= "</table>\n";
+
 	} elsif ($type eq 'month') {
+
 		$para .= "<table><tr><th colspan=\"4\">$stat_date</th></tr>\n";
 		for my $i ('01' .. '12') {
-			$para .= "<tr>" if (grep(/^$i$/, '01', '05', '09'));
+			$para .= "<tr>" if (grep(/^$i$/, '01', '04', '07','10'));
 			if (-f "$outdir/$i/index.html") {
 				$para .= "<td><a href=\"$prefix$i/index.html\">$Translate{$i}</a></td>";
 			} else {
 				$para .= "<td>$Translate{$i}</td>";
 			}
-			$para .= "</tr>\n" if (grep(/^$i$/, '04', '08', '12'));
+			$para .= "</tr>\n" if (grep(/^$i$/, '03', '06', '09', '12'));
 		}
 		$para .= "</table>\n";
+
 	}
 	$para .= "</div>\n";
 
@@ -3947,6 +3991,45 @@ sub _gen_year_summary
 
 }
 
+####
+# Get the week day of a date
+####
+sub get_day_of_week
+{
+	my ($year, $month, $day) = @_;
+
+#       %u     The day of the week as a decimal, range 1 to 7, Monday being 1.
+#       %w     The day of the week as a decimal, range 0 to 6, Sunday being 0.
+
+	#my $weekDay = POSIX::strftime("%u", gmtime timelocal_nocheck(0,0,0,$day,--$month,$year));
+	my $weekDay = POSIX::strftime("%u", 1,1,1,$day,--$month,$year-1900);
+
+	return $weekDay;
+}
+
+####
+# Get week number
+####
+sub get_week_number
+{
+	my ($year, $month, $day) = @_;
+
+#       %U     The week number of the current year as a decimal number, range 00 to 53, starting with the first
+#              Sunday as the first day of week 01.
+#       %V     The  ISO 8601  week  number (see NOTES) of the current year as a decimal number, range 01 to 53,
+#              where week 1 is the first week that has at least 4 days in the new year.
+#       %W     The week number of the current year as a decimal number, range 00 to 53, starting with the first
+#              Monday as the first day of week 01.
+
+	# Check if the date is valide first
+	my $datefmt = POSIX::strftime("%F", 1, 1, 1, $day, $month - 1, $year - 1900);
+	if ($datefmt ne "$year-$month-$day") {
+		return -1;
+	}
+	my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $month - 1, $year - 1900);
+
+	return $weekNumber;
+}
 
 1;
 
