@@ -109,3 +109,4 @@ Mime_graph_hits_title		MIME-Типы запросы за
 Mime_graph_bytes_title		MIME-Типы траффик за
 User				Пользователь
 Count				Считать
+WeekDay				Su Mo Tu We Th Fr Sa

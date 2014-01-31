@@ -110,3 +110,4 @@ Mime_graph_hits_title		Acessos a Tipos MIME em
 Mime_graph_bytes_title		Bytes Transferidos de Tipos MIME em
 User				Usu&aacute;rios
 Count				N&uacute;mero
+WeekDay				Su Mo Tu We Th Fr Sa

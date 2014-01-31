@@ -108,3 +108,4 @@ Mime_graph_hits_title		Mime Typen Treffer Statistik
 Mime_graph_bytes_title		Mime Typen Bytes Statistik
 User				Benutzer
 Count				Anzahl
+WeekDay				Su Mo Tu We Th Fr Sa
