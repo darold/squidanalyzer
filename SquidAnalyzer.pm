@@ -514,6 +514,7 @@ sub parseFile
 							}
 						}
 					}
+
 					# The entry is not allowed in included file so skip it
 					next if (!$found);
 					$found = 0;
@@ -608,6 +609,7 @@ sub parseFile
 		}
 
 		# Compute month statistics
+		$self->_clear_stats();
 		if (!$self->{QuietMode}) {
 			print STDERR "Generating monthly data files now...\n";
 		}
@@ -621,6 +623,7 @@ sub parseFile
 		}
 
 		# Compute year statistics
+		$self->_clear_stats();
 		if (!$self->{no_year_stat}) {
 			if (!$self->{QuietMode}) {
 				print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
