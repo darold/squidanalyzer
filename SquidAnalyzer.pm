@@ -609,6 +609,19 @@ sub parseFile
 			$current->close;
 		}
 
+		# Compute week statistics
+		$self->_clear_stats();
+		if (!$self->{QuietMode}) {
+			print STDERR "Generating weekly data files now...\n";
+		}
+		my $wn = &get_week_number("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
+		my @wd = &get_wdays_per_month($wn, "$self->{last_year}-$self->{last_month}");
+		$wn++;
+
+		print STDERR "Compute and dump weekly statistics for week $wn on $self->{last_year}\n" if (!$self->{QuietMode});
+		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
+
+
 		# Compute month statistics
 		$self->_clear_stats();
 		if (!$self->{QuietMode}) {
@@ -1069,11 +1082,14 @@ sub _parseData
 
 sub _save_stat
 {
-	my ($self, $year, $month, $day) = @_;
+	my ($self, $year, $month, $day, $wn, @wd) = @_;
 
 	my $type = 'hour';
 	if (!$day) {
 		$type = 'day';
+	}
+	if ($wn) {
+		$type = 'week';
 	}
 	if (!$month) {
 		$type = 'month';
@@ -1087,6 +1103,13 @@ sub _save_stat
 		foreach my $d ("01" .. "31") {
 			$self->_read_stat($year, $month, $d, 'day');
 		}
+	} elsif ($type eq 'week') {
+		$path = "$year/week$wn";
+		foreach my $wdate (@wd) {
+			$wdate =~ /^(\d+)-(\d+)-(\d+)$/;
+			$self->_read_stat($1, $2, $3, 'day', $wn);
+		}
+		$type = 'day';
 	} elsif ($type eq 'month') {
 		foreach my $m ("01" .. "12") {
 			$self->_read_stat($year, $m, $day, 'month');
@@ -1219,10 +1242,7 @@ sub _save_stat
 
 sub _save_data
 {
-	my ($self, $year, $month, $day) = @_;
-
-	my $path = join('/', $year, $month, $day);
-	$path =~ s/[\/]+$//;
+	my ($self, $year, $month, $day, $wn, @wd) = @_;
 
 	#### Create directory structure
 	if (!-d "$self->{Output}/$year") {
@@ -1234,15 +1254,18 @@ sub _save_data
 	if ($day && !-d "$self->{Output}/$year/$month/$day") {
 		mkdir("$self->{Output}/$year/$month/$day", 0755) || die "ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n";
 	}
+	if ($wn && !-d "$self->{Output}/$year/week$wn") {
+		mkdir("$self->{Output}/$year/week$wn", 0755) || die "ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n";
+	}
 	# Dumping data
-	$self->_save_stat($year, $month, $day);
+	$self->_save_stat($year, $month, $day, $wn, @wd);
 
 }
 
 
 sub _read_stat
 {
-	my ($self, $year, $month, $day, $sum_type) = @_;
+	my ($self, $year, $month, $day, $sum_type, $wn) = @_;
 
 	my $type = 'hour';
 	if (!$day) {
@@ -4029,6 +4052,50 @@ sub get_week_number
 	my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $month - 1, $year - 1900);
 
 	return $weekNumber;
+}
+
+# Returns all days following the week number
+sub get_wdays_per_month
+{
+	my $wn = shift;
+	my ($year, $month) = split(/\-/, shift);
+	my @months = ();
+	my @retdays = ();
+
+	$month ||= '01';
+	push(@months, "$year$month");
+	my $start_month = $month;
+	if ($month eq '01') {
+		unshift(@months, ($year - 1) . "12");
+	} else {
+		unshift(@months, $year . sprintf("%02d", $month - 1));
+	}
+	if ($month == 12) {
+		push(@months, ($year+1) . "01");
+	} else {
+		push(@months, $year . sprintf("%02d", $month + 1));
+	}
+
+	foreach my $d (@months) {
+		$d =~ /^(\d{4})(\d{2})$/;
+		my $y = $1;
+		my $m = $2;
+		foreach my $day ("01" .. "31") {
+			# Check if the date is valide first
+			my $datefmt = POSIX::strftime("%F", 1, 1, 1, $day, $m - 1, $y - 1900);
+			if ($datefmt ne "$y-$m-$day") {
+				next;
+			}
+			my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $m - 1, $y - 1900);
+			if ( ($weekNumber == $wn) || ( ($weekNumber eq '00') && (($wn == 1) || ($wn >= 52)) ) ) {
+				push(@retdays, "$year-$m-$day");
+				return @retdays if ($#retdays == 6);
+			}
+			next if ($weekNumber > $wn);
+		}
+	}
+
+	return @retdays;
 }
 
 1;
