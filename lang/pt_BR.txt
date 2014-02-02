@@ -111,3 +111,4 @@ Mime_graph_bytes_title		Bytes Transferidos de Tipos MIME em
 User				Usu&aacute;rios
 Count				N&uacute;mero
 WeekDay				Su Mo Tu We Th Fr Sa
+Week				Week

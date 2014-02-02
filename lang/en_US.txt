@@ -109,3 +109,4 @@ Mime_graph_bytes_title		Mime Type Bytes Statistiques on
 User				User
 Count				Count
 WeekDay				Su Mo Tu We Th Fr Sa
+Week				Week

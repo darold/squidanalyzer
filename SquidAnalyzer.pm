@@ -143,6 +143,7 @@ my %Translate = (
 	'User' => 'User',
 	'Count' => 'Count',
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
+	'Week' => 'Week',
 );
 
 my @TLD1 = (
@@ -1625,7 +1626,9 @@ sub buildHTML
 		next if (!$p_year && ($y < $old_year));
 		opendir(DIR, "$outdir/$y") || die "Error: can't opendir $outdir/$y: $!";
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
+		my @weeks  = grep { /^week\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		closedir DIR;
+		my @weeks_to_build = ();
 		foreach my $m (sort {$a <=> $b} @months) {
 			next if (!$m);
 			next if ($self->check_build_date($y, $m));
@@ -1644,9 +1647,16 @@ sub buildHTML
 				next if ("$y$m$d" < "$old_year$old_month$old_day");
 				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
 				$self->gen_html_output($outdir, $y, $m, $d);
+				my $wn = &get_week_number($y,$m,$d);
+				push(@weeks_to_build, $wn) if (!grep(/^$wn$/, @weeks_to_build));
 			}
 			print STDERR "Generating monthly statistics for month $y-$m\n" if (!$self->{QuietMode});
 			$self->gen_html_output($outdir, $y, $m);
+		}
+		foreach my $w (sort @weeks_to_build) {
+			$w = sprintf("%02d", $w+1);
+			print STDERR "Generating weekly statistics for week $w on year $y\n" if (!$self->{QuietMode});
+			$self->gen_html_output($outdir, $y, '', '', $w);
 		}
 		print STDERR "Generating yearly statistics for year $y\n" if (!$self->{QuietMode});
 		$self->gen_html_output($outdir, $y);
@@ -1661,7 +1671,7 @@ sub buildHTML
 
 sub gen_html_output
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $dir = "$outdir";
 	if ($year) {
@@ -1675,25 +1685,30 @@ sub gen_html_output
 	}
 	my $stat_date = $self->set_date($year, $month, $day);
 
+	if ($week) {
+		$dir .= "/week$week";
+		$stat_date = "$Translate{Week} $week - $year";
+	}
+
 	my $nuser = 0;
 	my $nurl = 0;
 	my $ndomain = 0;
-	if ( !$self->{no_year_stat} || $month ) {
+	if ( !$self->{no_year_stat} || $month || $week) {
 		print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
-		$nuser = $self->_print_user_stat($dir, $year, $month, $day);
+		$nuser = $self->_print_user_stat($dir, $year, $month, $day, $week);
 		print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
-		$self->_print_mime_stat($dir, $year, $month, $day);
+		$self->_print_mime_stat($dir, $year, $month, $day, $week);
 		print STDERR "\tNetwork statistics in $dir...\n" if (!$self->{QuietMode});
-		$self->_print_network_stat($dir, $year, $month, $day);
+		$self->_print_network_stat($dir, $year, $month, $day, $week);
 		if ($self->{UrlReport}) {
 			print STDERR "\tTop URL statistics in $dir...\n" if (!$self->{QuietMode});
-			$nurl = $self->_print_top_url_stat($dir, $year, $month, $day);
+			$nurl = $self->_print_top_url_stat($dir, $year, $month, $day, $week);
 			print STDERR "\tTop domain statistics in $dir...\n" if (!$self->{QuietMode});
-			$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day);
+			$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day, $week);
 		}
 	}
 	print STDERR "\tCache statistics in $dir...\n" if (!$self->{QuietMode});
-	$self->_print_cache_stat($dir, $year, $month, $day, $nuser, $nurl, $ndomain);
+	$self->_print_cache_stat($dir, $year, $month, $day, $nuser, $nurl, $ndomain, $week);
 
 	return ($nuser, $nurl, $ndomain);
 }
@@ -1715,7 +1730,7 @@ sub parse_duration
 
 sub _print_cache_stat
 {
-	my ($self, $outdir, $year, $month, $day, $nuser, $nurl, $ndomain) = @_;
+	my ($self, $outdir, $year, $month, $day, $nuser, $nurl, $ndomain, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -1725,6 +1740,9 @@ sub _print_cache_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -1762,12 +1780,13 @@ sub _print_cache_stat
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	if ( !$self->{no_year_stat} || ($type ne 'month') ) {
 		$self->_print_header(\$out, $self->{menu}, $cal);
-		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
+		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 	} else {
 		$self->_print_header(\$out, $self->{menu3}, $cal);
-		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date);
+		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 		%code_stat = ();
 		$self->_print_footer(\$out);
 		$out->close();
@@ -1782,26 +1801,38 @@ sub _print_cache_stat
 	my $colspn = 5;
 	$colspn = 6 if ($self->{CostPrice});
 
-	my $last = '23';
-	my $first = '00';
 	my $title = $Translate{'Hourly'} || 'Hourly';
 	my $unit = $Translate{'Hours'} || 'Hours';
+	my @xaxis = ();
 	if ($type eq 'day') {
-		$last = '31';
-		$first = '01';
-		$title = $Translate{'Daily'} || 'Daily';
+		if (!$week) {
+			$title = $Translate{'Daily'} || 'Daily';
+			for ("01" .. "31") {
+				push(@xaxis, "$_");
+			}
+		} else {
+			@xaxis = &get_wdays_per_year($week - 1, $year);
+			$title = $Translate{'Weekly'} || 'Weekly';
+			$type = 'week';
+			$type = '[' . join(',', @xaxis) . ']';
+		}
 		$unit = $Translate{'Days'} || 'Days';
 	} elsif ($type eq 'month') {
-		$last = '12';
-		$first = '01';
 		$title = $Translate{'Monthly'} || 'Monthly';
 		$unit = $Translate{'Months'} || 'Months';
+		for ("01" .. "12") {
+			push(@xaxis, "$_");
+		}
+	} else {
+		for ("00" .. "23") {
+			push(@xaxis, "$_");
+		}
 	}
 	my @hit = ();
 	my @miss = ();
 	my @denied = ();
 	my @total = ();
-	for ("$first" .. "$last") {
+	foreach (@xaxis) {
 		my $tot = 0;
 		if (exists $detail_code_stat{HIT}{$_}{request}) {
 			push(@hit, "[ $_, $detail_code_stat{HIT}{$_}{request} ]");
@@ -1841,7 +1872,7 @@ sub _print_cache_stat
 	@denied = ();
 	@total = ();
 
-	for ("$first" .. "$last") {
+	foreach (@xaxis) {
 		my $tot = 0;
 		if (exists $detail_code_stat{HIT}{$_}{bytes}) {
 			push(@hit, "[ $_, " . int($detail_code_stat{HIT}{$_}{bytes}/1000000) . " ]");
@@ -1949,7 +1980,7 @@ sub _print_cache_stat
 
 sub _print_mime_stat
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -1959,6 +1990,9 @@ sub _print_mime_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -1990,9 +2024,10 @@ sub _print_mime_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	# Print title and calendar view
-	print $out $self->_print_title($Translate{'Mime_title'}, $stat_date);
+	print $out $self->_print_title($Translate{'Mime_title'}, $stat_date, $week);
 
 	my %data = ();
 	$total_count ||= 1;
@@ -2078,7 +2113,7 @@ sub _print_mime_stat
 
 sub _print_network_stat
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2088,6 +2123,9 @@ sub _print_network_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -2151,8 +2189,9 @@ sub _print_network_stat
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
-	print $out $self->_print_title($Translate{'Network_title'}, $stat_date);
+	print $out $self->_print_title($Translate{'Network_title'}, $stat_date, $week);
 
 	my $last = '23';
 	my $first = '00';
@@ -2278,7 +2317,7 @@ sub _print_network_stat
 		# Print the HTML header
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
 		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
-		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date);
+		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date, $week);
 
 		my @hits = ();
 		my @bytes = ();
@@ -2353,7 +2392,7 @@ sub _print_network_stat
 
 sub _print_user_stat
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2363,6 +2402,9 @@ sub _print_user_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -2421,6 +2463,7 @@ sub _print_user_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 
 	my $last = '23';
@@ -2441,7 +2484,7 @@ sub _print_user_stat
 
 	%total_user_detail = ();
 
-	print $out $self->_print_title($Translate{'User_title'}, $stat_date);
+	print $out $self->_print_title($Translate{'User_title'}, $stat_date, $week);
 
 	print $out "<h3>$Translate{'User_number'}: $nuser</h3>\n";
 
@@ -2520,7 +2563,7 @@ sub _print_user_stat
 		# Print the HTML header
 		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
 		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
-		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date);
+		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date, $week);
 
 		my @hits = ();
 		my @bytes = ();
@@ -2815,7 +2858,7 @@ sub _print_user_detail
 
 sub _print_top_url_stat
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2825,6 +2868,9 @@ sub _print_top_url_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -2871,13 +2917,14 @@ sub _print_top_url_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
 		$t1 =~ s/\%d/$self->{TopNumber}/;
 		if ($tpe eq 'Hits') {
-			print $out $self->_print_title($t1, $stat_date);
+			print $out $self->_print_title($t1, $stat_date, $week);
 		} else {
 			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
 		}
@@ -2984,7 +3031,7 @@ sub _print_top_url_stat
 
 sub _print_top_domain_stat
 {
-	my ($self, $outdir, $year, $month, $day) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2994,6 +3041,9 @@ sub _print_top_domain_stat
 	}
 	if (!$month) {
 		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
 	}
 
 	# Load code statistics
@@ -3083,6 +3133,7 @@ sub _print_top_domain_stat
 
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
 
@@ -3094,7 +3145,7 @@ sub _print_top_domain_stat
 
 		if ($tpe eq 'Hits') {
 
-			print $out $self->_print_title($t1, $stat_date);
+			print $out $self->_print_title($t1, $stat_date, $week);
 
 			my %data = ();
 			foreach my $dom (keys %perdomain) {
@@ -3586,10 +3637,13 @@ sub format_bytes
 
 sub _print_title
 {
-	my ($self, $title, $stat_date) = @_;
+	my ($self, $title, $stat_date, $week) = @_;
+
+	my $week_title = '';
+	$week_title = " $Translate{Week} $week" if ($week);
 
 	my $para = qq{
-<h4>$title $stat_date</h4>
+<h4>$title $stat_date$week_title</h4>
 <div class="line-separator"></div>
 };
 
@@ -3639,8 +3693,8 @@ sub _get_calendar
 			}
 
 			if ($wd == 7) {
-				my $week = "<th>" . ($wn+1) . "</th>";
-				#$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+				my $week = "<th>" . sprintf("%02d", $wn+1) . "</th>";
+				$week = "<th><a href=\"$self->{WebUrl}/$year/week" . sprintf("%02d", $wn+1) . "\">" . sprintf("%02d", $wn+1) . "</a></th>" if (grep(/href/, @currow));
 				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
 				$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 				@currow = ('','','','','','','');
@@ -3650,8 +3704,8 @@ sub _get_calendar
 		my $date = $year . $month . $d;
 		my $wn = &get_week_number($year,$month,28);
 		if (($wn == $old_week) || grep(/href/, @currow)) {
-			my $week = "<th>" . ($wn+1) . "</th>";
-			#$week = "<th><a href=\"$outdir/week" . ($wn+1) . "\">" . ($wn+1) . "</a></th>" if (grep(/href/, @currow));
+			my $week = "<th>" . sprintf("%02d", $wn+1) . "</th>";
+			$week = "<th><a href=\"$self->{WebUrl}/$year/week" . sprintf("%02d", $wn+1) . "\">" . sprintf("%02d", $wn+1) . "</a></th>" if (grep(/href/, @currow));
 			$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 		}
 		$para .= "</table>\n";
@@ -3722,6 +3776,11 @@ sub flotr2_bargraph
 		return days[(pos - 1) % 31];
 };
 		$numticks = 31;
+	} elsif ($xtype =~ /\[.*\]/) {
+		$xlabel = qq{var days = $xtype;
+		return pos;
+};
+		$numticks = 7;
 	} else  {
 		$xlabel = qq{var hours = [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
 		return hours[pos % 24];
@@ -4089,6 +4148,43 @@ sub get_wdays_per_month
 			my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $m - 1, $y - 1900);
 			if ( ($weekNumber == $wn) || ( ($weekNumber eq '00') && (($wn == 1) || ($wn >= 52)) ) ) {
 				push(@retdays, "$year-$m-$day");
+				return @retdays if ($#retdays == 6);
+			}
+			next if ($weekNumber > $wn);
+		}
+	}
+
+	return @retdays;
+}
+
+# Returns all days following the week number
+sub get_wdays_per_year
+{
+	my ($wn, $year) = @_;
+
+	my @months = ();
+	my @retdays = ();
+
+	foreach ("01" .. "12") {
+		push(@months, "$year$_");
+	}
+	my $start_month = "01";;
+	unshift(@months, ($year - 1) . "12");
+	push(@months, ($year+1) . "01");
+
+	foreach my $d (@months) {
+		$d =~ /^(\d{4})(\d{2})$/;
+		my $y = $1;
+		my $m = $2;
+		foreach my $day ("01" .. "31") {
+			# Check if the date is valide first
+			my $datefmt = POSIX::strftime("%F", 1, 1, 1, $day, $m - 1, $y - 1900);
+			if ($datefmt ne "$y-$m-$day") {
+				next;
+			}
+			my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $m - 1, $y - 1900);
+			if ( ($weekNumber == $wn) || ( ($weekNumber eq '00') && (($wn == 1) || ($wn >= 52)) ) ) {
+				push(@retdays, "$day");
 				return @retdays if ($#retdays == 6);
 			}
 			next if ($weekNumber > $wn);

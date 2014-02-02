@@ -31,10 +31,10 @@ function dateTracker(obj, gtype, labels, datasets)
                 return '<span class="mfigure">NO DATASET</span>';
         }
 
-        var textToShow = '<div class="mouse-figures">On '+dateToDisplay.toGMTString();
+        var textToShow = '<div class="mouse-figures">';
         for (var i = 0; i < labels.length; i++) {
                 if (datasets[i] != undefined) {
-                        textToShow += '<br><span class="mfigure">'+pretty_print_number(datasets[i][pos][1], gtype)+' <small>'+labels[i]+'</small></span>';
+                        textToShow += '<span class="mfigure">'+pretty_print_number(datasets[i][pos][1], gtype)+' <small>'+labels[i]+'</small></span><br>';
                 }
         }
         textToShow += '</div>';

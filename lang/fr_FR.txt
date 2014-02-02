@@ -109,3 +109,4 @@ Mime_graph_bytes_title		Statistiques des transferts par type MIME pour
 User				Utilisateur
 Count				Compte
 WeekDay				Di Lu Ma Me Je Ve Sa
+Week				Semaine
