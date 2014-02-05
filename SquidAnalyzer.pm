@@ -737,6 +737,7 @@ sub _init
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
 		while (my $l = <IN>) {
 			chomp($l);
+			$l =~ s/\r//gs;
 			next if ($l =~ /^[\s\t]*#/);
 			next if (!$l);
 			my ($key, $str) = split(/\t+/, $l);
