@@ -1,0 +1,112 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Author: BhEaN
+#------------------------------------------------------------------------------
+CharSet				utf-8
+01				Ene
+02				Feb
+03				Mar
+04				Abr
+05				May
+06				Jun
+07				Jul
+08				Ago
+09				Sep
+10				Oct
+11				Nov
+12				Dic
+KB				Kilo bytes
+MB				Mega bytes
+GB				Giga bytes
+Requests			Peticiones
+Bytes				Bytes
+Megabytes			Mega bytes
+Total				Total
+Years				Años
+Months				Meses
+Days				Dias
+Hit				Clicks
+Miss				Perdidas
+Denied				Denegado
+Cost				Coste
+Users				Usuarios
+Sites				Sitios
+Domains				Dominios
+Requests_graph			Respuestas
+Megabytes_graph			Mega bytes
+Months_graph			Meses
+Days_graph			Dias
+Hit_graph			Clicks
+Miss_graph			Perdidas
+Denied_graph			Denegadas
+Total_graph			Total
+Domains_graph			Dominios
+Users_help			Número total de usuarios diferentes en este periodo
+Sites_help			Número total de sitios diferentes visitados en este periodo
+Domains_help			Número total de dominios de seguno nivel visitados en este periodo
+Hit_help			Objetos encontrados en la cache
+Miss_help			Objetos no encontrados en la cache
+Denied_help			Objetos con acceso denegado
+Cost_help			1 Mega byte =
+Generation			Informe generado en
+Main_cache_title		Estadísticas de cache
+Cache_title			Estadísticas de cache en
+Stat_label			Estadística
+Mime_link			Mime types
+Network_link			Redes
+User_link			Usuarios
+Top_url_link			Top Urls
+Top_domain_link			Top Dominios
+Back_link			Volver
+Graph_cache_hit_title		%s Estadística de respuestas en
+Graph_cache_byte_title		%s Estadística de megabytes en
+Hourly				Horariamente
+Hours				Horas
+Daily				Diariamente
+Days				Dias
+Monthly				Mensualmente
+Months				Meses
+Mime_title			Esatdísticas de mime types en
+Mime_number			Número de mime types
+Network_title			Estadísticas de red en
+Network_number			Número de redes
+Duration			Duracion
+Time				Hora
+Largest				El más largo
+Url				Url
+User_title			Estadísticas de usuario en
+User_number			Número de usuario
+Url_Hits_title			Top %d de clicks en
+Url_Bytes_title			Top %d de bytes de Url en
+Url_Duration_title		Top %d de duración de visita enn
+Url_number			Número de Url
+Domain_Hits_title		Top %d Clicks en dominios en
+Domain_Bytes_title		Top %d Bytes de dominios en
+Domain_Duration_title		Top %d duración de dominios
+Domain_number			Número de dominios
+Domain_graph_hits_title		Estadísticas de clicks en dominios
+Domain_graph_bytes_title	Estadísticas de bytes de dominios en
+Second_domain_graph_hits_title	Estadísticas de segundo nivel en
+Second_domain_graph_bytes_title	Estadísticas de bytes de segundo nivel en
+First_visit			Primera visita
+Last_visit			Última visita
+Globals_Statistics		Estadísticas globales
+Legend				Leyenda
+File_Generated			Archivo generado en
+Up_link				Arriab
+Click_year_stat			Haga click en 'Estadíscitas anuales' para más detalles
+Mime_graph_hits_title		Estadísticas de mime-types en
+Mime_graph_bytes_title		Estadísticas de bytes en mime-types en
+User				Ususario
+Count				Contador
+WeekDay				Do Lu Ma Mi Ju Vi Sa
+Week				Semana
