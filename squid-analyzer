@@ -94,7 +94,7 @@ sub usage
 Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
-				 By default: /etc/squidanalyzer.conf
+				 By default: $DEFAULT_CONFFILE
     -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug informations.
