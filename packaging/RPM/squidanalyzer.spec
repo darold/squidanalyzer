@@ -30,12 +30,12 @@ or more often with heavy proxy usage.
 %build
 perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_sbindir} HTMLDIR=%{contentdir}/html/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
 
-%make
+make
 
 %install
 rm -rf %{buildroot}
 
-%makeinstall_std
+make DESTDIR=%{buildroot} install
 install etc/* %{buildroot}%{_sysconfdir}/%{name}/
 install -d %{buildroot}%{_sysconfdir}/cron.daily
 echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron.daily/0%{name}
