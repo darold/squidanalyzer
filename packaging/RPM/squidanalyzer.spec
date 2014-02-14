@@ -42,24 +42,24 @@ echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cro
 
 
 %files
-%defattr(-,root,squid)
+%defattr(-,root,root)
 %doc README ChangeLog
 %{_mandir}/man3/*
 %{perl_vendorlib}/SquidAnalyzer.pm
-%attr(0755,root,squid) %{_sbindir}/squid-analyzer
-%attr(0755,root,squid) %dir %{_sysconfdir}/%{name}
-%attr(0664,root,squid) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
-%config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/excluded
-%config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/network-aliases
-%config(noreplace) %attr(0644,root,squid) %{_sysconfdir}/%{name}/user-aliases
-%config(noreplace) %attr(0754,root,squid) %{_sysconfdir}/cron.daily/0%{name}
-%attr(0755,root,squid) %dir %{_sysconfdir}/%{name}/lang
+%attr(0755,root,root) %{_sbindir}/squid-analyzer
+%attr(0755,root,root) %dir %{_sysconfdir}/%{name}
+%attr(0664,root,root) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/excluded
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/network-aliases
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/user-aliases
+%config(noreplace) %attr(0754,root,root) %{_sysconfdir}/cron.daily/0%{name}
+%attr(0755,root,root) %dir %{_sysconfdir}/%{name}/lang
 %{_sysconfdir}/%{name}/lang/*
-%attr(0755,root,squid) %dir %{contentdir}/html/%{name}
+%attr(0755,root,root) %dir %{contentdir}/html/%{name}
 %{contentdir}/html/%{name}/flotr2.js
 %{contentdir}/html/%{name}/sorttable.js
 %{contentdir}/html/%{name}/%{name}.css
-%attr(0755,root,squid) %dir %{contentdir}/html/%{name}/images
+%attr(0755,root,root) %dir %{contentdir}/html/%{name}/images
 %{contentdir}/html/%{name}/images/*.png
 
 %clean
