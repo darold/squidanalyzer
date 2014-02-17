@@ -32,9 +32,6 @@ or more often with heavy proxy usage.
 %build
 perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_sbindir} HTMLDIR=%{contentdir}/html/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
 
-# remove special files
-find %{buildroot} -name "perllocal.pod" -o -name ".packlist" |xargs -i rm -f {}
-
 make
 
 %install
