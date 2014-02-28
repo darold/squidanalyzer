@@ -38,7 +38,7 @@ $BZCAT_PROG = "/bin/bzcat";
 $RM_PROG  = "/bin/rm";
 
 # DNS Cache
-my %CACHE = {};
+my %CACHE = ();
 
 # Color used to draw grpahs
 my @GRAPH_COLORS = ('#6e9dc9', '#f4ab3a', '#ac7fa8', '#8dbd0f');
@@ -695,11 +695,12 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug, $rebuild) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild, $pidfile) = @_;
 
 	# Prevent for a call without instance
 	if (!ref($self)) {
 		print STDERR "ERROR - init : Unable to call init without an object instance.\n";
+		unlink("$pidfile");
 		exit(0);
 	}
 
@@ -711,7 +712,7 @@ sub _init
 			$conf_file = 'squidanalyzer.conf';
 		}
 	}
-	my %options = &parse_config($conf_file, $log_file, $rebuild);
+	my %options = $self->parse_config($conf_file, $log_file, $rebuild);
 
 	# Configuration options
 	$self->{MinPie} = $options{MinPie} || 2;
@@ -732,6 +733,7 @@ sub _init
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
 	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
 	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
+	$self->{pidfile} = $pidfile || '/tmp/squid-analyzer.pid';
 
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -1326,6 +1328,7 @@ sub _read_stat
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
 				print STDERR "$l\n";
+				unlink($self->{pidfile});
 				exit 0;
 			}
 			$i++;
@@ -1353,6 +1356,7 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
 					print STDERR "$l\n";
+					unlink($self->{pidfile});
 					exit 0;
 				}
 				$i++;
@@ -1403,6 +1407,7 @@ sub _read_stat
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
 				print STDERR "$l\n";
+				unlink($self->{pidfile});
 				exit 0;
 			}
 			$i++;
@@ -1435,6 +1440,7 @@ sub _read_stat
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
 				print STDERR "$l\n";
+				unlink($self->{pidfile});
 				exit 0;
 			}
 			$i++;
@@ -1467,6 +1473,7 @@ sub _read_stat
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
 				print STDERR "$l\n";
+				unlink($self->{pidfile});
 				exit 0;
 			}
 			$i++;
@@ -1487,6 +1494,7 @@ sub _read_stat
 			} else {
 				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
 				print STDERR "$l\n";
+				unlink($self->{pidfile});
 				exit 0;
 			}
 			$i++;
@@ -3413,7 +3421,7 @@ sub _gen_summary
 
 sub parse_config
 {
-	my ($file, $log_file, $rebuild) = @_;
+	my ($self, $file, $log_file, $rebuild) = @_;
 
 	die "FATAL: no configuration file!\n" if (!-e $file);
 
@@ -3433,26 +3441,31 @@ sub parse_config
 	# Check config
 	if (!exists $opt{Output} || !-d $opt{Output}) {
 		print STDERR "Error: you must give a valid output directory. See option: Output\n";
+		unlink($self->{pidfile});
 		exit 0;
 	}
 	if ( !$opt{LogFile} || !-f $opt{LogFile} ) {
 		if (!$rebuild) {
 			print STDERR "Error: you must give a valid path to the Squid log file. See LogFile or option -l\n";
+			unlink($self->{pidfile});
 			exit 0;
 		}
 	}
 	if (exists $opt{DateFormat}) {
 		if ( ($opt{DateFormat} !~ m#\%y#) || (($opt{DateFormat} !~ m#\%m#) && ($opt{DateFormat} !~ m#\%M#) )|| ($opt{DateFormat} !~ m#\%d#) ) {
 			print STDERR "Error: bad date format: $opt{DateFormat}, must have \%y, \%m or \%M, \%d. See DateFormat option.\n";
+			unlink($self->{pidfile});
 			exit 0;
 		}
 	}
 	if ($opt{Lang} && !-e $opt{Lang}) {
 		print STDERR "Error: can't find translation file $opt{Lang}. See option: Lang\n";
+		unlink($self->{pidfile});
 		exit 0;
 	}
 	if ($opt{ImgFormat} && !grep(/^$opt{ImgFormat}$/, 'png','jpg')) {
 		print STDERR "Error: unknown image format. See option: ImgFormat\n";
+		unlink($self->{pidfile});
 		exit 0;
 	}
 	return %opt;

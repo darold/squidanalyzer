@@ -19,6 +19,8 @@ my $debug      = 0;
 my $version    = 0;
 my $build_date = '';
 my $no_year_stat = 0;
+my $pid_dir = '/tmp';
+my $pidfile = 'squid-analyzer.pid';
 
 # get the command line parameters
 my $result = GetOptions (
@@ -29,6 +31,7 @@ my $result = GetOptions (
 	"l|logfile=s"          => \$logfile,
 	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
+	"P|pid_dir=s"          => \$pid_dir,
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
 );  
@@ -62,8 +65,38 @@ if ($help) {
 	exit;
 }
 
+# Check if an other process is already running
+if (-e "$pid_dir/$pidfile") {
+	die "FATAL: pid file ($pid_dir/$pidfile) exists, an other squid-analalyzer process may still running.\n";
+}
+
+# Write the pid file
+open(OUT, ">$pid_dir/$pidfile") or die "FATAL: can not write to pid file $pid_dir/$pidfile, $!\n";
+print OUT "$$";
+close(OUT);
+
+# Die cleanly on signal
+sub terminate
+{
+        # block signal
+        local $SIG{TERM} = 'IGNORE';
+        local $SIG{INT}  = 'IGNORE';
+        local $SIG{QUIT} = 'IGNORE';
+
+        print("LOG: Received terminating signal.\n");
+        if (-e "$pid_dir/$pidfile") {
+                unlink("$pid_dir/$pidfile") or print("ERROR: Unable to remove pid file $pid_dir/$pidfile, $!\n");
+        }
+
+        exit 0;
+}
+
+# Die on kill -2, -3 or -15 
+$SIG{'INT'} = $SIG{'QUIT'} = $SIG{'TERM'} = 'terminate';
+
+
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild);
+my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild, "$pid_dir/$pidfile");
 
 $sa->{no_year_stat} = $no_year_stat;
 
@@ -85,6 +118,9 @@ if ($rebuild) {
 # Generate graphics and html
 $sa->buildHTML();
 
+# Remove PID file
+unlink("$pid_dir/$pidfile");
+
 exit(0);
 
 
@@ -103,6 +139,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 				 By default: /var/log/squid/access.log
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
+    -P | --pid_dir directory   : set directory where pid file will be stored.
+				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
     -v | version               : show version and exit.
