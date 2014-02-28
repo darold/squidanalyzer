@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SQUIDANALYZER 1"
-.TH SQUIDANALYZER 1 "2014-01-31" "perl v5.14.2" "User Contributed Perl Documentation"
+.TH SQUIDANALYZER 1 "2014-02-28" "perl v5.14.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -295,6 +295,8 @@ script. Here are authorized usage:
 \&                                     By default: /var/log/squid/access.log
 \&        \-p | \-\-preserve number     : used to set the statistic obsolescence in
 \&                                     number of month. Older stats will be removed.
+\&        \-P | \-\-pid_dir directory   : set directory where pid file will be stored.
+\&                                     Default /tmp/
 \&        \-r | \-\-rebuild             : use this option to rebuild all html and graphs
 \&                                     output from all data files.
 \&        \-v | version               : show version and exit.
