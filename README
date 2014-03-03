@@ -124,14 +124,23 @@ INSTALLATION
     the logfiles are rotated. It would be better to call squid-analyzer from
     logrotate, eg:
 
-            prerotate
-                    /usr/local/bin/squid-analyzer
-            endscript
+            /var/log/proxy/squid-access.log {
+                daily
+                compress
+                rotate 730
+                missingok
+                nocreate
+                sharedscripts
+                postrotate
+                    test ! -e /var/run/squid.pid || /usr/sbin/squid -k rotate
+                    /usr/bin/squid-analyzer -d -l /var/log/proxy/squid-access.log.1
+                endscript
+            }
 
-    You can use network name instead of network ip addresses by using the
-    network-aliases file. Also if you don't have authentication enable and
-    want to replace client ip addresses by some know user or computer you
-    can use the user-aliases file to do so.
+    You can also use network name instead of network ip addresses by using
+    the network-aliases file. Also if you don't have authentication enable
+    and want to replace client ip addresses by some know user or computer
+    you can use the user-aliases file to do so.
 
     See the file squidanalyzer.conf to customized your output statistics and
     match your network and file system configuration.
