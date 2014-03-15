@@ -734,6 +734,8 @@ sub _init
 	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
 	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
 	$self->{pidfile} = $pidfile || '/tmp/squid-analyzer.pid';
+	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
+
 
 	if ($self->{Lang}) {
 		open(IN, "$self->{Lang}") or die "ERROR: can't open translation file $self->{Lang}, $!\n";
@@ -1536,8 +1538,7 @@ sub _print_header
 	<div id="header">
 		<div id="alignLeft">
 		<h1>
-		<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a>
-		SquidAnalyzer
+		$self->{CustomHeader}
 		</h1>
 		<p class="sous-titre">
 		$Translate{'Generation'} $now.

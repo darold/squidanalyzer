@@ -199,6 +199,20 @@ CONFIGURATION
         The URL of the SquidAnalyzer javascript, HTML and images files.
         Default: /squidreport
 
+    CustomHeader
+        This directive allow you to replace the SquidAnalyze logo by your
+        custom logo. The default value is defined as follow:
+
+                <a href="$self->{WebUrl}">
+                <img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0">
+                </a> SquidAnalyzer
+
+        Feel free to define your own header but take care to not break
+        current design. For example:
+
+                CustomHeader   <a href="http://my.isp.dom/"><img src="http://my.isp.dom/logo.png" title="My ISP link" border="0" width="100" height="110"></a> My ISP Company
+                                                                                                   126,1         Bas
+
     LogFile squid_access_log_file
         Set the path to the Squid log file.
 
