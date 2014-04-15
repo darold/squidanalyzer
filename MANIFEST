@@ -24,4 +24,7 @@ lang/en_US.txt
 lang/fr_FR.txt
 lang/pt_BR.txt
 lang/es_ES.txt
+lang/ru_RU.txt
+lang/uk_UA.txt
+lang/cs_CZ.txt
 META.yml                                 Module meta-data (added by MakeMaker)
