@@ -1,5 +1,80 @@
 Revision history for SquidAnalyzer
 
+5.4 - Sun May  4 18:57:27 CEST 2014
+
+This release fixes several bugs and adds more translation files (Ukrainian,
+Czech, Spanidh and Russian). It also allow a custom definition of the logo
+and title. Add new weekly statistics and reports as well as TCP DENIED
+report in cache statistics.
+
+	- Change CSS to adjust calendar position. Thanks to Nathanael Bonnin
+	  for the patch.
+	- Add Czech language file. Thanks to Martin Kylian for the patch.
+	- Add Ukrainian translation file. Thanks to Oleg A. Deordiev for the
+	  patch.
+	- Add CustomHeader to allow custom definition of the logo and title.
+	  See squidanalyzer.conf or documentation for more explanation and
+	  example. Thanks to Raktim Chatterjee.
+	- Replace logrotate example that was too simplistic. Thanks to Gaetan
+	  Slongo for the patch
+	- Update documentation about -P option.
+	- Prevents the script to run multiple instances using a pid file. This
+	  patch adds a new command line option -P to change the default pid file
+	  (/tmp/squid-analyzer.pid). Thanks to Gaetan Slongo for the patch.
+	- Remove useless command to delete special files because those files are
+	  not installed by make install. Thanks to David Walser for the report.
+	- Fix spec file to build RPM. Thanks to Jonathan Gibert for the patch.
+	- Fix usage to show $DEFAULT_CONFIGFILE that may not always be the
+	  right place following the installation. Thanks to Jonathan Gibert for
+	  the patch.
+	- Remove squid requirement from RPM spec file. Thanks to Jonathan Gibert
+	  for the report.
+	- Add spanish language file. Thanks to BhEaN for the patch.
+	- Remove ^M when reading translation files. Thanks to Filipe Teixeira
+	  for the report.
+	- Add new weekly reports. Thanks to Amish for the feature reports.
+	- Add documentation about the new "Include" configuration directive.
+	- Add build and storage of weekly statistics.
+	- Fix CSS to reduce font size used in the calendar and increase size
+	  of the header.
+	- Add WeekDay translation string.
+	- Remove link on week, the week view is not available yet.
+	- Add week day and week number to the calendar.
+	- Fix bug where statistics from the last parsed day was count twice
+	  in months and years statisics.
+	- Add file etc/included to limit entries to matching users, networks
+	  or ip address. Thanks to giovanniredix for the feature request.
+	- Show values of all dataset when mouse is over graph.
+	- Update pt_BR.txt language file. Thanks to Joseh-Henrique for the
+	  patch.
+	- Update flotr2 to most recent version. Replace bars in graphs with
+	  line to have mouse tracking on each dataset. Change line graphs
+	  colors and reformat label shown on mouse over graph data.
+	- Remove special hidden character from documentation that prevent
+	  pod2man from working. Thanks to David Walser for the report.
+	- Add TCP DENIED report in cache statistics. Thanks to Karl Dawkins
+	  for the feature request.
+	- Fix missing semi-colon after graph width definition. Add missing
+	  graph on mime type.
+	- Add russian translation. Thanks to Sergey Kononenko for the patch.
+	- Fix german lang file about new second level domain label. Thanks
+	  to Klaus Tachtler for the patch.
+	- Update translation files with new Second_domain_graph_hits_title
+	  and Second_domain_graph_bytes_title variables.
+	- Klaus Tachtler have made some small text improvements for the
+	  German language file.
+	- Add ordering of pie legend following percentage. Thanks to Klaus
+	  Tachtler for the report.
+	- Change trackFormatter so that mouse over the pie-chart color shows
+	  the domain/TLD name also with the value. Thanks to Jeetendra Poojari
+	  for the patch.
+	- Add advice about parsing access.log after logrotate. Thanks to James
+	  Harper for the report.
+	- Fix some more issue on top second level report.
+
+UPDATE: you must override all your installation, Perl scripts, configuration file,
+CSS and Javascript files. Backward compatibility with data files is fully preserved.
+
 5.3 - Sun Dec  1 16:36:52 CET 2013
 
 This release fixes several bugs and adds two new pie charts about the most use
