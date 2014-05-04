@@ -7,7 +7,7 @@ SquidAnalyzer - Squid access log report generation tool
 
 SquidAnalyzer parse native access log format of the Squid proxy and
 generate general statistics about hits, bytes, users, networks, top
-url and top second level domain.
+url, top second level domain and denied URLs.
 
 Statistic reports are oriented to user and bandwidth control, this
 is not a pure cache statistics generator. SquidAnalyzer use flat
@@ -421,7 +421,7 @@ Gilles DAROLD <gilles@darold.net>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2013 Gilles DAROLD
+Copyright (c) 2001-2014 Gilles DAROLD
     
 This package is free software and published under the GPL v3 or above
 license.
