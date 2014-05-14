@@ -1,0 +1,112 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Polish translation by Adam Ciarciński.
+#------------------------------------------------------------------------------
+CharSet				utf-8
+01				Sty
+02				Lut
+03				Mar
+04				Kwi
+05				Maj
+06				Cze
+07				Lip
+08				Sie
+09				Wrz
+10				Paź
+11				Lis
+12				Gru
+KB				Kilobajty
+MB				Megabajty
+GB				Gigabajty
+Requests			Żądania
+Bytes				Bajty
+Megabytes			Megabajtów
+Total				Razem
+Years				Lata
+Months				Miesiące
+Days				Dni
+Hit				Trafienia
+Miss				Pudła
+Denied				Odrzucone
+Cost				Koszt
+Users				Użytkownicy
+Sites				Witryny
+Domains				Domeny
+Requests_graph			Żądań
+Megabytes_graph			Mega bajtów
+Months_graph			Miesięcy
+Days_graph			Dni
+Hit_graph			Trafień
+Miss_graph			Pudeł
+Denied_graph			Odrzuconych
+Total_graph			Razem
+Domains_graph			Domen
+Users_help			Razem liczba różnych użytkowników dla tego okresu
+Sites_help			Razem liczba różnych odwiedzanych witryn dla tego okresu
+Domains_help			Razem liczba różnych odwiedzanych witryn drugiego poziomu dla tego okresu
+Hit_help			Obiekty będące w pamięci podręcznej
+Miss_help			Obiekty nie będące w pamięci podręcznej
+Denied_help			Obiekty z odrzuceniem dostępu
+Cost_help			1 Megabajt =
+Generation			Report utworzony dnia
+Main_cache_title		Statystyki pamięci podręcznej
+Cache_title			Statystyki pamięci podręcznej
+Stat_label			Stat
+Mime_link			Typy Mime
+Network_link			Sieci
+User_link			Użytkownicy
+Top_url_link			Topowe Url
+Top_domain_link			Topowe Domeny
+Back_link			Wróć
+Graph_cache_hit_title		%s statystyki żądań w
+Graph_cache_byte_title		%s statystyki megabajtów w
+Hourly				Godzinowe
+Hours				Godzin
+Daily				Dzienne
+Days				Dni
+Monthly				Miesięczne
+Months				Miesiące
+Mime_title			Statystyki typów Mime z dnia
+Mime_number			Liczba typów mime
+Network_title			Statystyki sieci z dnia
+Network_number			Liczba sieci
+Duration			Czas trwania
+Time				Czas
+Largest				Największy
+Url				Url
+User_title			Statystyki użytkowników z dnia
+User_number			Liczba użytkowników
+Url_Hits_title			Topowych %d trafień dla Url w
+Url_Bytes_title			Topowych %d bajtów dla Url w
+Url_Duration_title		Topowych %d czasów trwania dla Url w
+Url_number			Liczba Url
+Domain_Hits_title		Topowych %d trafień dla domen w
+Domain_Bytes_title		Topowych %d bajtów dla domen w
+Domain_Duration_title		Topowych %d czasów trwania dla domen w
+Domain_number			Liczba domen
+Domain_graph_hits_title		Statystyki trafień domen w
+Domain_graph_bytes_title	Statystyki bajtów domen w
+Second_domain_graph_hits_title	Statystyki trafień drugiego poziomu w
+Second_domain_graph_bytes_title	Statystyki bajtów drugiego poziomu w
+First_visit			Pierwsza wizyta
+Last_visit			Ostatnia wizyta
+Globals_Statistics		Statystyki ogólne
+Legend				Legenda
+File_Generated			Plik utworzony przez
+Up_link				W górę
+Click_year_stat			Aby zobaczyć szczegóły, kliknij w odnośnik statystyki rocznej
+Mime_graph_hits_title		Statystyki trafień typów Mime w
+Mime_graph_bytes_title		Statystyki bajtów typów Mime w
+User				Użytkownik
+Count				Ilość
+WeekDay				Nd Pn Wt Śr Cz Pt So
+Week				Tydzień
