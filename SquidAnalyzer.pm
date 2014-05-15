@@ -443,6 +443,9 @@ sub parseFile
 			$bytes = $5 || 0;
 			$method = $6 || '';
 
+			# Do not parse some unwanted method
+			next if (grep(/^$method$/, @{$self->{ExcludedMethods}}));
+
 			# Go to last parsed date (incremental mode)
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
 
@@ -735,6 +738,10 @@ sub _init
 	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
 	$self->{pidfile} = $pidfile || '/tmp/squid-analyzer.pid';
 	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
+	$self->{ExcludedMethods} = ();
+	if ($options{ExcludedMethods}) {
+		push(@{$self->{ExcludedMethods}}, split(/\s*,\s*/, $options{ExcludedMethods}));
+	}
 
 
 	if ($self->{Lang}) {
@@ -3472,6 +3479,7 @@ sub parse_config
 		unlink($self->{pidfile});
 		exit 0;
 	}
+
 	return %opt;
 }
 

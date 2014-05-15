@@ -352,6 +352,12 @@ CONFIGURATION
 
         you can have multiple line of the same inclusion type.
 
+        item= ExcludedMethods
+
+        This directive allow exclusion of some unwanted methods in report
+        statistics like HEAD, POST, CONNECT, etc. Can be a comma separated
+        list of methods.
+
     Lang language_file
         Used to set the translation file to be used. Value must be set to a
         file containing all string translated. See the lang directory for
