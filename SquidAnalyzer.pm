@@ -1785,8 +1785,8 @@ sub _print_cache_stat
 	my $total_bytes = $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes};
 	my $total_denied =  $code_stat{DENIED}{request} + $code_stat{DENIED}{request};
 
-	if (!-d "$outdir") {
-		mkdir("$outdir", 0755) || die "ERROR: can't create directory $outdir, $!\n";
+	if ($week && !-d "$outdir") {
+		return;
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
@@ -3712,7 +3712,12 @@ sub _get_calendar
 
 			if ($wd == 7) {
 				my $week = "<th>" . sprintf("%02d", $wn+1) . "</th>";
-				$week = "<th><a href=\"$self->{WebUrl}/$year/week" . sprintf("%02d", $wn+1) . "\">" . sprintf("%02d", $wn+1) . "</a></th>" if (grep(/href/, @currow));
+				my $ww = sprintf("%02d", $wn+1);
+				if (!-f "$outdir/week$ww") {
+					$week = "<th>$ww</th>" if (grep(/href/, @currow));
+				} else {
+					$week = "<th><a href=\"$self->{WebUrl}/$year/week$ww\">$ww</a></th>" if (grep(/href/, @currow));
+				}
 				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
 				$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
 				@currow = ('','','','','','','');
