@@ -1785,6 +1785,9 @@ sub _print_cache_stat
 	my $total_bytes = $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes};
 	my $total_denied =  $code_stat{DENIED}{request} + $code_stat{DENIED}{request};
 
+	if (!-d "$outdir") {
+		mkdir("$outdir", 0755) || die "ERROR: can't create directory $outdir, $!\n";
+	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
 	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
