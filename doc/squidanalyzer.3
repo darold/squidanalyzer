@@ -509,11 +509,19 @@ See example bellow:
 .Ve
 .Sp
 you can have multiple line of the same inclusion type.
-.Sp
-item= ExcludedMethods
-.Sp
+.IP "ExcludedMethods" 4
+.IX Item "ExcludedMethods"
 This directive allow exclusion of some unwanted methods in report statistics
 like \s-1HEAD\s0, \s-1POST\s0, \s-1CONNECT\s0, etc. Can be a comma separated list of methods.
+.IP "ExcludedMimes" 4
+.IX Item "ExcludedMimes"
+This directive allow exclusion of some unwanted mimetypes in report statistics
+like text/html, text/plain, or more generally text/*, etc. Can be a comma
+separated list of perl regular expression. Ex:
+.Sp
+.Vb 1
+\&        ExcludedMimes   text/.*,image/.*
+.Ve
 .IP "Lang language_file" 4
 .IX Item "Lang language_file"
 Used to set the translation file to be used. Value must be set to

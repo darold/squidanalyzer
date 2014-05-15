@@ -444,7 +444,7 @@ sub parseFile
 			$method = $6 || '';
 
 			# Do not parse some unwanted method
-			next if (grep(/^$method$/, @{$self->{ExcludedMethods}}));
+			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
 
 			# Go to last parsed date (incremental mode)
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
@@ -474,6 +474,10 @@ sub parseFile
 				$status = lc($3) || '';
 				$mime_type = lc($4) || '';
 				$mime_type = 'none' if (!$mime_type || ($mime_type eq '-'));
+
+				# Do not parse some unwanted method
+				next if (($#{$self->{ExcludedMimes}} >= 0) && map {$mime_type =~ m#^$_$#} @{$self->{ExcludedMimes}});
+
 				# Remove extra space character in username
 				$login =~ s/\%20//g;
 
@@ -741,6 +745,10 @@ sub _init
 	$self->{ExcludedMethods} = ();
 	if ($options{ExcludedMethods}) {
 		push(@{$self->{ExcludedMethods}}, split(/\s*,\s*/, $options{ExcludedMethods}));
+	}
+	$self->{ExcludedMimes} = ();
+	if ($options{ExcludedMimes}) {
+		push(@{$self->{ExcludedMimes}}, split(/\s*,\s*/, $options{ExcludedMimes}));
 	}
 
 

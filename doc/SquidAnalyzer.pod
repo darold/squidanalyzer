@@ -374,10 +374,18 @@ See example bellow:
 
 you can have multiple line of the same inclusion type.
 
-item= ExcludedMethods
+=item ExcludedMethods
 
 This directive allow exclusion of some unwanted methods in report statistics
 like HEAD, POST, CONNECT, etc. Can be a comma separated list of methods.
+
+=item ExcludedMimes
+
+This directive allow exclusion of some unwanted mimetypes in report statistics
+like text/html, text/plain, or more generally text/*, etc. Can be a comma
+separated list of perl regular expression. Ex:
+
+	ExcludedMimes   text/.*,image/.*
 
 =item Lang language_file
 
