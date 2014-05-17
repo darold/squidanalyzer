@@ -36,7 +36,7 @@ Months				Monate
 Days				Tage
 Hit				Cachespeicher
 Miss				Internet
-Denied				Denied
+Denied				Zugriff verweigert
 Cost				Kosten
 Users				Benutzer
 Sites				Seiten
@@ -47,7 +47,7 @@ Months_graph			Monate
 Days_graph			Tage
 Hit_graph			Cachespeicher
 Miss_graph			Internet
-Denied_graph			Denied
+Denied_graph			Zugriff verweigert
 Total_graph			Gesamt
 Domains_graph			Domains
 Users_help			Anzahl der verschiedenen Benutzer in diesem Zeitraum
@@ -55,7 +55,7 @@ Sites_help			Anzahl der verschiedenen besuchten Seiten in diesem Zeitraum
 Domains_help			Anzahl der verschiedenen besuchten Subdomains in diesem Zeitraum
 Hit_help			Objekte die im Cachespeicher gefunden wurden
 Miss_help			Objekte die im Cachespeicher nicht gefunden wurden
-Denied_help			Object with access denied
+Denied_help			Objekte auf die der Zugriff verweigert wurde
 Cost_help			1 Mega Byte =
 Generation			Report erstellt am
 Main_cache_title		Cachespeicher Statistik
@@ -108,5 +108,5 @@ Mime_graph_hits_title		Mime Typen Treffer Statistik
 Mime_graph_bytes_title		Mime Typen Bytes Statistik
 User				Benutzer
 Count				Anzahl
-WeekDay				Su Mo Tu We Th Fr Sa
-Week				Week
+WeekDay				Mo Di Mi Do Fr Sa So
+Week				Woche
