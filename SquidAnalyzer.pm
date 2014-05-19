@@ -387,6 +387,15 @@ sub new
 
 }
 
+sub localdie
+{
+	my ($self, $msg) = @_;
+
+	print STDERR "$msg";
+	unlink($self->{pidfile}) if (-e $self->{pidfile});
+	exit 1;
+}
+
 sub parseFile
 {
 	my ($self) = @_;
@@ -401,12 +410,12 @@ sub parseFile
 	my $logfile = new IO::File;
 	if ($self->{LogFile} =~ /\.gz/) {
 		# Open a pipe to zcat program for compressed log
-		$logfile->open("$ZCAT_PROG $self->{LogFile} |") || die "ERROR: cannot read from pipe to $ZCAT_PROG $self->{LogFile}. $!\n";
+		$logfile->open("$ZCAT_PROG $self->{LogFile} |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $self->{LogFile}. $!\n");
 	} elsif ($self->{LogFile} =~ /\.bz2/) {
 		# Open a pipe to zcat program for compressed log
-		$logfile->open("$BZCAT_PROG $self->{LogFile} |") || die "ERROR: cannot read from pipe to $BZCAT_PROG $self->{LogFile}. $!\n";
+		$logfile->open("$BZCAT_PROG $self->{LogFile} |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $self->{LogFile}. $!\n");
 	} else {
-		$logfile->open($self->{LogFile}) || die "ERROR: Unable to open Squid access.log file $self->{LogFile}. $!\n";
+		$logfile->open($self->{LogFile}) || $self->localdie("ERROR: Unable to open Squid access.log file $self->{LogFile}. $!\n");
 	}
 
 	my $line = '';
@@ -612,7 +621,7 @@ sub parseFile
 		# Set the current start time into history file
 		if ($self->{end_time}) {
 			my $current = new IO::File;
-			$current->open(">$self->{Output}/SquidAnalyzer.current") or die "Error: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n";
+			$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("Error: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
 			print $current "$self->{end_time}";
 			$current->close;
 		}
@@ -790,10 +799,10 @@ sub _init
 	if ($self->{OrderMime} !~ /^(hits|bytes)$/) {
 		die "ERROR: OrderMime must be one of these values: hits or bytes\n";
 	}
-	%{$self->{NetworkAlias}} = &parse_network_aliases($options{NetworkAlias} || '');
-	%{$self->{UserAlias}}    = &parse_user_aliases($options{UserAlias} || '');
-	%{$self->{Exclude}}      = &parse_exclusion($options{Exclude} || '');
-	%{$self->{Include}}      = &parse_inclusion($options{Include} || '');
+	%{$self->{NetworkAlias}} = $self->parse_network_aliases($options{NetworkAlias} || '');
+	%{$self->{UserAlias}}    = $self->parse_user_aliases($options{UserAlias} || '');
+	%{$self->{Exclude}}      = $self->parse_exclusion($options{Exclude} || '');
+	%{$self->{Include}}      = $self->parse_inclusion($options{Include} || '');
 
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
@@ -1145,7 +1154,7 @@ sub _save_stat
 	if ($self->{UrlReport}) {
 		my $dat_file_user_url = new IO::File;
 		$dat_file_user_url->open(">$self->{Output}/$path/stat_user_url.dat")
-			or die "ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n";
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
 				$dat_file_user_url->print("$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
@@ -1163,7 +1172,7 @@ sub _save_stat
 	#### Save user statistics
 	my $dat_file_user = new IO::File;
 	$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
-		or die "ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n";
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
 	foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
 		my $name = $id;
 		$name =~ s/\s+//g;
@@ -1189,7 +1198,7 @@ sub _save_stat
 	#### Save network statistics
 	my $dat_file_network = new IO::File;
 	$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
-		or die "ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n";
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
 	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_network_$type"}}) {
 		$dat_file_network->print("$net\thits_$type=");
 		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
@@ -1213,7 +1222,7 @@ sub _save_stat
 	#### Save user per network statistics
 	my $dat_file_netuser = new IO::File;
 	$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
-		or die "ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n";
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
 	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}}) {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}{$net}}) {
 			$dat_file_netuser->print("$net\t$id\thits=" . $self->{"stat_netuser_$type"}{$net}{$id}{hits} . ";" .
@@ -1231,7 +1240,7 @@ sub _save_stat
 	#### Save cache statistics
 	my $dat_file_code = new IO::File;
 	$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
-		or die "ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n";
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
 	foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
 		$dat_file_code->print("$code " .
 			"hits_$type=");
@@ -1251,7 +1260,7 @@ sub _save_stat
 	#### Save mime statistics
 	my $dat_file_mime_type = new IO::File;
 	$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
-		or die "ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n";
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
 	foreach my $mime (sort {$a cmp $b} keys %{$self->{"stat_mime_type_$type"}}) {
 		$dat_file_mime_type->print("$mime hits=" . $self->{"stat_mime_type_$type"}{$mime}{hits} . ";" .
 			"bytes=" . $self->{"stat_mime_type_$type"}{$mime}{bytes} .  "\n");
@@ -1267,16 +1276,16 @@ sub _save_data
 
 	#### Create directory structure
 	if (!-d "$self->{Output}/$year") {
-		mkdir("$self->{Output}/$year", 0755) || die "ERROR: can't create directory $self->{Output}/$year, $!\n";
+		mkdir("$self->{Output}/$year", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year, $!\n");
 	}
 	if ($month && !-d "$self->{Output}/$year/$month") {
-		mkdir("$self->{Output}/$year/$month", 0755) || die "ERROR: can't create directory $self->{Output}/$year/$month, $!\n";
+		mkdir("$self->{Output}/$year/$month", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/$month, $!\n");
 	}
 	if ($day && !-d "$self->{Output}/$year/$month/$day") {
-		mkdir("$self->{Output}/$year/$month/$day", 0755) || die "ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n";
+		mkdir("$self->{Output}/$year/$month/$day", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n");
 	}
 	if ($wn && !-d "$self->{Output}/$year/week$wn") {
-		mkdir("$self->{Output}/$year/week$wn", 0755) || die "ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n";
+		mkdir("$self->{Output}/$year/week$wn", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n");
 	}
 	# Dumping data
 	$self->_save_stat($year, $month, $day, $wn, @wd);
@@ -1649,7 +1658,7 @@ sub buildHTML
 			next;
 		}
 		next if (!$p_year && ($y < $old_year));
-		opendir(DIR, "$outdir/$y") || die "Error: can't opendir $outdir/$y: $!";
+		opendir(DIR, "$outdir/$y") || $self->localdie("Error: can't opendir $outdir/$y: $!");
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		my @weeks  = grep { /^week\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		closedir DIR;
@@ -1664,7 +1673,7 @@ sub buildHTML
 				next;
 			}
 			next if ("$y$m" < "$old_year$old_month");
-			opendir(DIR, "$outdir/$y/$m") || die "Error: can't opendir $outdir/$y/$m: $!";
+			opendir(DIR, "$outdir/$y/$m") || $self->localdie("Error: can't opendir $outdir/$y/$m: $!");
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
 			closedir DIR;
 			foreach my $d (sort {$a <=> $b} @days) {
@@ -1805,7 +1814,7 @@ sub _print_cache_stat
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$cal = '' if ($week);
@@ -2044,7 +2053,7 @@ sub _print_mime_stat
 
 	my $file = $outdir . '/mime_type.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
 	$sortpos = 2 if ($self->{OrderMime} eq 'bytes');
@@ -2214,7 +2223,7 @@ sub _print_network_stat
 
 	my $file = $outdir . '/network.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
 	$cal = '' if ($week);
@@ -2483,7 +2492,7 @@ sub _print_user_stat
 
 	my $file = $outdir . '/user.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
@@ -2937,7 +2946,7 @@ sub _print_top_url_stat
 
 	my $file = $outdir . '/url.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
@@ -3153,7 +3162,7 @@ sub _print_top_domain_stat
 
 	my $file = $outdir . '/domain.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
@@ -3333,7 +3342,7 @@ sub _gen_summary
 	my ($self, $outdir) = @_;
 
 	# Get all day subdirectory
-        opendir(DIR, "$outdir") or die "ERROR: Can't read directory $outdir, $!\n";
+        opendir(DIR, "$outdir") or $self->localdie("ERROR: Can't read directory $outdir, $!\n");
         my @dirs = grep { /^\d{4}$/ && -d "$outdir/$_" } readdir(DIR);
         closedir DIR;
 
@@ -3367,7 +3376,7 @@ sub _gen_summary
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	$self->_print_header(\$out);
 	my $colspn = 2;
@@ -3442,10 +3451,10 @@ sub parse_config
 {
 	my ($self, $file, $log_file, $rebuild) = @_;
 
-	die "FATAL: no configuration file!\n" if (!-e $file);
+	$self->localdie("FATAL: no configuration file!\n") if (!-e $file);
 
 	my %opt = ();
-	open(CONF, $file) or die "ERROR: can't open file $file, $!\n";
+	open(CONF, $file) or $self->localdie("ERROR: can't open file $file, $!\n");
 	while (my $l = <CONF>) {
 		chomp($l);
 		next if (!$l || ($l =~ /^[\s\t]*#/));
@@ -3493,12 +3502,12 @@ sub parse_config
 
 sub parse_network_aliases
 {
-	my ($file) = @_;
+	my ($self, $file) = @_;
 
 	return if (!$file || !-f $file);
 
 	my %alias = ();
-	open(ALIAS, $file) or die "ERROR: can't open network aliases file $file, $!\n";
+	open(ALIAS, $file) or $self->localdie("ERROR: can't open network aliases file $file, $!\n");
 	my $i = 0;
 	while (my $l = <ALIAS>) {
 		chomp($l);
@@ -3512,12 +3521,12 @@ sub parse_network_aliases
 				$r =~ s/^\^//;
 				# If this is not a cidr notation
 				if ($r !~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
-					&check_regex($r, "$file at line $i");
+					$self->check_regex($r, "$file at line $i");
 				}
 				$alias{"$r"} = $data[0];
 			}
 		} else {
-			die "ERROR: wrong format in network aliases file $file, line $i\n";
+			$self->localdie("ERROR: wrong format in network aliases file $file, line $i\n");
 		}
 	}
 	close(ALIAS);
@@ -3527,12 +3536,12 @@ sub parse_network_aliases
 
 sub parse_user_aliases
 {
-	my ($file) = @_;
+	my ($self, $file) = @_;
 
 	return if (!$file || !-f $file);
 
 	my %alias = ();
-	open(ALIAS, $file) or die "ERROR: can't open user aliases file $file, $!\n";
+	open(ALIAS, $file) or $self->localdie("ERROR: can't open user aliases file $file, $!\n");
 	my $i = 0;
 	while (my $l = <ALIAS>) {
 		chomp($l);
@@ -3545,11 +3554,11 @@ sub parse_user_aliases
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
 				$r =~ s/([^\\])\$$/$1/;
-				&check_regex($r, "$file at line $i");
+				$self->check_regex($r, "$file at line $i");
 				$alias{"$r"} = $data[0];
 			}
 		} else {
-			die "ERROR: wrong format in user aliases file $file, line $i\n";
+			$self->localdie("ERROR: wrong format in user aliases file $file, line $i\n");
 		}
 	}
 	close(ALIAS);
@@ -3559,12 +3568,12 @@ sub parse_user_aliases
 
 sub parse_exclusion
 {
-	my ($file) = @_;
+	my ($self, $file) = @_;
 
 	return if (!$file || !-f $file);
 
 	my %exclusion = ();
-	open(EXCLUDED, $file) or die "ERROR: can't open exclusion file $file, $!\n";
+	open(EXCLUDED, $file) or $self->localdie("ERROR: can't open exclusion file $file, $!\n");
 	my $i = 0;
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
@@ -3577,12 +3586,12 @@ sub parse_exclusion
 			my @rg =  split(m#[\s\t]+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
-				&check_regex($r, "$file at line $i");
+				$self->check_regex($r, "$file at line $i");
 			}
 			push(@{$exclusion{$lbl}}, @rg);
 		} else {
 			# backward compatibility is not more supported
-			die "ERROR: wrong line format in file $file at line $i\n";
+			$self->localdie("ERROR: wrong line format in file $file at line $i\n");
 		}
 	}
 	close(EXCLUDED);
@@ -3592,12 +3601,12 @@ sub parse_exclusion
 
 sub parse_inclusion
 {
-	my ($file) = @_;
+	my ($self, $file) = @_;
 
 	return if (!$file || !-f $file);
 
 	my %inclusion = ();
-	open(INCLUDED, $file) or die "ERROR: can't open inclusion file $file, $!\n";
+	open(INCLUDED, $file) or $self->localdie("ERROR: can't open inclusion file $file, $!\n");
 	my $i = 0;
 	while (my $l = <INCLUDED>) {
 		chomp($l);
@@ -3610,12 +3619,12 @@ sub parse_inclusion
 			my @rg =  split(m#[\s\t]+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
-				&check_regex($r, "$file at line $i");
+				$self->check_regex($r, "$file at line $i");
 			}
 			push(@{$inclusion{$lbl}}, @rg);
 		} else {
 			# backward compatibility is not more supported
-			die "ERROR: wrong line format in file $file at line $i\n";
+			$self->localdie("ERROR: wrong line format in file $file at line $i\n");
 		}
 	}
 	close(INCLUDED);
@@ -4025,11 +4034,11 @@ EOF
 
 sub check_regex
 {
-	my ($pattern, $label) = @_;
+	my ($self, $pattern, $label) = @_;
 
 	eval { $pattern =~ m/^$pattern$/i;};
 	if ($@) {
-		die "FATAL: $label invalid regex '$pattern', $!\n";
+		$self->localdie("FATAL: $label invalid regex '$pattern', $!\n");
 	}
 }
 
@@ -4057,7 +4066,7 @@ sub _gen_year_summary
 	my ($self, $outdir) = @_;
 
 	# Get all day subdirectory
-        opendir(DIR, "$outdir") or die "ERROR: Can't read directory $outdir, $!\n";
+        opendir(DIR, "$outdir") or $self->localdie("ERROR: Can't read directory $outdir, $!\n");
         my @dirs = grep { /^\d{4}$/ && -d "$outdir/$_" } readdir(DIR);
         closedir DIR;
 
@@ -4069,7 +4078,7 @@ sub _gen_year_summary
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || die "ERROR: Unable to open $file. $!\n";
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	$self->_print_header(\$out);
 	my $colspn = 2;
