@@ -52,6 +52,7 @@ echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cro
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0664,root,root) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/excluded
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/included
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/network-aliases
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/user-aliases
 %config(noreplace) %attr(0754,root,root) %{_sysconfdir}/cron.daily/0%{name}
