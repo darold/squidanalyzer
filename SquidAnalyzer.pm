@@ -631,6 +631,7 @@ sub parseFile
 		if (!$self->{QuietMode}) {
 			print STDERR "Generating weekly data files now...\n";
 		}
+
 		my $wn = &get_week_number("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
 		my @wd = &get_wdays_per_month($wn, "$self->{last_year}-$self->{last_month}");
 		$wn++;
@@ -958,6 +959,18 @@ sub _parseData
 			# Stats can be cleared
 			print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
 			$self->_clear_stats();
+
+			if (!$self->{QuietMode}) {
+				print STDERR "Generating weekly data files...\n";
+			}
+			my $wn = &get_week_number("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
+			my @wd = &get_wdays_per_month($wn, "$self->{last_year}-$self->{last_month}");
+			$wn++;
+
+			print STDERR "Compute and dump weekly statistics for week $wn on $self->{last_year}\n" if (!$self->{QuietMode});
+			$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
+			$self->_clear_stats();
+
 		}
 	}
 
@@ -1084,6 +1097,10 @@ sub _parseData
 		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_day}{$id}{$dest}{firsthit}));
 		$self->{stat_user_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_user_url_day}{$id}{$dest}{lasthit}));
 		$self->{stat_user_url_day}{$id}{$dest}{bytes} += $bytes;
+		if ($code eq 'HIT') {
+			$self->{stat_user_url_day}{$id}{$dest}{cache_hit}++;
+			$self->{stat_user_url_day}{$id}{$dest}{cache_bytes} += $bytes;
+		}
 	}
 
 	#### Store user per networks statistics
@@ -1162,7 +1179,8 @@ sub _save_stat
 					"duration=" . $self->{"stat_user_url_$type"}{$id}{$dest}{duration} . ";" .
 					"first=" . $self->{"stat_user_url_$type"}{$id}{$dest}{firsthit} . ";" .
 					"last=" . $self->{"stat_user_url_$type"}{$id}{$dest}{lasthit} . ";" .
-					"url=$dest\n");
+					"url=$dest;cache_hit=" . $self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit} . ";" .
+					"cache_bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes} . "\n");
 			}
 		}
 		$dat_file_user_url->close();
@@ -1369,7 +1387,15 @@ sub _read_stat
 			my $i = 1;
 			while (my $l = <$dat_file_user_url>) {
 				chomp($l);
-				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
+				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*);cache_hit=(\d+);cache_bytes=(\d+)$//) {
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_hit} += $8;
+					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_bytes} += $9;
+				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
@@ -3095,6 +3121,10 @@ sub _print_top_domain_stat
 	my $url = '';
 	my $hits = 0;
 	my $bytes = 0;
+	my $cache_hit = 0;
+	my $cache_bytes = 0;
+	my $total_cache_hit = 0;
+	my $total_cache_bytes = 0;
 	my $duration = 0;
 	my $first = 0;
 	my $last = 0;
@@ -3110,6 +3140,15 @@ sub _print_top_domain_stat
 			$hits = $1;
 			$bytes = $2;
 			$duration = $3;
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*);cache_hit=(\d+);cache_bytes=(\d+)/) {
+			$url = lc($6);
+			$hits = $1;
+			$bytes = $2;
+			$duration = $3;
+			$first = $4;
+			$last = $5;
+			$cache_hit = $7;
+			$cache_bytes= $8;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			$url = lc($6);
 			$hits = $1;
@@ -3127,8 +3166,12 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
+				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
 				$perdomain{"$2"}{bytes} += $bytes;
+				$perdomain{"$2"}{cache_hit} += $cache_hit;
+				$perdomain{"$2"}{cache_bytes} += $cache_bytes;
 				$done = 1;
 			} elsif ($url =~ $tld_pattern2) {
 				$domain_stat{"$1$2"}{hits} += $hits;
@@ -3137,8 +3180,12 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
 				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
+				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
 				$perdomain{"$2"}{bytes} += $bytes;
+				$perdomain{"$2"}{cache_hit} += $cache_hit;
+				$perdomain{"$2"}{cache_bytes} += $cache_bytes;
 				$done = 1;
 			}
 		}
@@ -3151,10 +3198,16 @@ sub _print_top_domain_stat
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
 			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser});
+			$domain_stat{'unknown'}{cache_hit} += $cache_hit;
+			$domain_stat{'unknown'}{cache_bytes} += $cache_bytes;
+			$perdomain{'others'}{cache_hit} += $cache_hit;
+			$perdomain{'others'}{cache_bytes} += $cache_bytes;
 		}
 		$total_hits += $hits;
 		$total_bytes += $bytes;
 		$total_duration += $duration;
+		$total_cache_hit += $cache_hit;
+		$total_cache_bytes += $cache_bytes;
 	}
 	$infile->close();
 
@@ -3722,39 +3775,38 @@ sub _get_calendar
 		my $month = $2 || '';
 
 		my @currow = ('','','','','','','');
-		my $old_week = 0;
-		my $d = '';
-		for $d ("01" .. "31") {
-			my $wd = &get_day_of_week($year,$month,$d);
-			my $wn =  &get_week_number($year,$month,$d);
+		my %weeks_num = ();
+		my $wn = '';
+		my $wd = '';
+		for my $d ("01" .. "31") {
+			$wn =  &get_week_number($year,$month,$d);
 			next if ($wn == -1);
-			$old_week = $wn;
+			$wd = &get_day_of_week($year,$month,$d);
+			next if ($wd == -1);
 			if (-f "$outdir/$d/index.html") {
 				$currow[$wd-1] = "<td><a href=\"$prefix$d/index.html\">$d</a></td>";
 			} else {
 				$currow[$wd-1] = "<td>$d</td>";
 			}
-
 			if ($wd == 7) {
-				my $week = "<th>" . sprintf("%02d", $wn+1) . "</th>";
-				my $ww = sprintf("%02d", $wn+1);
-				if (!-f "$outdir/week$ww") {
-					$week = "<th>$ww</th>" if (grep(/href/, @currow));
-				} else {
-					$week = "<th><a href=\"$self->{WebUrl}/$year/week$ww\">$ww</a></th>" if (grep(/href/, @currow));
-				}
 				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
-				$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
+				@{$weeks_num{$wn}} = @currow;
 				@currow = ('','','','','','','');
 			}
 		}
-		map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
-		my $date = $year . $month . $d;
-		my $wn = &get_week_number($year,$month,28);
-		if (($wn == $old_week) || grep(/href/, @currow)) {
-			my $week = "<th>" . sprintf("%02d", $wn+1) . "</th>";
-			$week = "<th><a href=\"$self->{WebUrl}/$year/week" . sprintf("%02d", $wn+1) . "\">" . sprintf("%02d", $wn+1) . "</a></th>" if (grep(/href/, @currow));
-			$para .= "<tr>$week" . join('', @currow) . "</tr>\n";
+		if ( ($wd < 7) && ($wd != -1) && ($wn != -1) ) {
+			map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
+			@{$weeks_num{$wn}} = @currow;
+		}
+		my $path = $outdir;
+		$path =~ s/(\/\d{4})\/\d{2}.*/$1/;
+		foreach my $w (sort { $a <=> $b } keys %weeks_num) {
+			my $ww = sprintf("%02d", $w+1);
+			my $week = "<tr><th>$ww</th>";
+			if (-d "$path/week$ww") {
+				$week = "<tr><th><a href=\"$self->{WebUrl}/$year/week$ww\">$ww</a></th>";
+			}
+			$para .= $week . join('', @{$weeks_num{$w}}) . "</tr>\n";
 		}
 		$para .= "</table>\n";
 
@@ -3777,6 +3829,7 @@ sub _get_calendar
 
 	return $para;
 }
+
 
 sub anonymize_id
 {
