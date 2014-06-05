@@ -20,6 +20,7 @@ BEGIN {
 	use IO::File;
 	use Socket;
 	use Time::HiRes qw/ualarm/;
+	use Time::Local 'timelocal_nocheck';
 
 	# Set all internal variable
 	$VERSION = '5.4';
@@ -1174,13 +1175,15 @@ sub _save_stat
 			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
-				$dat_file_user_url->print("$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
+				$dat_file_user_url->print(
+					"$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
 					"bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{bytes} . ";" .
 					"duration=" . $self->{"stat_user_url_$type"}{$id}{$dest}{duration} . ";" .
 					"first=" . $self->{"stat_user_url_$type"}{$id}{$dest}{firsthit} . ";" .
 					"last=" . $self->{"stat_user_url_$type"}{$id}{$dest}{lasthit} . ";" .
-					"url=$dest;cache_hit=" . $self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit} . ";" .
-					"cache_bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes} . "\n");
+					"url=$dest;" .
+					"cache_hit=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit}||0) . ";" .
+					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . "\n");
 			}
 		}
 		$dat_file_user_url->close();
@@ -1387,7 +1390,7 @@ sub _read_stat
 			my $i = 1;
 			while (my $l = <$dat_file_user_url>) {
 				chomp($l);
-				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*);cache_hit=(\d+);cache_bytes=(\d+)$//) {
+				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
 					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
@@ -1867,6 +1870,7 @@ sub _print_cache_stat
 	my $title = $Translate{'Hourly'} || 'Hourly';
 	my $unit = $Translate{'Hours'} || 'Hours';
 	my @xaxis = ();
+	my @xstick = ();
 	if ($type eq 'day') {
 		if (!$week) {
 			$title = $Translate{'Daily'} || 'Daily';
@@ -1875,6 +1879,10 @@ sub _print_cache_stat
 			}
 		} else {
 			@xaxis = &get_wdays_per_year($week - 1, $year);
+			foreach my $x (@xaxis) {
+				push(@xstick, POSIX::strftime("%F", localtime($x/1000)));
+			}
+			map { s/\d{4}-\d{2}-//; } @xstick;
 			$title = $Translate{'Weekly'} || 'Weekly';
 			$type = 'week';
 			$type = '[' . join(',', @xaxis) . ']';
@@ -1895,29 +1903,31 @@ sub _print_cache_stat
 	my @miss = ();
 	my @denied = ();
 	my @total = ();
-	foreach (@xaxis) {
+	for (my $i = 0; $i <= $#xaxis; $i++) {
+		my $ddate = $xaxis[$i];
+		$ddate = $xstick[$i] if ($#xstick >= 0);
 		my $tot = 0;
-		if (exists $detail_code_stat{HIT}{$_}{request}) {
-			push(@hit, "[ $_, $detail_code_stat{HIT}{$_}{request} ]");
-			$tot += $detail_code_stat{HIT}{$_}{request};
+		if (exists $detail_code_stat{HIT}{$ddate}{request}) {
+			push(@hit, "[ $xaxis[$i], $detail_code_stat{HIT}{$ddate}{request} ]");
+			$tot += $detail_code_stat{HIT}{$ddate}{request};
 		} else {
-			push(@hit, "[ $_, 0 ]");
+			push(@hit, "[ $xaxis[$i], 0 ]");
 		}
-		if (exists $detail_code_stat{MISS}{$_}{request}) {
-			push(@miss, "[ $_, $detail_code_stat{MISS}{$_}{request} ]");
-			$tot += $detail_code_stat{MISS}{$_}{request};
+		if (exists $detail_code_stat{MISS}{$ddate}{request}) {
+			push(@miss, "[ $xaxis[$i], $detail_code_stat{MISS}{$ddate}{request} ]");
+			$tot += $detail_code_stat{MISS}{$ddate}{request};
 		} else {
-			push(@miss, "[ $_, 0 ]");
+			push(@miss, "[ $xaxis[$i], 0 ]");
 		}
-		if (exists $detail_code_stat{DENIED}{$_}{request}) {
-			push(@denied, "[ $_, $detail_code_stat{DENIED}{$_}{request} ]");
+		if (exists $detail_code_stat{DENIED}{$ddate}{request}) {
+			push(@denied, "[ $xaxis[$i], $detail_code_stat{DENIED}{$ddate}{request} ]");
 		} else {
-			push(@denied, "[ $_, 0 ]");
+			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
-		push(@total, "[ $_, $tot ]");
-		delete $detail_code_stat{HIT}{$_}{request};
-		delete $detail_code_stat{MISS}{$_}{request};
-		delete $detail_code_stat{DENIED}{$_}{request};
+		push(@total, "[ $xaxis[$i], $tot ]");
+		delete $detail_code_stat{HIT}{$ddate}{request};
+		delete $detail_code_stat{MISS}{$ddate}{request};
+		delete $detail_code_stat{DENIED}{$ddate}{request};
 	}
 
 	my $t1 = $Translate{'Graph_cache_hit_title'};
@@ -1935,26 +1945,28 @@ sub _print_cache_stat
 	@denied = ();
 	@total = ();
 
-	foreach (@xaxis) {
+	for (my $i = 0; $i <= $#xaxis; $i++) {
+		my $ddate = $xaxis[$i];
+		$ddate = $xstick[$i] if ($#xstick >= 0);
 		my $tot = 0;
-		if (exists $detail_code_stat{HIT}{$_}{bytes}) {
-			push(@hit, "[ $_, " . int($detail_code_stat{HIT}{$_}{bytes}/1000000) . " ]");
-			$tot += $detail_code_stat{HIT}{$_}{bytes};
+		if (exists $detail_code_stat{HIT}{$ddate}{bytes}) {
+			push(@hit, "[ $xaxis[$i], " . int($detail_code_stat{HIT}{$ddate}{bytes}/1000000) . " ]");
+			$tot += $detail_code_stat{HIT}{$ddate}{bytes};
 		} else {
-			push(@hit, "[ $_, 0 ]");
+			push(@hit, "[ $xaxis[$i], 0 ]");
 		}
-		if (exists $detail_code_stat{MISS}{$_}{bytes}) {
-			push(@miss, "[ $_, " . int($detail_code_stat{MISS}{$_}{bytes}/1000000) . " ]");
-			$tot += $detail_code_stat{MISS}{$_}{bytes};
+		if (exists $detail_code_stat{MISS}{$ddate}{bytes}) {
+			push(@miss, "[ $xaxis[$i], " . int($detail_code_stat{MISS}{$ddate}{bytes}/1000000) . " ]");
+			$tot += $detail_code_stat{MISS}{$ddate}{bytes};
 		} else {
-			push(@miss, "[ $_, 0 ]");
+			push(@miss, "[ $xaxis[$i], 0 ]");
 		}
-		if (exists $detail_code_stat{DENIED}{$_}{bytes}) {
-			push(@denied, "[ $_, " . int($detail_code_stat{DENIED}{$_}{bytes}/1000000) . " ]");
+		if (exists $detail_code_stat{DENIED}{$ddate}{bytes}) {
+			push(@denied, "[ $xaxis[$i], " . int($detail_code_stat{DENIED}{$ddate}{bytes}/1000000) . " ]");
 		} else {
-			push(@denied, "[ $_, 0 ]");
+			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
-		push(@total, "[ $_, " . int($tot/1000000) . " ]");
+		push(@total, "[ $xaxis[$i], " . int($tot/1000000) . " ]");
 	}
 	%detail_code_stat = ();
 	$t1 = $Translate{'Graph_cache_byte_title'};
@@ -2811,6 +2823,8 @@ sub _print_user_detail
 	my $total_hit = 0;
 	my $total_bytes = 0;
 	my $total_duration = 0;
+	my $total_cache_hit = 0;
+	my $total_cache_bytes = 0;
 	my $ok = 0;
 	while(my $l = <$infile>) {
 		chomp($l);
@@ -2818,19 +2832,32 @@ sub _print_user_detail
 		last if (($user ne $usr) && $ok);
 		next if ($user ne $usr);
 		$ok = 1;
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
-			$url_stat{$4}{hits} = $1;
-			$url_stat{$4}{bytes} = $2;
-			$url_stat{$4}{duration} = $3;
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+			$url_stat{$6}{hits} = $1;
+			$url_stat{$6}{bytes} = $2;
+			$url_stat{$6}{duration} = $3;
+			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
+			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
+			$url_stat{$6}{cache_hit} = $7;
+			$url_stat{$6}{cache_bytes} = $8;
 			$total_hit += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
+			$total_cache_hit += $7;
+			$total_cache_bytes += $8;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
+			$total_hit += $1;
+			$total_bytes += $2;
+			$total_duration += $3;
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+			$url_stat{$4}{hits} = $1;
+			$url_stat{$4}{bytes} = $2;
+			$url_stat{$4}{duration} = $3;
 			$total_hit += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -2943,17 +2970,24 @@ sub _print_top_url_stat
 	my $total_hits = 0;
 	my $total_bytes = 0;
 	my $total_duration = 0;
+	my $total_cache_hit = 0;
+	my $total_cache_bytes = 0;
 	while(my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
-			$url_stat{$4}{hits} = $1;
-			$url_stat{$4}{bytes} = $2;
-			$url_stat{$4}{duration} = $3;
-			$url_stat{$4}{users}{$user}++ if ($self->{TopUrlUser});
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+			$url_stat{$6}{hits} = $1;
+			$url_stat{$6}{bytes} = $2;
+			$url_stat{$6}{duration} = $3;
+			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
+			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
+			$url_stat{$6}{cache_hit} = $7;
+			$url_stat{$6}{cache_bytes} = $8;
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
+			$total_cache_hit += $7;
+			$total_cache_bytes += $8;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
@@ -2961,6 +2995,14 @@ sub _print_top_url_stat
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
 			$url_stat{$6}{users}{$user}++ if ($self->{TopUrlUser});
+			$total_hits += $1;
+			$total_bytes += $2;
+			$total_duration += $3;
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+			$url_stat{$4}{hits} = $1;
+			$url_stat{$4}{bytes} = $2;
+			$url_stat{$4}{duration} = $3;
+			$url_stat{$4}{users}{$user}++ if ($self->{TopUrlUser});
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -3135,12 +3177,7 @@ sub _print_top_domain_stat
 	while(my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
-			$url = $4;
-			$hits = $1;
-			$bytes = $2;
-			$duration = $3;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*);cache_hit=(\d+);cache_bytes=(\d+)/) {
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url = lc($6);
 			$hits = $1;
 			$bytes = $2;
@@ -3156,6 +3193,11 @@ sub _print_top_domain_stat
 			$duration = $3;
 			$first = $4;
 			$last = $5;
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+			$url = $4;
+			$hits = $1;
+			$bytes = $2;
+			$duration = $3;
 		}
 		my $done = 0;
 		if ($url !~ /\.\d+$/) {
@@ -3867,6 +3909,7 @@ sub flotr2_bargraph
 	my $month_array = '';
 	my $xlabel = '';
 	my $numticks = 0;
+	my $xmode = 'normal';
 	if ($xtype eq 'month') {
 		$month_array = qq{var months = [ '$Translate{"01"}', '$Translate{"02"}', '$Translate{"03"}', '$Translate{"04"}', '$Translate{"05"}', '$Translate{"06"}', '$Translate{"07"}', '$Translate{"08"}', '$Translate{"09"}', '$Translate{"10"}', '$Translate{"11"}', '$Translate{"12"}' ];
 };
@@ -3878,9 +3921,7 @@ sub flotr2_bargraph
 };
 		$numticks = 31;
 	} elsif ($xtype =~ /\[.*\]/) {
-		$xlabel = qq{var days = $xtype;
-		return pos;
-};
+		$xmode = 'time';
 		$numticks = 7;
 	} else  {
 		$xlabel = qq{var hours = [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
@@ -3888,6 +3929,14 @@ sub flotr2_bargraph
 };
 		$numticks = 24;
 	}
+
+	my $tickFormatter = qq{
+            tickFormatter: function(x) {
+                var pos = parseInt(x);
+		$xlabel
+            },
+};
+	$tickFormatter = '' if ($xmode eq 'time');
 
 	my $dateTracker_lblopts = '';
 	map { if (/label: "([^"]+)"/) { $dateTracker_lblopts .= "'$1',"; } } @legend;
@@ -3918,17 +3967,14 @@ $month_array
         },
         yaxis: {
             min: 0,
-            autoscaleMargin: 1,
             mode: "normal",
+            autoscaleMargin: 1,
             title: "$ytitle",
         },
         xaxis: {
-            mode: "normal",
+            mode: "$xmode",
             noTicks: $numticks,
-            tickFormatter: function(x) {
-                var pos = parseInt(x);
-		$xlabel
-            },
+	    $tickFormatter
             title: "$xtitle",
         },
         title: "$title",
@@ -4285,13 +4331,13 @@ sub get_wdays_per_year
 			}
 			my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $m - 1, $y - 1900);
 			if ( ($weekNumber == $wn) || ( ($weekNumber eq '00') && (($wn == 1) || ($wn >= 52)) ) ) {
-				push(@retdays, "$day");
+				my $time = timelocal_nocheck(0, 0, 0, $day, $m - 1, $y - 1900);
+				push(@retdays, $time*1000);
 				return @retdays if ($#retdays == 6);
 			}
 			next if ($weekNumber > $wn);
 		}
 	}
-
 	return @retdays;
 }
 
