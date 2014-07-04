@@ -9,7 +9,7 @@
 # replace dynamics values. Following the language their place in the string
 # may vary.
 #
-# Author: Martin Kylián
+# Author: Gilles Darold
 #------------------------------------------------------------------------------
 CharSet				utf-8
 01				Led
@@ -36,6 +36,7 @@ Months				Měsíce
 Days				Dny
 Hit				Hity
 Miss				Miss
+Denied				Zakázané
 Cost				Cena
 Users				Uživatelé
 Sites				Weby
@@ -46,6 +47,7 @@ Months_graph			Měsíce
 Days_graph			Dny
 Hit_graph			Hity
 Miss_graph			Miss
+Denied_graph			Zakázané
 Total_graph			Celkem
 Domains_graph			Domény
 Users_help			Počet různých uživatelů za toto období
@@ -53,6 +55,7 @@ Sites_help			Počet různých webů za toto období
 Domains_help			Počet různých domén za toto období
 Hit_help			Objektů nalezeno v cache
 Miss_help			Objektů nenalezeno v cache
+Denied_help			Objektů s nepovoleným přístupem (pokusy o přístup)
 Cost_help			1 Mega Byte =
 Generation			Report generován na
 Main_cache_title		Statistika Cache
@@ -91,7 +94,9 @@ Domain_Bytes_title		Top %d bytů - Domény -
 Domain_Duration_title		Top %d trvání - Domény - 
 Domain_number			Počet unikátních domén
 Domain_graph_hits_title		Statistika Hitů - Top level domény -
-Domain_graph_bytes_title	Statistika přenesených bytů - Top level domény -
+Domain_graph_bytes_title	Statistika přenesených Bytů - Top level domény -
+Second_domain_graph_hits_title	Statistika Hitů - Domény druhého řádu -
+Second_domain_graph_bytes_title	Statistika přenesených Bytů - Domény druhého řádu -
 First_visit			Poprvé navštíveno
 Last_visit			Naposledy navštíveno
 Globals_Statistics		Celková Statistika
@@ -101,3 +106,8 @@ Up_link				Nahoru
 Click_year_stat			Klikněte na odkaz ročního přehledu pro více detailů
 Mime_graph_hits_title		Statistika Hitů - Mime Typy -  
 Mime_graph_bytes_title		Statistika přenesených bytů - Mime Typy -
+User				Uživatel
+Count				Počet
+WeekDay				Ne Po Út St Čt Pá So
+Week				Týden
+
