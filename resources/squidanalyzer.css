@@ -80,7 +80,7 @@ table.stata td a:hover { color: #76add2; }
 /**************/
 
 .iconUpArrow { background-image: url("./images/up-arrow.png"); background-position: left bottom; background-repeat: no-repeat; padding-left: 25px; margin-bottom: 20px; }
-#header { background: #222222; height: 140px; width: 100%; border-bottom: 3px solid #76add2; }
+#header { background: #222222; height: 155px; width: 100%; border-bottom: 3px solid #76add2; }
 #header h1 { margin: 0; color: white; font-size: 3em; font-style: italic; font-variant: small-caps; letter-spacing: 2px; }
 #header h1 img { float: left; margin-top: 5px; margin-right: 20px; padding-left: 20px; }
 #header .sous-titre { color: #76add2; font-style: italic; padding-left: 180px; font-size:0.8em; font-weight: 600; }

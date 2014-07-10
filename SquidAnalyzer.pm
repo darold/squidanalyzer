@@ -3819,12 +3819,14 @@ sub _get_calendar
 		my @currow = ('','','','','','','');
 		my %weeks_num = ();
 		my $wn = '';
+		my $wn_ok = '';
 		my $wd = '';
 		for my $d ("01" .. "31") {
 			$wn =  &get_week_number($year,$month,$d);
 			next if ($wn == -1);
 			$wd = &get_day_of_week($year,$month,$d);
 			next if ($wd == -1);
+			$wn_ok = $wn;
 			if (-f "$outdir/$d/index.html") {
 				$currow[$wd-1] = "<td><a href=\"$prefix$d/index.html\">$d</a></td>";
 			} else {
@@ -3832,13 +3834,13 @@ sub _get_calendar
 			}
 			if ($wd == 7) {
 				map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
-				@{$weeks_num{$wn}} = @currow;
+				@{$weeks_num{$wn_ok}} = @currow;
 				@currow = ('','','','','','','');
 			}
 		}
-		if ( ($wd < 7) && ($wd != -1) && ($wn != -1) ) {
+		if ( ($wd < 7) && ($wd != -1) && ($wn_ok != -1) ) {
 			map { $_ = "<td>&nbsp;</td>" if ($_ eq ''); } @currow;
-			@{$weeks_num{$wn}} = @currow;
+			@{$weeks_num{$wn_ok}} = @currow;
 		}
 		my $path = $outdir;
 		$path =~ s/(\/\d{4})\/\d{2}.*/$1/;
