@@ -436,9 +436,34 @@ sub parseFile
 	my $line_processed_count = 0;
 	my $line_stored_count = 0;
 
+	# Move directly to the last position in logfile
+	if ($self->{end_offset}) {
+		if ((lstat($logfile))[7] < $self->{end_offset}) {
+			print STDERR "New log detected, starting from the begining of the logfile.\n" if (!$self->{QuietMode});
+			$logfile->seek(0, 0);
+			$self->{end_offset} = 0;
+		} else {
+			print STDERR "Going to offset $self->{end_offset} in logfile.\n" if (!$self->{QuietMode});
+			my $ret = $logfile->seek($self->{end_offset}, 0);
+			if (!$ret) {
+				print STDERR "New log detected, starting from the begining of the logfile.\n" if (!$self->{QuietMode});
+				$logfile->seek(0, 0);
+				$self->{end_offset} = 0;
+			}
+		}
+	}
+
 	# Read and parse each line of the access log file
 	while ($line = <$logfile>) {
+
+		# Store the current line starting position in logfile
+		my $tmp_pos = $logfile->tell() - length($line);
+
 		chomp($line);
+
+		# Number of log lines parsed
+		$line_count++;
+
 		#logformat squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
 		#logformat squidmime %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt [%>h] [%<h]
 		# The log format below are not supported
@@ -453,14 +478,31 @@ sub parseFile
 			$bytes = $5 || 0;
 			$method = $6 || '';
 
+			if ($line_count == 1) {
+				# Check if this file has changed to reread it from the begining (incremental mode)
+				if ($self->{end_offset} && $self->{history_time} && ($self->{history_time} == $time)) {
+					print STDERR "Found last history time: $self->{history_time} at offset $self->{end_offset}, starting from here.\n" if (!$self->{QuietMode});
+					next;
+				} elsif ($self->{end_offset} && $self->{history_time} && ($self->{history_time} < $time)) {
+					print STDERR "New log detected (at offset: $self->{end_offset}, history time: $self->{history_time} lower then current time: $time), rereading logfile from the begining.\n" if (!$self->{QuietMode});
+					$logfile->seek(0, 0);
+					$self->{end_offset} = 0;
+					next;
+				}
+			}
+
+			# Determine if we have to reset the 
 			# Do not parse some unwanted method
 			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
 
 			# Go to last parsed date (incremental mode)
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
 
-			# Register the last parsing time
+			# Register the last parsing time and last offset position in logfile
 			$self->{end_time} = $time;
+
+			# Get/set current position in logfile
+			$self->{end_offset} = $tmp_pos;
 
 			# Register the first parsing time
 			if (!$self->{begin_time}) {
@@ -602,7 +644,6 @@ sub parseFile
 			}
 			$line_processed_count++;
 		}
-		$line_count++;
 	}
 	$logfile->close();
 
@@ -623,7 +664,7 @@ sub parseFile
 		if ($self->{end_time}) {
 			my $current = new IO::File;
 			$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("Error: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
-			print $current "$self->{end_time}";
+			print $current "$self->{end_time}\t$self->{end_offset}";
 			$current->close;
 		}
 
@@ -836,6 +877,7 @@ sub _init
         $self->{first_month} = 0;
 	$self->{begin_time} = 0;
 	$self->{end_time} = 0;
+	$self->{end_offset} = 0;
 	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
 	$self->{preserve} = 0;
@@ -858,8 +900,9 @@ sub _init
 			print STDERR "ERROR: Can't read file $self->{Output}/SquidAnalyzer.current, $!\n" if (!$self->{QuietMode});
 			print STDERR "Starting at the first line of Squid access log file.\n" if (!$self->{QuietMode});
 		} else {
-			$self->{history_time} = <$current>;
-			chomp($self->{history_time});
+			my $tmp = <$current>;
+			chomp($tmp);
+			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
 			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{history_time})), "\n" if (!$self->{QuietMode});
