@@ -3595,6 +3595,7 @@ sub parse_config
 	open(CONF, $file) or $self->localdie("ERROR: can't open file $file, $!\n");
 	while (my $l = <CONF>) {
 		chomp($l);
+		$l =~ s/\r//;
 		next if (!$l || ($l =~ /^[\s\t]*#/));
 		my ($key, $val) = split(/[\s\t]+/, $l, 2);
 		$opt{$key} = $val;
