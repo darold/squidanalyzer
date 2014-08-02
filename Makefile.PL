@@ -86,8 +86,6 @@ install -m 644 resources/images/info.png $DESTDIR$HTMLDIR/images/
 install -m 644 resources/images/network.png $DESTDIR$HTMLDIR/images/
 install -m 644 resources/images/user.png $DESTDIR$HTMLDIR/images/
 install -m 644 lang/* $DESTDIR$CONFDIR/lang/
-pod2man doc/SquidAnalyzer.pod doc/squidanalyzer.3
-install -m 644 doc/squidanalyzer.3 $DESTDIR$MANDIR/squidanalyzer.3
 pod2text doc/SquidAnalyzer.pod README
 };
 if ($DOCDIR ne '') {
@@ -151,9 +149,22 @@ WriteMakefile(
 		   },
 	'AUTHOR'       => 'Gilles Darold (gilles@darold.net)',
 	'ABSTRACT'     => 'Squid log analyzer',
+	'EXE_FILES'    => [ qw(squid-analyzer) ],
+	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/squidanalyzer.3' },
 	'DESTDIR'      => $ENV{DESTDIR},
 	'INSTALLDIRS'  => $ENV{INSTALLDIRS},
-	clean	=> {FILES => "install_all.sh"},
+	'clean'	       => { FILES => "install_all.sh lib/blib/" },
+	'META_MERGE'   => {
+		resources  => {
+			homepage => 'http://squidanalyzer.darold.net/',
+			repository  => {
+				type => 'git',
+				git => 'git@github.com:darold/squidanalyzer.git',
+				web => 'https://github.com/darold/squidanalyzer',
+			},
+		},
+	}
+
 );
 
 sub MY::install {
