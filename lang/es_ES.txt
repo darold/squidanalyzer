@@ -102,7 +102,7 @@ Last_visit			Última visita
 Globals_Statistics		Estadísticas globales
 Legend				Leyenda
 File_Generated			Archivo generado en
-Up_link				Arriab
+Up_link				Arriba
 Click_year_stat			Haga click en 'Estadíscitas anuales' para más detalles
 Mime_graph_hits_title		Estadísticas de mime-types en
 Mime_graph_bytes_title		Estadísticas de bytes en mime-types en
