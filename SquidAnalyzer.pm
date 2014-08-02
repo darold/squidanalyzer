@@ -1888,7 +1888,7 @@ sub _print_cache_stat
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	if ( !$self->{no_year_stat} || ($type ne 'month') ) {
 		$self->_print_header(\$out, $self->{menu}, $cal);
@@ -2141,7 +2141,7 @@ sub _print_mime_stat
 	$sortpos = 3 if ($self->{OrderMime} eq 'duration');
 
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	# Print title and calendar view
@@ -2306,7 +2306,7 @@ sub _print_network_stat
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out $self->_print_title($Translate{'Network_title'}, $stat_date, $week);
@@ -2433,7 +2433,7 @@ sub _print_network_stat
 		my $outnet = new IO::File;
 		$outnet->open(">$outdir/networks/$net/$net.html") || return;
 		# Print the HTML header
-		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
+		my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir, '../../');
 		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date, $week);
 
@@ -2580,7 +2580,7 @@ sub _print_user_stat
 	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
 
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 
@@ -2679,7 +2679,7 @@ sub _print_user_stat
 		my $outusr = new IO::File;
 		$outusr->open(">$outdir/users/$url/$url.html") || return;
 		# Print the HTML header
-		my $cal = $self->_get_calendar($stat_date, $type, $outdir, '../../');
+		my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir, '../../');
 		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date, $week);
 
@@ -3064,7 +3064,7 @@ sub _print_top_url_stat
 	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
@@ -3307,7 +3307,7 @@ sub _print_top_domain_stat
 	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	# Print the HTML header
-	my $cal = $self->_get_calendar($stat_date, $type, $outdir);
+	my $cal = $self->_get_calendar($stat_date, $year, $month, $type, $outdir);
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
@@ -3824,7 +3824,7 @@ sub _print_title
 
 sub _get_calendar
 {
-	my ($self, $stat_date, $type, $outdir, $prefix) = @_;
+	my ($self, $stat_date, $year, $month, $type, $outdir, $prefix) = @_;
 
 	my $para = "<div id=\"calendar\">\n";
 	if ($type eq 'day') {
@@ -3845,10 +3845,6 @@ sub _get_calendar
 		$para .= "<tr><td>&nbsp;</td>";
 		map { $para .= '<td align="center">' . $day_lbl{$_} . '</td>'; } @wday;
 		$para .= "</tr>\n";
-
-		$stat_date =~ /^(\d+)-(\d+)$/;
-		my $year = $1 || '';
-		my $month = $2 || '';
 
 		my @currow = ('','','','','','','');
 		my %weeks_num = ();
