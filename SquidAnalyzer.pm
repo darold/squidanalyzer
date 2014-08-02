@@ -3607,33 +3607,23 @@ sub parse_config
 
 	# Check config
 	if (!exists $opt{Output} || !-d $opt{Output}) {
-		print STDERR "Error: you must give a valid output directory. See option: Output\n";
-		unlink($self->{pidfile});
-		exit 0;
+		$self->localdie("ERROR: you must give a valid output directory. See option: Output\n");
 	}
 	if ( !$opt{LogFile} || !-f $opt{LogFile} ) {
 		if (!$rebuild) {
-			print STDERR "Error: you must give a valid path to the Squid log file. See LogFile or option -l\n";
-			unlink($self->{pidfile});
-			exit 0;
+			$self->localdie("ERROR: you must give a valid path to the Squid log file. See LogFile or option -l\n");
 		}
 	}
 	if (exists $opt{DateFormat}) {
 		if ( ($opt{DateFormat} !~ m#\%y#) || (($opt{DateFormat} !~ m#\%m#) && ($opt{DateFormat} !~ m#\%M#) )|| ($opt{DateFormat} !~ m#\%d#) ) {
-			print STDERR "Error: bad date format: $opt{DateFormat}, must have \%y, \%m or \%M, \%d. See DateFormat option.\n";
-			unlink($self->{pidfile});
-			exit 0;
+			$self->localdie("ERROR: bad date format: $opt{DateFormat}, must have \%y, \%m or \%M, \%d. See DateFormat option.\n");
 		}
 	}
 	if ($opt{Lang} && !-e $opt{Lang}) {
-		print STDERR "Error: can't find translation file $opt{Lang}. See option: Lang\n";
-		unlink($self->{pidfile});
-		exit 0;
+		$self->localdie("ERROR: can't find translation file $opt{Lang}. See option: Lang\n");
 	}
 	if ($opt{ImgFormat} && !grep(/^$opt{ImgFormat}$/, 'png','jpg')) {
-		print STDERR "Error: unknown image format. See option: ImgFormat\n";
-		unlink($self->{pidfile});
-		exit 0;
+		$self->localdie("ERROR: unknown image format. See option: ImgFormat\n");
 	}
 
 	return %opt;
