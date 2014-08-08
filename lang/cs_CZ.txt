@@ -105,7 +105,7 @@ File_Generated			Generaváno
 Up_link				Nahoru
 Click_year_stat			Klikněte na odkaz ročního přehledu pro více detailů
 Mime_graph_hits_title		Statistika Hitů - Mime Typy -  
-Mime_graph_bytes_title		Statistika přenesených bytů - Mime Typy -
+Mime_graph_bytes_title		Statistika přenesených MBytů - Mime Typy -
 User				Uživatel
 Count				Počet
 WeekDay				Ne Po Út St Čt Pá So

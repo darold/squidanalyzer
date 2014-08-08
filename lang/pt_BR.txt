@@ -107,7 +107,7 @@ File_Generated			Gerado pela
 Up_link				Up
 Click_year_stat			Clique no link "Estat&iacute;sticas ano *" para mais detalhes
 Mime_graph_hits_title		Acessos a Tipos MIME em
-Mime_graph_bytes_title		Bytes Transferidos de Tipos MIME em
+Mime_graph_bytes_title		MBytes Transferidos de Tipos MIME em
 User				Usu&aacute;rios
 Count				N&uacute;mero
 WeekDay				Su Mo Tu We Th Fr Sa

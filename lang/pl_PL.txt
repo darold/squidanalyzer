@@ -105,7 +105,7 @@ File_Generated			Plik utworzony przez
 Up_link				W górę
 Click_year_stat			Aby zobaczyć szczegóły, kliknij w odnośnik statystyki rocznej
 Mime_graph_hits_title		Statystyki trafień typów Mime w
-Mime_graph_bytes_title		Statystyki bajtów typów Mime w
+Mime_graph_bytes_title		Statystyki Mbajtów typów Mime w
 User				Użytkownik
 Count				Ilość
 WeekDay				Nd Pn Wt Śr Cz Pt So
