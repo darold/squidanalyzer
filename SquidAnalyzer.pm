@@ -464,8 +464,8 @@ sub parseFile
 	# Read and parse each line of the access log file
 	while ($line = <$logfile>) {
 
-		# Store the current line starting position in logfile
-		my $tmp_pos = $logfile->tell() - length($line);
+		# Store the current position in logfile
+		$self->{end_offset} += length($line);
 
 		chomp($line);
 
@@ -509,9 +509,6 @@ sub parseFile
 
 			# Register the last parsing time and last offset position in logfile
 			$self->{end_time} = $time;
-
-			# Get/set current position in logfile
-			$self->{end_offset} = $tmp_pos;
 
 			# Register the first parsing time
 			if (!$self->{begin_time}) {
