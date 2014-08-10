@@ -374,7 +374,7 @@ my @TLD2 = (
 
 # Regex to match ipv4 and ipv6 address
 my $ip_regexp = qr/^([a-fA-F0-9\.\:]+)$/;
-my $cidr_regex =~ qr/^[a-fA-F0-9\.\:]+\/\d+$/;
+my $cidr_regex = qr/^[a-fA-F0-9\.\:]+\/\d+$/;
 
 # Native log format squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
 my $native_format_regex1 = qr/^(\d+\.\d{3})\s+(\d+)\s+([^\s]+)\s+([^\s]+)\s+(\d+)\s+([^\s]+)\s+(.*)/;
@@ -1014,10 +1014,8 @@ sub _parseData
 	}
 
 	# Extract the domainname part of the URL
-	my $dest = $url;
-	$dest =~ s#^[^\/]+\/\/##;
-	$dest =~ s#\/.*##;
-	$dest =~ s#:\d+$##;
+	$url =~ m/^[^\/]+\/\/([^\/:]+)/;
+	my $dest = $1 || $url;
 
 	# Replace username by his dnsname if there's no username
 	# (login is equal to ip) and if client is an ip address
@@ -1045,8 +1043,8 @@ sub _parseData
 	}
 	# Set default to a class A network
 	if (!$network) {
-		$network = $client;
-		$network =~ s/\.\d+$/\.0/;
+		$client =~ /^(.*)([:\.]+)\d+$/;
+		$network = "$1$2". "0";
 	}
 
 	# Replace username by his alias if any
