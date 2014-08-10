@@ -694,7 +694,6 @@ sub parseFile
 		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
 		$self->_clear_stats();
 
-
 		# Compute month statistics
 		if (!$self->{QuietMode}) {
 			print STDERR "Generating monthly data files now...\n";
@@ -710,14 +709,12 @@ sub parseFile
 
 		# Compute year statistics
 		$self->_clear_stats();
-		if (!$self->{no_year_stat}) {
-			if (!$self->{QuietMode}) {
-				print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
-			}
-			for my $year ($self->{first_year} .. $self->{last_year}) {
-				if (-d "$self->{Output}/$year") {
-					$self->_save_data($year);
-				}
+		if (!$self->{QuietMode}) {
+			print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
+		}
+		for my $year ($self->{first_year} .. $self->{last_year}) {
+			if (-d "$self->{Output}/$year") {
+				$self->_save_data($year);
 			}
 		}
 	}
@@ -1212,6 +1209,29 @@ sub _save_stat
 
 	print STDERR "Dumping data into $self->{Output}/$path\n" if (!$self->{QuietMode});
 
+	#### Save cache statistics
+	my $dat_file_code = new IO::File;
+	$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
+	foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
+		$dat_file_code->print("$code " .
+			"hits_$type=");
+		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
+			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
+		}
+		$dat_file_code->print(";bytes_$type=");
+		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
+			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
+		}
+		$dat_file_code->print("\n");
+	}
+	$dat_file_code->close();
+	$self->{"stat_code_$type"} = ();
+	$self->{stat_code} = ();
+
+	#### With huge log file we only store global statistics in year and month views
+	return if ( $self->{no_year_stat} && (($type ne 'hour') && !$wn) );
+
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
 		my $dat_file_user_url = new IO::File;
@@ -1301,27 +1321,6 @@ sub _save_stat
 	$dat_file_netuser->close();
 	$self->{"stat_netuser_$type"} = ();
 
-
-	#### Save cache statistics
-	my $dat_file_code = new IO::File;
-	$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
-	foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
-		$dat_file_code->print("$code " .
-			"hits_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
-			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
-		}
-		$dat_file_code->print(";bytes_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
-			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
-		}
-		$dat_file_code->print("\n");
-	}
-	$dat_file_code->close();
-	$self->{"stat_code_$type"} = ();
-	$self->{stat_code} = ();
-
 	#### Save mime statistics
 	my $dat_file_mime_type = new IO::File;
 	$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
@@ -1332,7 +1331,7 @@ sub _save_stat
 	}
 	$dat_file_mime_type->close();
 	$self->{"stat_mime_type_$type"} = ();
-
+	
 }
 
 sub _save_data
@@ -1382,6 +1381,42 @@ sub _read_stat
 	$key = $day if ($sum_type eq 'day');
 	$key = $month if ($sum_type eq 'month');
 	$sum_type ||= $type;
+
+	#### Read previous cache statistics
+	my $dat_file_code = new IO::File;
+	if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
+		my $i = 1;
+		while (my $l = <$dat_file_code>) {
+			chomp($l);
+			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
+				my $code = $1;
+				my $hits = $2 || '';
+				my $bytes = $3 || '';
+				$hits =~ s/,$//;
+				$bytes =~ s/,$//;
+				my %hits_tmp = split(/[:,]/, $hits);
+				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_code_$sum_type"}{$code}{$k}{hits} += $hits_tmp{$tmp};
+				}
+				my %bytes_tmp = split(/[:,]/, $bytes);
+				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+					if ($key ne '') { $k = $key; } else { $k = $tmp; }
+					$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
+				}
+			} else {
+				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
+				print STDERR "$l\n";
+				unlink($self->{pidfile});
+				exit 0;
+			}
+			$i++;
+		}
+		$dat_file_code->close();
+	}
+
+	#### With huge log file we only store global statistics in year and month views
+	return if ($self->{no_year_stat} && ($type ne 'hour'));
 
 	#### Read previous client statistics
 	my $dat_file_user = new IO::File;
@@ -1545,39 +1580,6 @@ sub _read_stat
 			$i++;
 		}
 		$dat_file_netuser->close();
-	}
-
-	#### Read previous cache statistics
-	my $dat_file_code = new IO::File;
-	if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_code>) {
-			chomp($l);
-			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
-				my $code = $1;
-				my $hits = $2 || '';
-				my $bytes = $3 || '';
-				$hits =~ s/,$//;
-				$bytes =~ s/,$//;
-				my %hits_tmp = split(/[:,]/, $hits);
-				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_code_$sum_type"}{$code}{$k}{hits} += $hits_tmp{$tmp};
-				}
-				my %bytes_tmp = split(/[:,]/, $bytes);
-				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
-				}
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_code->close();
 	}
 
 	#### Read previous mime statistics
@@ -1769,11 +1771,7 @@ sub buildHTML
 		$self->gen_html_output($outdir, $y);
 	}
 
-	if (!$self->{no_year_stat}) {
-		$self->_gen_summary($outdir);
-	} else {
-		$self->_gen_year_summary($outdir);
-	}
+	$self->_gen_summary($outdir);
 }
 
 sub gen_html_output
@@ -1800,7 +1798,9 @@ sub gen_html_output
 	my $nuser = 0;
 	my $nurl = 0;
 	my $ndomain = 0;
-	if ( !$self->{no_year_stat} || $month || $week) {
+
+	#### With huge log file we do not store detail statistics
+	if ( !$self->{no_year_stat} || ($self->{no_year_stat} && ($day || $week)) ) {
 		print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
 		$nuser = $self->_print_user_stat($dir, $year, $month, $day, $week);
 		print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
@@ -1897,10 +1897,6 @@ sub _print_cache_stat
 	} else {
 		$self->_print_header(\$out, $self->{menu3}, $cal);
 		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
-		%code_stat = ();
-		$self->_print_footer(\$out);
-		$out->close();
-		return;
 	}
 
 	my $total_cost = sprintf("%2.2f", int($total_bytes/1000000) * $self->{CostPrice});
@@ -2026,6 +2022,9 @@ sub _print_cache_stat
 	@miss = ();
 	@denied = ();
 	@total = ();
+	$nuser ||= '-';
+	$nurl ||= '-';
+	$ndomain ||= '-';
 
 	print $out qq{
 <table class="stata">
@@ -3007,7 +3006,7 @@ sub _print_top_url_stat
 		$type = 'day';
 	}
 
-	# Load code statistics
+	# Load user URL statistics
 	my $infile = new IO::File;
 	$infile->open("$outdir/stat_user_url.dat") || return;
 	my %url_stat = ();
