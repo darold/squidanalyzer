@@ -372,6 +372,14 @@ my @TLD2 = (
 	'\.onion','\.root','\.uucp','\.tld','\.nato'
 );
 
+# Regex to match ipv4 and ipv6 address
+my $ip_regexp = qr/^([a-fA-F0-9\.\:]+)$/;
+my $cidr_regex =~ qr/^[a-fA-F0-9\.\:]+\/\d+$/;
+
+# Native log format squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
+my $native_format_regex1 = qr/^(\d+\.\d{3})\s+(\d+)\s+([^\s]+)\s+([^\s]+)\s+(\d+)\s+([^\s]+)\s+(.*)/;
+my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+)\s*/;
+
 sub new
 {
 	my ($class, $conf_file, $log_file, $debug, $rebuild) = @_;
@@ -470,13 +478,14 @@ sub parseFile
 		#logformat common %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
 		#logformat combined %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 		# Parse log with format: time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost mime_type
-		if ( $line =~ s#^(\d+\.\d{3})\s+(\d+)\s+([^\s]+)\s+([^\s]+)\s+(\d+)\s+([^\s]+)\s+## ) {
-			$time = $1 || 0;
-			$elapsed = $2 || 0;
-			$client_ip = $3 || '';
-			$code = $4 || '';
-			$bytes = $5 || 0;
-			$method = $6 || '';
+		if ( $line =~ $native_format_regex1 ) {
+			$time = $1;
+			$elapsed = $2;
+			$client_ip = $3;
+			$code = $4;
+			$bytes = $5;
+			$method = $6;
+			$line = $7;
 
 			if ($line_count == 1) {
 				# Check if this file has changed to reread it from the begining (incremental mode)
@@ -520,12 +529,15 @@ sub parseFile
 				next;
 			}
 
-			if ( $line =~ s#^(.*?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+)\s*## ) {
-				$url = lc($1) || '';
-				$login = lc($2) || '';
-				$status = lc($3) || '';
-				$mime_type = lc($4) || '';
-				$mime_type = 'none' if (!$mime_type || ($mime_type eq '-'));
+			if ( $line =~ $native_format_regex2 ) {
+				$url = lc($1);
+				$login = lc($2);
+				$status = lc($3);
+				if (!$4 || ($4 eq '-')) {
+					$mime_type = 'none';
+				} else {
+					$mime_type = lc($4);
+				}
 
 				# Do not parse some unwanted method
 				next if (($#{$self->{ExcludedMimes}} >= 0) && map {$mime_type =~ m#^$_$#} @{$self->{ExcludedMimes}});
@@ -680,10 +692,10 @@ sub parseFile
 
 		print STDERR "Compute and dump weekly statistics for week $wn on $self->{last_year}\n" if (!$self->{QuietMode});
 		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
+		$self->_clear_stats();
 
 
 		# Compute month statistics
-		$self->_clear_stats();
 		if (!$self->{QuietMode}) {
 			print STDERR "Generating monthly data files now...\n";
 		}
@@ -1004,30 +1016,19 @@ sub _parseData
 			print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
 			$self->_clear_stats();
 
-			if (!$self->{QuietMode}) {
-				print STDERR "Generating weekly data files...\n";
-			}
-			my $wn = &get_week_number("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
-			my @wd = &get_wdays_per_month($wn, "$self->{last_year}-$self->{last_month}");
-			$wn++;
-
-			print STDERR "Compute and dump weekly statistics for week $wn on $self->{last_year}\n" if (!$self->{QuietMode});
-			$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
-			$self->_clear_stats();
-
 		}
 	}
 
 	# Extract the domainname part of the URL
 	my $dest = $url;
-	$dest =~ s#^[^\/]*\/\/##;
+	$dest =~ s#^[^\/]+\/\/##;
 	$dest =~ s#\/.*##;
 	$dest =~ s#:\d+$##;
 
 	# Replace username by his dnsname if there's no username
 	# (login is equal to ip) and if client is an ip address
 	if ( ($id eq $client) && $self->{UseClientDNSName}) {
-		if ($client =~ /^\d+\.\d+\.\d+\.\d+$/) {
+		if ($client =~ $ip_regexp) {
 			my $dnsname = $self->_gethostbyaddr($client);
 			if ($dnsname) {
 				$id = $dnsname;
@@ -1038,7 +1039,7 @@ sub _parseData
 	# Replace network by his aliases if any
 	my $network = '';
 	foreach my $r (keys %{$self->{NetworkAlias}}) {
-		if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
+		if ($r =~ $cidr_regex) {
 			if (&check_ip($client, $r)) {
 				$network = $self->{NetworkAlias}->{$r};
 				last;
