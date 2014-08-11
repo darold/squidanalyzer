@@ -1687,6 +1687,12 @@ sub buildHTML
 {
 	my ($self, $outdir) = @_;
 
+	# No new log registered, no html buid required
+	if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
+		print STDERR "Skipping HTML build.\n" if (!$self->{QuietMode});
+		return;
+	}
+
 	$outdir ||= $self->{Output};
 
 	print STDERR "Building HTML output into $outdir\n" if (!$self->{QuietMode});
