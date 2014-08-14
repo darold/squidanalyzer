@@ -6,6 +6,7 @@ use strict;
 use SquidAnalyzer;
 use Getopt::Long;
 use Benchmark;
+use POSIX ":sys_wait_h";
 
 $| = 1;
 
@@ -22,6 +23,7 @@ my $build_date = '';
 my $no_year_stat = 0;
 my $pid_dir = '/tmp';
 my $pidfile = 'squid-analyzer.pid';
+my $queue_size = 0;
 my $t0 = Benchmark->new;
 
 # get the command line parameters
@@ -30,6 +32,7 @@ my $result = GetOptions (
 	"b|build_date=s"       => \$build_date,
 	"d|debug!"             => \$debug,
 	"h|help"               => \$help,
+	"j|jobs=i"             => \$queue_size,
 	"l|logfile=s"          => \$logfile,
 	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
@@ -77,30 +80,47 @@ open(OUT, ">$pid_dir/$pidfile") or die "FATAL: can not write to pid file $pid_di
 print OUT "$$";
 close(OUT);
 
+# Clear multiprocess temporary file if any
+unlink("$pid_dir/last_parsed.tmp");
+
+# Instanciate SquidAnalyzer.pm perl module
+my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild, $pid_dir, $pidfile);
+$sa->{no_year_stat} = $no_year_stat;
+$sa->{queue_size} = $queue_size;
+
 # Die cleanly on signal
 sub terminate
 {
         # block signal
         local $SIG{TERM} = 'IGNORE';
         local $SIG{INT}  = 'IGNORE';
-        local $SIG{QUIT} = 'IGNORE';
 
         print("LOG: Received terminating signal.\n");
+
+	$sa->{terminate} = 1;
+
+        # Wait for all child processes to die except for the logger
+	my $kid = 0;
+	do {
+                sleep(1);
+		$kid = waitpid(-1, WNOHANG);
+	} while ($kid > 0);
+
+	# Removed pid iand temp file
         if (-e "$pid_dir/$pidfile") {
                 unlink("$pid_dir/$pidfile") or print("ERROR: Unable to remove pid file $pid_dir/$pidfile, $!\n");
+	}
+        if (-e "$pid_dir/last_parsed.tmp") {
+                unlink("$pid_dir/last_parsed.tmp") or print("ERROR: Unable to remove temp file $pid_dir/last_parsed.tmp, $!\n");
         }
 
         exit 0;
 }
 
-# Die on kill -2, -3 or -15 
-$SIG{'INT'} = $SIG{'QUIT'} = $SIG{'TERM'} = 'terminate';
-
-
-# Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild, "$pid_dir/$pidfile");
-
-$sa->{no_year_stat} = $no_year_stat;
+# Handle signals to die cleanly
+$SIG{'INT'} = \&terminate;
+$SIG{'TERM'} = \&terminate;
+$SIG{'CHLD'} = 'DEFAULT';
 
 my $t1;
 # Run parsing only if we have a log file or that we are not in rebuild mode
@@ -132,7 +152,7 @@ if (defined $t1) {
 }
 
 my $td = timediff($t2, $t0);
-print STDERR "DEBUG: totale execution time:", timestr($td), "\n";
+print STDERR "DEBUG: total execution time:", timestr($td), "\n";
 
 # Remove PID file
 unlink("$pid_dir/$pidfile");
@@ -151,6 +171,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug informations.
     -h | --help                : show this message and exit.
+    -j | --jobs number         : number of jobs to run at same time. Default is 1,
+                                 run as single process.
     -l | --logfile filename    : path to the Squid logfile to parse.
 				 By default: /var/log/squid/access.log
     -p | --preserve number     : used to set the statistic obsolescence in
