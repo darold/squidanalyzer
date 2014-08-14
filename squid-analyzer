@@ -171,7 +171,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug informations.
     -h | --help                : show this message and exit.
-    -j | --jobs number         : number of jobs to run at same time. Default is 1,
+    -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                  run as single process.
     -l | --logfile filename    : path to the Squid logfile to parse.
 				 By default: /var/log/squid/access.log

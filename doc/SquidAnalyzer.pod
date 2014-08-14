@@ -153,25 +153,27 @@ match your network and file system configuration.
 SquidAnalyzer can be run manually or by cron job using the squid-analyzer Perl
 script. Here are authorized usage:
 
-    Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
 
-	-c | --configfile filename : path to the SquidAnalyzer configuration file.
-				     By default: /etc/squidanalyzer.conf
-	-b | --build_date date     : set the day to be rebuilt, format: yyyy-mm-dd,
-				     yyyy-mm or yyyy. Used with -r or --rebuild.
-	-d | --debug               : show debug informations.
-	-h | --help                : show this message and exit.
-	-l | --logfile filename    : path to the Squid logfile to parse.
-				     By default: /var/log/squid/access.log
-	-p | --preserve number     : used to set the statistic obsolescence in
-				     number of month. Older stats will be removed.
-	-P | --pid_dir directory   : set directory where pid file will be stored.
-				     Default /tmp/
-	-r | --rebuild             : use this option to rebuild all html and graphs
-				     output from all data files.
-	-v | version               : show version and exit.
-	--no-year-stat             : disable years statistics, reports will
-				     start from month level only.
+    -c | --configfile filename : path to the SquidAnalyzer configuration file.
+				 By default: /etc/squidanalyzer/squidanalyzer.conf
+    -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
+				 or yyyy-mm or yyyy. Used with -r or --rebuild.
+    -d | --debug               : show debug informations.
+    -h | --help                : show this message and exit.
+    -j | --jobs number         : number of jobs to run at same time. Default is 1,
+                                 run as single process.
+    -l | --logfile filename    : path to the Squid logfile to parse.
+				 By default: /var/log/squid/access.log
+    -p | --preserve number     : used to set the statistic obsolescence in
+				 number of month. Older stats will be removed.
+    -P | --pid_dir directory   : set directory where pid file will be stored.
+				 Default /tmp/
+    -r | --rebuild             : use this option to rebuild all html and graphs
+				 output from all data files.
+    -v | version               : show version and exit.
+    --no-year-stat             : disable years statistics, reports will start
+                                 from month level only.
 
 
 There is special options like --rebuild that force SquidAnalyzer to rebuild all
@@ -186,6 +188,18 @@ removed from the filesystem. Useful to preserve space, for example:
 	squid-analyzer -p 6 -c /etc/squidanalyzer/squidanalyzer.conf
 
 will only preserve six month of statistics from the last run of squidanalyzer.
+
+=head1 MULTIPROCESS
+
+If you have huges squid access.log you will be interested by using multiprocess
+with SquidAnalyzer. Using the -j or --jobs command line option you can force
+SquidAnalyzer to use as many cores/cpus as wanted.
+
+	squid-analyzer -j 8 -l /var/log/squid3/huge_access.log
+
+Here SquidAnalyzer will use 8 cpus to parse the file and compute all statistics
+reports. It will also use much more memory at the same time.
+
 
 =head1 CONFIGURATION
 
