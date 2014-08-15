@@ -12,7 +12,8 @@ $| = 1;
 
 my $DEFAULT_CONFFILE = '/etc/squidanalyzer/squidanalyzer.conf';
 
-my $logfile    = '';
+my @logfile    = ();
+my $obsolete   = 0;
 my $configfile = '';
 my $help       = '';
 my $rebuild    = '';
@@ -33,13 +34,18 @@ my $result = GetOptions (
 	"d|debug!"             => \$debug,
 	"h|help"               => \$help,
 	"j|jobs=i"             => \$queue_size,
-	"l|logfile=s"          => \$logfile,
+	"l|logfile"            => \$obsolete,
 	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
 	"P|pid_dir=s"          => \$pid_dir,
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
 );  
+
+# Show warning for obsolete options
+if ($obsolete) {
+	print STDERR "WARNING: use of obsolete -l option, log files must be given at command line arguments.\n"
+}
 
 # Show version and exit
 if ($version) {
@@ -55,15 +61,13 @@ if ($build_date) {
 	}
 }
 
-# Look at configuration file
-if (!$configfile) {
-	# Backward compatibility with release < 4.0 with configuration
-	# file as single argument.
-	$configfile = $ARGV[0] if (($#ARGV == 0) && $ARGV[0]);
-
-	# Set default configuration file
-	$configfile ||= $DEFAULT_CONFFILE;
+# Add multiple log files given from command line
+foreach my $f (@ARGV) {
+	push(@logfile, $f) if (-f $f && !-z $f);
 }
+
+# Set default configuration file
+$configfile ||= $DEFAULT_CONFFILE;
 
 if ($help) {
 	&usage;
@@ -84,7 +88,7 @@ close(OUT);
 unlink("$pid_dir/last_parsed.tmp");
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, $logfile, $debug, $rebuild, $pid_dir, $pidfile);
+my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile);
 $sa->{no_year_stat} = $no_year_stat;
 $sa->{queue_size} = $queue_size;
 
@@ -124,7 +128,7 @@ $SIG{'CHLD'} = 'DEFAULT';
 
 my $t1;
 # Run parsing only if we have a log file or that we are not in rebuild mode
-if (!$rebuild || $logfile) {
+if (!$rebuild || ($#logfile >= 0)) {
 	$sa->parseFile();
 	$t1 = Benchmark->new;
 	my $td = timediff($t1, $t0);
@@ -163,7 +167,7 @@ exit(0);
 sub usage
 {
 	print qq{
-Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
 				 By default: $DEFAULT_CONFFILE
@@ -173,8 +177,6 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
     -h | --help                : show this message and exit.
     -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                  run as single process.
-    -l | --logfile filename    : path to the Squid logfile to parse.
-				 By default: /var/log/squid/access.log
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
@@ -184,6 +186,10 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
     -v | version               : show version and exit.
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
+
+Log files to parse can be given as command line arguments or as a comma separated
+list of file for the LogFile configuration directive. By default SquidAnalyer will
+use file: /var/log/squid/access.log
 
 };
 

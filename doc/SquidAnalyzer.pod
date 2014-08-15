@@ -153,7 +153,7 @@ match your network and file system configuration.
 SquidAnalyzer can be run manually or by cron job using the squid-analyzer Perl
 script. Here are authorized usage:
 
-Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 
     -c | --configfile filename : path to the SquidAnalyzer configuration file.
 				 By default: /etc/squidanalyzer/squidanalyzer.conf
@@ -163,8 +163,6 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
     -h | --help                : show this message and exit.
     -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                  run as single process.
-    -l | --logfile filename    : path to the Squid logfile to parse.
-				 By default: /var/log/squid/access.log
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
@@ -174,6 +172,10 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
     -v | version               : show version and exit.
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
+
+Log files to parse can be given as command line arguments or as a comma separated
+list of file for the LogFile configuration directive. By default SquidAnalyer will
+use file: /var/log/squid/access.log
 
 
 There is special options like --rebuild that force SquidAnalyzer to rebuild all
@@ -237,7 +239,9 @@ For example:
 
 =item LogFile squid_access_log_file
 
-Set the path to the Squid log file.
+Set the path to the Squid log file. This can be a comma separated list of files
+to process several files at the same time. If the files comes from differents
+Squid servers, they will be merges in a single reports.
 
 =item UseClientDNSName        0
 

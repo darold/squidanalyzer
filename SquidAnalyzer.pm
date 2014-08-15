@@ -24,7 +24,7 @@ BEGIN {
 	use Fcntl qw(:flock);
 
 	# Set all internal variable
-	$VERSION = '5.4';
+	$VERSION = '6.0beta';
 	$COPYRIGHT = 'Copyright (c) 2001-2014 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
@@ -468,72 +468,119 @@ sub parseFile
 {
 	my ($self) = @_;
 
-	return if ((!-f $self->{LogFile}) || (-z $self->{LogFile}));
-
 	my $line_count = 0;
 	my $line_processed_count = 0;
 	my $line_stored_count = 0;
+	my $saved_queue_size = $self->{queue_size};
+	my $history_offset = $self->{end_offset};
 
-	# Compressed file do not allow multiprocess
-	if ($self->{LogFile} =~ /\.(gz|bz2)$/) {
-		$self->{queue_size} = 1;
-	}
+	foreach my $lfile (@{$self->{LogFile}}) {
 
-	# Search the last position in logfile
-	if ($self->{end_offset}) {
-		if ((lstat($self->{LogFile}))[7] < $self->{end_offset}) {
-			print STDERR "New log detected, starting from the begining of the logfile.\n" if (!$self->{QuietMode});
-			$self->{end_offset} = 0;
+		print STDERR "Starting to parse logfile $lfile.\n" if (!$self->{QuietMode});
+		if ((!-f $lfile) || (-z $lfile)) {
+			print STDERR "DEBUG: bad or empty log file $lfile.\n" if (!$self->{QuietMode});
+			next;
 		}
-	}
+		# Restore the right multiprocess queue
+		$self->{queue_size} = $saved_queue_size;
 
-	if ($self->{queue_size} <= 1) {
-		$self->_parse_file_part($self->{end_offset});
-	} else {
-		# Create multiple processes to parse one log file by chunks of data
-		my @chunks = $self->split_logfile($self->{LogFile});
-		print STDERR "DEBUG: The following $self->{queue_size} boundaries will be used to parse file $self->{LogFile}, ", join('|', @chunks), "\n";
-		my $child_count = 0;
-		for (my $i = 0; $i < $#chunks; $i++) {
-			if ($self->{interrupt}) {
-				print STDERR "FATAL: Abort signal received when processing to next chunk\n";
-				return;
-			}
-			$self->spawn(sub {
-				$self->_parse_file_part($chunks[$i], $chunks[$i+1], $i);
-			});
-			$child_count = $self->manage_queue_size(++$child_count);
+		# Compressed file do not allow multiprocess
+		if ($lfile =~ /\.(gz|bz2)$/) {
+			$self->{queue_size} = 1;
 		}
 
-		# Wait for last child stop
-		$self->wait_all_childs();
+		# Search the last position in logfile
+		if ($history_offset) {
 
-		# Get the last information parsed in this file part
-		if (-e "$self->{pid_dir}/last_parsed.tmp") {
-			if (open(IN, "$self->{pid_dir}/last_parsed.tmp")) {
-				while (my $l = <IN>) {
-					chomp($l);
-					my @data = split(/\s/, $l);
-					if (!$self->{end_offset} || ($data[4] > $self->{end_offset})) {
-						$self->{last_year} = $data[0];
-						$self->{last_month} = $data[1];
-						$self->{last_day} = $data[2];
-						$self->{end_time} = $data[3];
-						$self->{end_offset} = $data[4];
-						$line_stored_count += $data[5];
-						$line_processed_count += $data[6];
-						$line_count += $data[7];
-					} 
-					if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}") ) {
-						$self->{first_year} = $data[8];
-						$self->{first_month} = $data[9];
+			# Initialize start offset for each file
+			$self->{end_offset} = $history_offset;
+
+			# Compressed file are always read from the begining
+			if ($lfile =~ /\.(gz|bz2)$/i) {
+				$self->{end_offset} = 0;
+			} else {
+				# Look at first line to see if the file should be parse from the begining.
+				my $logfile = new IO::File;
+				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open Squid access.log file $lfile. $!\n");
+				my $line = <$logfile>;
+				chomp($line);
+				$line =~ /^([\d\.]+) /;
+				# if the first timestamp is higher that the history time, start from the beginning
+				if ($1 > $self->{history_time}) {
+					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
+					$self->{end_offset} = 0;
+				# If the size of the file is lower than the history offset, skip this file
+				} elsif ((lstat($lfile))[7] <= $history_offset) {
+					print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
+					$logfile->close;
+					next;
+				} else {
+					# move at ofset and see if next line is older than history time
+					$logfile->seek($history_offset, 0);
+					$line = <$logfile>;
+					chomp($line);
+					$line =~ /^([\d\.]+) /;
+					if ($1 < $self->{history_time}) {
+						print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected.\n" if (!$self->{QuietMode});
+						$logfile->close;
+						next;
 					}
 				}
-				close(IN);
-				unlink("$self->{pid_dir}/last_parsed.tmp");
-			} else {
-				print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
+				$logfile->close;
 			}
+		} else {
+			# Initialise start offset for each file
+			$self->{end_offset} = 0;
+		}
+
+		if ($self->{queue_size} <= 1) {
+			$self->_parse_file_part($lfile, $self->{end_offset});
+		} else {
+			# Create multiple processes to parse one log file by chunks of data
+			my @chunks = $self->split_logfile($lfile);
+			print STDERR "DEBUG: The following $self->{queue_size} boundaries will be used to parse file $lfile, ", join('|', @chunks), "\n" if (!$self->{QuietMode});
+			my $child_count = 0;
+			for (my $i = 0; $i < $#chunks; $i++) {
+				if ($self->{interrupt}) {
+					print STDERR "FATAL: Abort signal received when processing to next chunk\n";
+					return;
+				}
+				$self->spawn(sub {
+					$self->_parse_file_part($lfile, $chunks[$i], $chunks[$i+1], $i);
+				});
+				$child_count = $self->manage_queue_size(++$child_count);
+			}
+		}
+	}
+
+	# Wait for last child stop
+	$self->wait_all_childs() if ($self->{queue_size} > 1);
+
+	# Get the last information parsed in this file part
+	if (-e "$self->{pid_dir}/last_parsed.tmp") {
+		if (open(IN, "$self->{pid_dir}/last_parsed.tmp")) {
+			while (my $l = <IN>) {
+				chomp($l);
+				my @data = split(/\s/, $l);
+				if (!$self->{end_offset} || ($data[4] > $self->{end_offset})) {
+					$self->{last_year} = $data[0];
+					$self->{last_month} = $data[1];
+					$self->{last_day} = $data[2];
+					$self->{end_time} = $data[3];
+					$self->{end_offset} = $data[4];
+					$line_stored_count += $data[5];
+					$line_processed_count += $data[6];
+					$line_count += $data[7];
+				} 
+				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}") ) {
+					$self->{first_year} = $data[8];
+					$self->{first_month} = $data[9];
+				}
+			}
+			close(IN);
+			#unlink("$self->{pid_dir}/last_parsed.tmp");
+		} else {
+			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
 	}
 
@@ -581,16 +628,20 @@ sub parseFile
 			}
 			print STDERR "Compute and dump month statistics for $1/$2\n" if (!$self->{QuietMode});
 			if (-d "$self->{Output}/$1/$2") {
-				$self->spawn(sub {
+				if ($self->{queue_size} > 1) {
+					$self->spawn(sub {
+						$self->_save_data("$1", "$2");
+					});
+					$child_count = $self->manage_queue_size(++$child_count);
+				} else {
 					$self->_save_data("$1", "$2");
-				});
+				}
 				$self->_clear_stats();
-				$child_count = $self->manage_queue_size(++$child_count);
 			}
 		}
 
 		# Wait for last child stop
-		$self->wait_all_childs();
+		$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 		# Compute year statistics
 		$child_count = 0;
@@ -603,16 +654,20 @@ sub parseFile
 				return;
 			}
 			if (-d "$self->{Output}/$year") {
-				$self->spawn(sub {
+				if ($self->{queue_size} > 1) {
+					$self->spawn(sub {
+						$self->_save_data("$year");
+					});
+					$child_count = $self->manage_queue_size(++$child_count);
+				} else {
 					$self->_save_data("$year");
-				});
+				}
 				$self->_clear_stats();
-				$child_count = $self->manage_queue_size(++$child_count);
 			}
 		}
 
 		# Wait for last child stop
-		$self->wait_all_childs();
+		$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	}
 
@@ -628,8 +683,7 @@ sub split_logfile
 	my $totalsize = (stat("$logf"))[7] || 0;
 
 	# If the file is very small, many jobs actually make the parsing take longer
-	#if ( ($totalsize <= 16777216) || ($totalsize < $self->{end_offset})) { #16MB
-	if ( ($totalsize <= 6777216) || ($totalsize <= $self->{end_offset})) { #16MB
+	if ( ($totalsize <= 16777216) || ($totalsize <= $self->{end_offset})) { #16MB
 		push(@chunks, $totalsize);
 		return @chunks;
 	}
@@ -661,20 +715,20 @@ sub split_logfile
 
 sub _parse_file_part
 {
-	my ($self, $start_offset, $stop_offset) = @_;
+	my ($self, $file, $start_offset, $stop_offset) = @_;
 
-	print STDERR "Reading file $self->{LogFile} from offset $start_offset to $stop_offset.\n" if (!$self->{QuietMode});
+	print STDERR "Reading file $file from offset $start_offset to ", ($stop_offset||'end'), ".\n" if (!$self->{QuietMode});
 
 	# Open logfile
 	my $logfile = new IO::File;
-	if ($self->{LogFile} =~ /\.gz/) {
+	if ($file =~ /\.gz/) {
 		# Open a pipe to zcat program for compressed log
-		$logfile->open("$ZCAT_PROG $self->{LogFile} |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $self->{LogFile}. $!\n");
-	} elsif ($self->{LogFile} =~ /\.bz2/) {
+		$logfile->open("$ZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $file. $!\n");
+	} elsif ($file =~ /\.bz2/) {
 		# Open a pipe to zcat program for compressed log
-		$logfile->open("$BZCAT_PROG $self->{LogFile} |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $self->{LogFile}. $!\n");
+		$logfile->open("$BZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $file. $!\n");
 	} else {
-		$logfile->open($self->{LogFile}) || $self->localdie("ERROR: Unable to open Squid access.log file $self->{LogFile}. $!\n");
+		$logfile->open($file) || $self->localdie("ERROR: Unable to open Squid access.log file $file. $!\n");
 	}
 
 	my $line = '';
@@ -733,19 +787,6 @@ sub _parse_file_part
 			$method = $6;
 			$line = $7;
 
-#			if ($line_count == 1) {
-#				# Check if this file has changed to reread it from the begining (incremental mode)
-#				if ($self->{end_offset} && $self->{history_time} && ($self->{history_time} == $time)) {
-#					print STDERR "Found last history time: $self->{history_time} at offset $self->{end_offset}, starting from here.\n" if (!$self->{QuietMode});
-#					next;
-#				} elsif ($self->{end_offset} && $self->{history_time} && ($self->{history_time} < $time)) {
-#					print STDERR "New log detected (at offset: $self->{end_offset}, history time: $self->{history_time} lower then current time: $time), rereading logfile from the begining.\n" if (!$self->{QuietMode});
-#					$logfile->seek(0, 0);
-#					$self->{end_offset} = 0;
-#					next;
-#				}
-#			}
-
 			# Determine if we have to reset the 
 			# Do not parse some unwanted method
 			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
@@ -754,12 +795,12 @@ sub _parse_file_part
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
 
 			# Register the last parsing time and last offset position in logfile
-			$self->{end_time} = $time;
+			$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
 
 			# Register the first parsing time
-			if (!$self->{begin_time}) {
+			if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
 				$self->{begin_time} = $time;
-				print STDERR "START TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($time)), "\n" if (!$self->{QuietMode});
+				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($time)), "\n" if (!$self->{QuietMode});
 			}
 			# Only store (HIT|UNMODIFIED)/MISS status and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)/#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
@@ -978,7 +1019,9 @@ sub _init
 
 	# Load configuration information
 	if (!$conf_file) {
-		if (-f '/etc/squidanalyzer.conf') {
+		if (-f '/etc/squidanalyzer/squidanalyzer.conf') {
+			$conf_file = '/etc/squidanalyzer/squidanalyzer.conf';
+		} elsif (-f '/etc/squidanalyzer.conf') {
 			$conf_file = '/etc/squidanalyzer.conf';
 		} elsif (-f 'squidanalyzer.conf') {
 			$conf_file = 'squidanalyzer.conf';
@@ -1004,6 +1047,7 @@ sub _init
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
 	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
 	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
+	$self->{LogFile} = ();
 	$self->{queue_size} = 1;
 	$self->{running_pids} = ();
 	$self->{pid_dir} = $pid_dir || '/tmp';
@@ -1035,9 +1079,9 @@ sub _init
 	if (! -d $self->{Output}) {
 		die "ERROR: 'Output' directory $self->{Output} doesn't exists.\n";
 	}
-	$self->{LogFile} = $options{LogFile} || '/var/log/squid/access.log';
-	if (!$self->{LogFile}) {
-		die "ERROR: 'LogFile' configuration option must be set.\n";
+	push(@{$self->{LogFile}}, @{$options{LogFile}});
+	if ($#{$self->{LogFile}} < 0) {
+		die "ERROR: 'LogFile' configuration directive must be set or use -l option at command line.\n";
 	}
 	$self->{OrderUser} = lc($options{OrderUser}) || 'bytes';
 	$self->{OrderNetwork} = lc($options{OrderNetwork}) || 'bytes';
@@ -1207,30 +1251,13 @@ sub _parseData
 	$month = sprintf("%02d", $month + 1);
 	$day = sprintf("%02d", $day);
 
-	# Store data when day or hour change
-	if ($self->{last_year}) {
-
+	# Store data when hour change to save memory
+	if ($self->{last_year} && ($self->{tmp_saving} ne '') && ($hour != $self->{tmp_saving}) ) {
 		# If the day has changed then we want to save stats of the previous one
-		if ("$year$month$day" ne "$self->{last_year}$self->{last_month}$self->{last_day}") {
-
-			$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
-			# Stats can be cleared
-			print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
-			$self->_clear_stats();
-
-		} else {
-
-			# Store data when hour change to save memory
-			if (($self->{tmp_saving} ne '') && ($hour != $self->{tmp_saving}) ) {
-				# If the day has changed then we want to save stats of the previous one
-				$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
-				# Stats can be cleared
-				print STDERR "Clearing statistics storage hashes.\n" if (!$self->{QuietMode});
-				$self->_clear_stats();
-			}
-
-		}
-
+		$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+		# Stats can be cleared
+		print STDERR "Clearing statistics storage hashes, for $self->{last_year}-$self->{last_month}-$self->{last_day} $self->{tmp_saving}:00:00.\n" if (!$self->{QuietMode});
+		$self->_clear_stats();
 	}
 
 	# Extract the domainname part of the URL
@@ -1276,14 +1303,19 @@ sub _parseData
 	}
 
 	# Stores last parsed date part
-	$self->{last_year} = $year;
-	$self->{last_month} = $month;
-	$self->{last_day} = $day;
+	if (!$self->{last_year} || ("$year$month$day" gt "$self->{last_year}$self->{last_month}$self->{last_day}")) {
+		$self->{last_year} = $year;
+		$self->{last_month} = $month;
+		$self->{last_day} = $day;
+	}
+	# Stores current processed hour
 	$self->{tmp_saving} = $hour;
 	$hour = sprintf("%02d", $hour);
 	# Stores first parsed date part
-	$self->{first_year} ||= $self->{last_year};
-	$self->{first_month} ||= $self->{last_month};
+	if (!$self->{first_year} || ("$self->{first_year}$self->{first_month}" gt "$year$month")) {
+		$self->{first_year} = $year;
+		$self->{first_month} = $month;
+	}
 
 	#### Store access denied statistics
 	if ($code eq 'DENIED') {
@@ -2006,39 +2038,55 @@ sub buildHTML
 				next if ($self->check_build_date($y, $m, $d));
 				next if ("$y$m$d" < "$old_year$old_month$old_day");
 				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
-                                $self->spawn(sub {
+				if ($self->{queue_size} > 1) {
+					$self->spawn(sub {
+						$self->gen_html_output($outdir, $y, $m, $d);
+					});
+					$child_count = $self->manage_queue_size(++$child_count);
+				} else {
 					$self->gen_html_output($outdir, $y, $m, $d);
-                                });
+				}
 				my $wn = &get_week_number($y,$m,$d);
 				push(@weeks_to_build, $wn) if (!grep(/^$wn$/, @weeks_to_build));
-                                $child_count = $self->manage_queue_size(++$child_count);
 			}
 			print STDERR "Generating monthly statistics for month $y-$m\n" if (!$self->{QuietMode});
 			push(@months_cal, "$outdir/$y/$m");
-			$self->spawn(sub {
+			if ($self->{queue_size} > 1) {
+				$self->spawn(sub {
+					$self->gen_html_output($outdir, $y, $m);
+				});
+				$child_count = $self->manage_queue_size(++$child_count);
+			} else {
 				$self->gen_html_output($outdir, $y, $m);
-			});
-			$child_count = $self->manage_queue_size(++$child_count);
+			}
 		}
 		foreach my $w (sort @weeks_to_build) {
 			$w = sprintf("%02d", $w+1);
 			push(@weeks_cal, "$outdir/$y/week$w");
 			print STDERR "Generating weekly statistics for week $w on year $y\n" if (!$self->{QuietMode});
-			$self->spawn(sub {
+			if ($self->{queue_size} > 1) {
+				$self->spawn(sub {
+					$self->gen_html_output($outdir, $y, '', '', $w);
+				});
+				$child_count = $self->manage_queue_size(++$child_count);
+			} else {
 				$self->gen_html_output($outdir, $y, '', '', $w);
-			});
-			$child_count = $self->manage_queue_size(++$child_count);
+			}
 		}
 		print STDERR "Generating yearly statistics for year $y\n" if (!$self->{QuietMode});
-		$self->spawn(sub {
+		if ($self->{queue_size} > 1) {
+			$self->spawn(sub {
+				$self->gen_html_output($outdir, $y);
+			});
+			$child_count = $self->manage_queue_size(++$child_count);
+		} else {
 			$self->gen_html_output($outdir, $y);
-		});
-		$child_count = $self->manage_queue_size(++$child_count);
+		}
 		push(@years_cal, "$outdir/$y");
 	}
 
 	# Wait for last child stop
-	$self->wait_all_childs();
+	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	# Set calendar in each new files by replace SA_CALENDAR be the right HTML code
 	foreach my $p (@years_cal) {
@@ -3919,20 +3967,28 @@ sub parse_config
 		$l =~ s/\r//;
 		next if (!$l || ($l =~ /^[\s\t]*#/));
 		my ($key, $val) = split(/[\s\t]+/, $l, 2);
-		$opt{$key} = $val;
+		if ($key ne 'LogFile') {
+			$opt{$key} = $val;
+		} else {
+			push(@{$opt{LogFile}}, split(/[,]+/, $val));
+		}
 	}
 	close(CONF);
 
 	# Set logfile from command line if any.
-	$opt{LogFile} = $log_file if ($log_file);
+	@{$opt{LogFile}} = split(/[,]+/, $log_file) if ($log_file);
 
 	# Check config
 	if (!exists $opt{Output} || !-d $opt{Output}) {
 		$self->localdie("ERROR: you must give a valid output directory. See option: Output\n");
 	}
-	if ( !$opt{LogFile} || !-f $opt{LogFile} ) {
-		if (!$rebuild) {
-			$self->localdie("ERROR: you must give a valid path to the Squid log file. See LogFile or option -l\n");
+	if ( ($#{$opt{LogFile}} < 0) && !$rebuild) {
+		$self->localdie("ERROR: you must give a Squid log file to parse. See LogFile or option -l\n");
+	} else {
+		foreach my $f (@{$opt{LogFile}}) {
+			if (!-f $f) {
+				$self->localdie("ERROR: you must give a valid path to the Squid log file.\n");
+			}
 		}
 	}
 	if (exists $opt{DateFormat}) {
