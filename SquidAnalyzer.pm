@@ -538,7 +538,6 @@ sub parseFile
 		} else {
 			# Create multiple processes to parse one log file by chunks of data
 			my @chunks = $self->split_logfile($lfile);
-			print STDERR "DEBUG: The following $self->{queue_size} boundaries will be used to parse file $lfile, ", join('|', @chunks), "\n" if (!$self->{QuietMode});
 			my $child_count = 0;
 			for (my $i = 0; $i < $#chunks; $i++) {
 				if ($self->{interrupt}) {
@@ -562,30 +561,40 @@ sub parseFile
 			while (my $l = <IN>) {
 				chomp($l);
 				my @data = split(/\s/, $l);
-				if (!$self->{end_offset} || ($data[4] > $self->{end_offset})) {
+				if (!$self->{last_year} || ("$data[0]$data[1]$data[2]" gt "$self->{last_year}$self->{last_month}$self->{last_day}")) {
 					$self->{last_year} = $data[0];
 					$self->{last_month} = $data[1];
 					$self->{last_day} = $data[2];
+				}
+				if (!$self->{end_time} || ($data[3] > $self->{end_time})) {
 					$self->{end_time} = $data[3];
 					$self->{end_offset} = $data[4];
-					$line_stored_count += $data[5];
-					$line_processed_count += $data[6];
-					$line_count += $data[7];
 				} 
+				$line_stored_count += $data[5];
+				$line_processed_count += $data[6];
+				$line_count += $data[7];
 				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}") ) {
 					$self->{first_year} = $data[8];
 					$self->{first_month} = $data[9];
 				}
+				my @tmp = split(/,/, $data[10]);
+				foreach my $w (@tmp) {
+					if (!grep(/^$w$/, @{$self->{week_parsed}})) {
+						push(@{$self->{week_parsed}}, $w);
+					}
+				}
 			}
 			close(IN);
-			#unlink("$self->{pid_dir}/last_parsed.tmp");
+			unlink("$self->{pid_dir}/last_parsed.tmp");
 		} else {
 			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
 	}
 
-	if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
+	if (!$self->{last_year}) {
+
 		print STDERR "No new log registered...\n" if (!$self->{QuietMode});
+
 	} else {
 
 		if (!$self->{QuietMode}) {
@@ -596,9 +605,45 @@ sub parseFile
 		# Set the current start time into history file
 		if ($self->{end_time}) {
 			my $current = new IO::File;
-			$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("Error: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
+			$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
 			print $current "$self->{end_time}\t$self->{end_offset}";
 			$current->close;
+		}
+
+		# Force reordering and unique sorting of data files
+		$self->{overwrite_datafile} = 1;
+		my $child_count = 0;
+		if (!$self->{rebuild}) {
+			if (!$self->{QuietMode}) {
+				print STDERR "Reordering daily data files now...\n";
+			}
+			for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
+				$date =~ /^(\d{4})(\d{2})$/;
+				my $y = $1;
+				my $m = $2;
+				next if (($m < 1) || ($m > 12));
+				if ($self->{interrupt}) {
+					print STDERR "FATAL: Abort signal received\n";
+					return;
+				}
+				if (-d "$self->{Output}/$y/$m") {
+					foreach my $d ("01" .. "31") {
+						if (-d "$self->{Output}/$y/$m/$d") {
+							if ($self->{queue_size} > 1) {
+								$self->spawn(sub {
+									$self->_save_data($y, $m, $d);
+								});
+								$child_count = $self->manage_queue_size(++$child_count);
+							} else {
+								$self->_save_data($y, $m, $d);
+							}
+							$self->_clear_stats();
+						}
+					}
+				}
+			}
+			# Wait for last child stop
+			$self->wait_all_childs() if ($self->{queue_size} > 1);
 		}
 
 		# Compute week statistics
@@ -606,35 +651,47 @@ sub parseFile
 			print STDERR "Generating weekly data files now...\n";
 		}
 
-		my $wn = &get_week_number("$self->{last_year}", "$self->{last_month}", "$self->{last_day}");
-		my @wd = &get_wdays_per_month($wn, "$self->{last_year}-$self->{last_month}");
-		$wn++;
+		$child_count = 0;
+		foreach my $week (@{$self->{week_parsed}}) {
+			my ($y, $m, $wn) = split(/\//, $week);
+			my @wd = &get_wdays_per_month($wn, "$y-$m");
+			$wn++;
 
-		print STDERR "Compute and dump weekly statistics for week $wn on $self->{last_year}\n" if (!$self->{QuietMode});
-		$self->_save_data("$self->{last_year}", "$self->{last_month}", "$self->{last_day}", sprintf("%02d", $wn), @wd);
-		$self->_clear_stats();
+			print STDERR "Compute and dump weekly statistics for week $wn on $y\n" if (!$self->{QuietMode});
+			if ($self->{queue_size} > 1) {
+				$self->spawn(sub {
+					$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
+				});
+				$child_count = $self->manage_queue_size(++$child_count);
+			} else {
+				$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
+			}
+			$self->_clear_stats();
+		}
 
 		# Compute month statistics
 		if (!$self->{QuietMode}) {
 			print STDERR "Generating monthly data files now...\n";
 		}
-		my $child_count = 0;
+
 		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
 			$date =~ /^(\d{4})(\d{2})$/;
-			next if (($2 < 1) || ($2 > 12));
+			my $y = $1;
+			my $m = $2;
+			next if (($m < 1) || ($m > 12));
 			if ($self->{interrupt}) {
 				print STDERR "FATAL: Abort signal received\n";
 				return;
 			}
-			print STDERR "Compute and dump month statistics for $1/$2\n" if (!$self->{QuietMode});
-			if (-d "$self->{Output}/$1/$2") {
+			if (-d "$self->{Output}/$y/$m") {
+				print STDERR "Compute and dump month statistics for $y/$m\n" if (!$self->{QuietMode});
 				if ($self->{queue_size} > 1) {
 					$self->spawn(sub {
-						$self->_save_data("$1", "$2");
+						$self->_save_data("$y", "$m");
 					});
 					$child_count = $self->manage_queue_size(++$child_count);
 				} else {
-					$self->_save_data("$1", "$2");
+					$self->_save_data("$y", "$m");
 				}
 				$self->_clear_stats();
 			}
@@ -646,7 +703,7 @@ sub parseFile
 		# Compute year statistics
 		$child_count = 0;
 		if (!$self->{QuietMode}) {
-			print STDERR "Compute and dump year statistics for $self->{first_year} to $self->{last_year}\n";
+			print STDERR "Generating yearly data files now...\n";
 		}
 		for my $year ($self->{first_year} .. $self->{last_year}) {
 			if ($self->{interrupt}) {
@@ -654,6 +711,7 @@ sub parseFile
 				return;
 			}
 			if (-d "$self->{Output}/$year") {
+				print STDERR "Compute and dump year statistics for $year\n";
 				if ($self->{queue_size} > 1) {
 					$self->spawn(sub {
 						$self->_save_data("$year");
@@ -768,6 +826,7 @@ sub _parse_file_part
 		$self->{end_offset} += length($line);
 
 		chomp($line);
+		next if (!$line);
 
 		# Number of log lines parsed
 		$line_count++;
@@ -948,11 +1007,17 @@ sub _parse_file_part
 		# Stats can be cleared
 		$self->_clear_stats();
 
+		# Stores last week to process
+		my $wn = &get_week_number($self->{last_year}, $self->{last_month}, $self->{last_day});
+		if (!grep(/^$self->{last_year}\/$self->{last_month}\/$wn$/, @{$self->{week_parsed}})) {
+			push(@{$self->{week_parsed}}, "$self->{last_year}/$self->{last_month}/$wn");
+		}
+
 		# Save the last information parsed in this file part
 		if ($self->{queue_size} > 1) {
 			if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
 				flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
-				print OUT "$self->{last_year} $self->{last_month} $self->{last_day} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}\n";
+				print OUT "$self->{last_year} $self->{last_month} $self->{last_day} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month} ", join(',', @{$self->{week_parsed}}), "\n";
 				close(OUT);
 			} else {
 				print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
@@ -1051,6 +1116,12 @@ sub _init
 	$self->{queue_size} = 1;
 	$self->{running_pids} = ();
 	$self->{pid_dir} = $pid_dir || '/tmp';
+	$self->{child_count} = 0;
+	$self->{rebuild} = $rebuild || 0;
+	$self->{overwrite_datafile} = 0;
+	if ($self->{rebuild}) {
+		$self->{overwrite_datafile} = 1;
+	}
 	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
 	$self->{ExcludedMethods} = ();
 	if ($options{ExcludedMethods}) {
@@ -1135,6 +1206,7 @@ sub _init
 	$self->{begin_time} = 0;
 	$self->{end_time} = 0;
 	$self->{end_offset} = 0;
+	$self->{week_parsed} = ();
 	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
 	$self->{preserve} = 0;
@@ -1256,8 +1328,16 @@ sub _parseData
 		# If the day has changed then we want to save stats of the previous one
 		$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
 		# Stats can be cleared
-		print STDERR "Clearing statistics storage hashes, for $self->{last_year}-$self->{last_month}-$self->{last_day} $self->{tmp_saving}:00:00.\n" if (!$self->{QuietMode});
+		print STDERR "Clearing statistics storage hashes, for $self->{last_year}-$self->{last_month}-$self->{last_day} ", sprintf("%02d", $self->{tmp_saving}), ":00:00.\n" if (!$self->{QuietMode});
 		$self->_clear_stats();
+	}
+
+	# Stores weeks to process
+	if ("$year$month$day" ne "$self->{last_year}$self->{last_month}$self->{last_day}") {
+		my $wn = &get_week_number($year, $month, $day);
+		if (!grep(/^$year\/$month\/$wn$/, @{$self->{week_parsed}})) {
+			push(@{$self->{week_parsed}}, "$year/$month/$wn");
+		}
 	}
 
 	# Extract the domainname part of the URL
@@ -1406,10 +1486,37 @@ sub _parseData
 
 }
 
+sub _load_history
+{
+	my ($self, $type, $year, $month, $day, $path, $kind, $wn, @wd) = @_;
+
+	#### Load history
+	if ($type eq 'day') {
+		foreach my $d ("01" .. "31") {
+			$self->_read_stat($year, $month, $d, 'day', $kind);
+		}
+	} elsif ($type eq 'week') {
+		$path = "$year/week$wn";
+		foreach my $wdate (@wd) {
+			$wdate =~ /^(\d+)-(\d+)-(\d+)$/;
+			$self->_read_stat($1, $2, $3, 'day', $kind, $wn);
+		}
+		$type = 'day';
+	} elsif ($type eq 'month') {
+		foreach my $m ("01" .. "12") {
+			$self->_read_stat($year, $m, $day, 'month', $kind);
+		}
+	} else {
+		$self->_read_stat($year, $month, $day, '', $kind);
+	}
+
+}
+
 sub _save_stat
 {
 	my ($self, $year, $month, $day, $wn, @wd) = @_;
 
+	my $read_type = '';
 	my $type = 'hour';
 	if (!$day) {
 		$type = 'day';
@@ -1420,38 +1527,28 @@ sub _save_stat
 	if (!$month) {
 		$type = 'month';
 	}
+	$read_type = $type;
 
 	my $path = join('/', $year, $month, $day);
 	$path =~ s/[\/]+$//;
 
-	#### Load history if we are not rebuilding a particular day
-	if ($type eq 'day') {
-		foreach my $d ("01" .. "31") {
-			$self->_read_stat($year, $month, $d, 'day');
-		}
-	} elsif ($type eq 'week') {
-		$path = "$year/week$wn";
-		foreach my $wdate (@wd) {
-			$wdate =~ /^(\d+)-(\d+)-(\d+)$/;
-			$self->_read_stat($1, $2, $3, 'day', $wn);
-		}
-		$type = 'day';
-	} elsif ($type eq 'month') {
-		foreach my $m ("01" .. "12") {
-			$self->_read_stat($year, $m, $day, 'month');
-		}
-	} else {
-		$self->_read_stat($year, $month, $day);
+	if ($self->{overwrite_datafile}) {
+		print STDERR "Reloading data into $self->{Output}/$path\n" if (!$self->{QuietMode});
 	}
-
 	print STDERR "Dumping data into $self->{Output}/$path\n" if (!$self->{QuietMode});
+	
 
 	#### Save cache statistics
-	open(LOCK, ">$self->{Output}/$path/stat_code.dat.lock") or die "Can't open $self->{Output}/$path/stat_code.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
 	my $dat_file_code = new IO::File;
-	$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
+	if (!$self->{overwrite_datafile}) {
+		$dat_file_code->open(">>$self->{Output}/$path/stat_code.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
+	} else {
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_code', $wn, @wd);
+		$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
+	}
+	flock($dat_file_code, 2) || die "FATAL: can't acquire lock on file, $!\n";
 	foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
 		$dat_file_code->print("$code " .
 			"hits_$type=");
@@ -1465,7 +1562,6 @@ sub _save_stat
 		$dat_file_code->print("\n");
 	}
 	$dat_file_code->close();
-	close LOCK;
 	$self->{"stat_code_$type"} = ();
 	$self->{stat_code} = ();
 
@@ -1474,11 +1570,16 @@ sub _save_stat
 
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
-		open(LOCK, ">$self->{Output}/$path/stat_user_url.dat.lock") or die "Can't open $self->{Output}/$path/stat_user_url.dat.lock ($!)";
-		flock(LOCK, LOCK_EX);
 		my $dat_file_user_url = new IO::File;
-		$dat_file_user_url->open(">$self->{Output}/$path/stat_user_url.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
+		if (!$self->{overwrite_datafile}) {
+			$dat_file_user_url->open(">>$self->{Output}/$path/stat_user_url.dat")
+				or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
+		} else {
+			$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user_url', $wn, @wd);
+			$dat_file_user_url->open(">$self->{Output}/$path/stat_user_url.dat")
+				or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
+		}
+		flock($dat_file_user_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
 				$dat_file_user_url->print(
@@ -1493,16 +1594,20 @@ sub _save_stat
 			}
 		}
 		$dat_file_user_url->close();
-		close LOCK;
 		$self->{"stat_user_url_$type"} = ();
 	}
 
 	#### Save user statistics
-	open(LOCK, ">$self->{Output}/$path/stat_user.dat.lock") or die "Can't open $self->{Output}/$path/stat_user.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
 	my $dat_file_user = new IO::File;
-	$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	if (!$self->{overwrite_datafile}) {
+		$dat_file_user->open(">>$self->{Output}/$path/stat_user.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	} else {
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user', $wn, @wd);
+		$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	}
+	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
 	foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
 		my $name = $id;
 		$name =~ s/\s+//g;
@@ -1522,16 +1627,20 @@ sub _save_stat
 		$dat_file_user->print(";largest_file_url=" . $self->{"stat_usermax_$type"}{$id}{largest_file_url} . "\n");
 	}
 	$dat_file_user->close();
-	close LOCK;
 	$self->{"stat_user_$type"} = ();
 	$self->{"stat_usermax_$type"} = ();
 
 	#### Save network statistics
-	open(LOCK, ">$self->{Output}/$path/stat_network.dat.lock") or die "Can't open $self->{Output}/$path/stat_network.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
 	my $dat_file_network = new IO::File;
-	$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	if (!$self->{overwrite_datafile}) {
+		$dat_file_network->open(">>$self->{Output}/$path/stat_network.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	} else {
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_network', $wn, @wd);
+		$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	}
+	flock($dat_file_network, 2) || die "FATAL: can't acquire lock on file, $!\n";
 	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_network_$type"}}) {
 		$dat_file_network->print("$net\thits_$type=");
 		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
@@ -1549,16 +1658,20 @@ sub _save_stat
 		$dat_file_network->print(";largest_file_url=" . $self->{"stat_netmax_$type"}{$net}{largest_file_url} . "\n");
 	}
 	$dat_file_network->close();
-	close LOCK;
 	$self->{"stat_network_$type"} = ();
 	$self->{"stat_netmax_$type"} = ();
 
 	#### Save user per network statistics
-	open(LOCK, ">$self->{Output}/$path/stat_netuser.dat.lock") or die "Can't open $self->{Output}/$path/stat_netuser.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
 	my $dat_file_netuser = new IO::File;
-	$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+	if (!$self->{overwrite_datafile}) {
+		$dat_file_netuser->open(">>$self->{Output}/$path/stat_netuser.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+	} else {
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_netuser', $wn, @wd);
+		$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+	}
+	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
 	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}}) {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}{$net}}) {
 			$dat_file_netuser->print("$net\t$id\thits=" . $self->{"stat_netuser_$type"}{$net}{$id}{hits} . ";" .
@@ -1570,24 +1683,288 @@ sub _save_stat
 		}
 	}
 	$dat_file_netuser->close();
-	close LOCK;
 	$self->{"stat_netuser_$type"} = ();
 
 	#### Save mime statistics
-	open(LOCK, ">$self->{Output}/$path/stat_mime_type.dat.lock") or die "Can't open $self->{Output}/$path/stat_mime_type.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
 	my $dat_file_mime_type = new IO::File;
-	$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	if (!$self->{overwrite_datafile}) {
+		$dat_file_mime_type->open(">>$self->{Output}/$path/stat_mime_type.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	} else {
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_mime_type', $wn, @wd);
+		$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	}
+	flock($dat_file_mime_type, 2) || die "FATAL: can't acquire lock on file, $!\n";
 	foreach my $mime (sort {$a cmp $b} keys %{$self->{"stat_mime_type_$type"}}) {
 		$dat_file_mime_type->print("$mime hits=" . $self->{"stat_mime_type_$type"}{$mime}{hits} . ";" .
 			"bytes=" . $self->{"stat_mime_type_$type"}{$mime}{bytes} .  "\n");
 	}
 	$dat_file_mime_type->close();
-	close LOCK;
 	$self->{"stat_mime_type_$type"} = ();
 	
 }
+
+sub _read_stat
+{
+	my ($self, $year, $month, $day, $sum_type, $kind, $wn) = @_;
+
+	my $type = 'hour';
+	if (!$day) {
+		$type = 'day';
+	}
+	if (!$month) {
+		$type = 'month';
+	}
+
+	my $path = join('/',  $year, $month, $day);
+	$path =~ s/[\/]+$//;
+
+	return if (! -d "$self->{Output}/$path");
+
+	print STDERR "Reading data from previous dat files in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
+
+	my $k = '';
+	my $key = '';
+	$key = $day if ($sum_type eq 'day');
+	$key = $month if ($sum_type eq 'month');
+	$sum_type ||= $type;
+
+	#### Read previous cache statistics
+	if (!$kind || ($kind eq 'stat_code')) {
+		my $dat_file_code = new IO::File;
+		if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
+			my $i = 1;
+			while (my $l = <$dat_file_code>) {
+				chomp($l);
+				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
+					my $code = $1;
+					my $hits = $2 || '';
+					my $bytes = $3 || '';
+					$hits =~ s/,$//;
+					$bytes =~ s/,$//;
+					my %hits_tmp = split(/[:,]/, $hits);
+					foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_code_$sum_type"}{$code}{$k}{hits} += $hits_tmp{$tmp};
+					}
+					my %bytes_tmp = split(/[:,]/, $bytes);
+					foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
+					}
+				} else {
+					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
+					print STDERR "$l\n";
+					unlink($self->{pidfile});
+					exit 0;
+				}
+				$i++;
+			}
+			$dat_file_code->close();
+		}
+	}
+
+	#### With huge log file we only store global statistics in year and month views
+	return if ($self->{no_year_stat} && ($type ne 'hour'));
+
+	#### Read previous client statistics
+	if (!$kind || ($kind eq 'stat_user')) {
+		my $dat_file_user = new IO::File;
+		if ($dat_file_user->open("$self->{Output}/$path/stat_user.dat")) {
+			my $i = 1;
+			while (my $l = <$dat_file_user>) {
+				chomp($l);
+				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+					my $id = $1;
+					my $hits = $2 || '';
+					my $bytes = $3 || '';
+					my $duration = $4 || '';
+					if ($5 > $self->{"stat_usermax_$sum_type"}{$id}{largest_file_size}) {
+						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $5;
+						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $6;
+					}
+					$hits =~ s/,$//;
+					$bytes =~ s/,$//;
+					$duration =~ s/,$//;
+					my %hits_tmp = split(/[:,]/, $hits);
+					foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_user_$sum_type"}{$id}{$k}{hits} += $hits_tmp{$tmp};
+					}
+					my %bytes_tmp = split(/[:,]/, $bytes);
+					foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_user_$sum_type"}{$id}{$k}{bytes} += $bytes_tmp{$tmp};
+					}
+					my %duration_tmp = split(/[:,]/, $duration);
+					foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_user_$sum_type"}{$id}{$k}{duration} += $duration_tmp{$tmp};
+					}
+				} else {
+					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
+					print STDERR "$l\n";
+					unlink($self->{pidfile});
+					exit 0;
+				}
+				$i++;
+			}
+			$dat_file_user->close();
+		}
+	}
+
+	#### Read previous url statistics
+	if ($self->{UrlReport}) {
+		if (!$kind || ($kind eq 'stat_user_url')) {
+			my $dat_file_user_url = new IO::File;
+			if ($dat_file_user_url->open("$self->{Output}/$path/stat_user_url.dat")) {
+				my $i = 1;
+				while (my $l = <$dat_file_user_url>) {
+					chomp($l);
+					if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_hit} += $8;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_bytes} += $9;
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
+						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
+						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{duration} += $4;
+					} else {
+						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
+						print STDERR "$l\n";
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$i++;
+				}
+				$dat_file_user_url->close();
+			}
+		}
+	}
+
+	#### Read previous network statistics
+	if (!$kind || ($kind eq 'stat_network')) {
+		my $dat_file_network = new IO::File;
+		if ($dat_file_network->open("$self->{Output}/$path/stat_network.dat")) {
+			my $i = 1;
+			while (my $l = <$dat_file_network>) {
+				chomp($l);
+				my ($net, $data) = split(/\t/, $l);
+				if (!$data) {
+					# Assume backward compatibility
+					$l =~ s/^(.*)\shits_$type=/hits_$type=/;
+					$net = $1;
+					$data = $l;
+				}
+				if ($data =~ s/^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+					my $hits = $1 || '';
+					my $bytes = $2 || '';
+					my $duration = $3 || '';
+					if ($4 > $self->{"stat_netmax_$sum_type"}{$net}{largest_file_size}) {
+						$self->{"stat_netmax_$sum_type"}{$net}{largest_file_size} = $4;
+						$self->{"stat_netmax_$sum_type"}{$net}{largest_file_url} = $5;
+					}
+					$hits =~ s/,$//;
+					$bytes =~ s/,$//;
+					$duration =~ s/,$//;
+					my %hits_tmp = split(/[:,]/, $hits);
+					foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_network_$sum_type"}{$net}{$k}{hits} += $hits_tmp{$tmp};
+					}
+					my %bytes_tmp = split(/[:,]/, $bytes);
+					foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_network_$sum_type"}{$net}{$k}{bytes} += $bytes_tmp{$tmp};
+					}
+					my %duration_tmp = split(/[:,]/, $duration);
+					foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
+						if ($key ne '') { $k = $key; } else { $k = $tmp; }
+						$self->{"stat_network_$sum_type"}{$net}{$k}{duration} += $duration_tmp{$tmp};
+					}
+				} else {
+					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
+					print STDERR "$l\n";
+					unlink($self->{pidfile});
+					exit 0;
+				}
+				$i++;
+			}
+			$dat_file_network->close();
+		}
+	}
+
+	#### Read previous user per network statistics
+	if (!$kind || ($kind eq 'stat_netuser')) {
+		my $dat_file_netuser = new IO::File;
+		if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
+			my $i = 1;
+			while (my $l = <$dat_file_netuser>) {
+				chomp($l);
+				my ($net, $id, $data) = split(/\t/, $l);
+				if (!$data) {
+					# Assume backward compatibility
+					$l =~ s/^(.*)\s([^\s]+)\shits=/hits=/;
+					$net = $1;
+					$id = $2;
+					$data = $l;
+				}
+				if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+					$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
+					$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
+					$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
+					if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
+					}
+				} else {
+					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
+					print STDERR "$l\n";
+					unlink($self->{pidfile});
+					exit 0;
+				}
+				$i++;
+			}
+			$dat_file_netuser->close();
+		}
+	}
+
+	#### Read previous mime statistics
+	if (!$kind || ($kind eq 'stat_mime_type')) {
+		my $dat_file_mime_type = new IO::File;
+		if ($dat_file_mime_type->open("$self->{Output}/$path/stat_mime_type.dat")) {
+			my $i = 1;
+			while (my $l = <$dat_file_mime_type>) {
+				chomp($l);
+				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
+					my $mime = $1;
+					$self->{"stat_mime_type_$sum_type"}{$mime}{hits} += $2;
+					$self->{"stat_mime_type_$sum_type"}{$mime}{bytes} += $3;
+				} else {
+					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
+					print STDERR "$l\n";
+					unlink($self->{pidfile});
+					exit 0;
+				}
+				$i++;
+			}
+			$dat_file_mime_type->close();
+		}
+	}
+
+}
+
 
 sub _save_data
 {
@@ -1608,273 +1985,6 @@ sub _save_data
 	}
 	# Dumping data
 	$self->_save_stat($year, $month, $day, $wn, @wd);
-
-}
-
-
-sub _read_stat
-{
-	my ($self, $year, $month, $day, $sum_type, $wn) = @_;
-
-	my $type = 'hour';
-	if (!$day) {
-		$type = 'day';
-	}
-	if (!$month) {
-		$type = 'month';
-	}
-
-	my $path = join('/',  $year, $month, $day);
-	$path =~ s/[\/]+$//;
-
-	return if (! -d "$self->{Output}/$path");
-
-	print STDERR "Reading data from previous dat files in $self->{Output}/$path/\n" if (!$self->{QuietMode});
-
-	my $k = '';
-	my $key = '';
-	$key = $day if ($sum_type eq 'day');
-	$key = $month if ($sum_type eq 'month');
-	$sum_type ||= $type;
-
-	#### Read previous cache statistics
-	open(LOCK, ">$self->{Output}/$path/stat_code.dat.lock") or die "Can't open $self->{Output}/$path/stat_code.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
-	my $dat_file_code = new IO::File;
-	if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_code>) {
-			chomp($l);
-			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
-				my $code = $1;
-				my $hits = $2 || '';
-				my $bytes = $3 || '';
-				$hits =~ s/,$//;
-				$bytes =~ s/,$//;
-				my %hits_tmp = split(/[:,]/, $hits);
-				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_code_$sum_type"}{$code}{$k}{hits} += $hits_tmp{$tmp};
-				}
-				my %bytes_tmp = split(/[:,]/, $bytes);
-				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
-				}
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_code->close();
-	}
-	close LOCK;
-
-	#### With huge log file we only store global statistics in year and month views
-	return if ($self->{no_year_stat} && ($type ne 'hour'));
-
-	#### Read previous client statistics
-	open(LOCK, ">$self->{Output}/$path/stat_user.dat.lock") or die "Can't open $self->{Output}/$path/stat_user.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
-	my $dat_file_user = new IO::File;
-	if ($dat_file_user->open("$self->{Output}/$path/stat_user.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_user>) {
-			chomp($l);
-			if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-				my $id = $1;
-				my $hits = $2 || '';
-				my $bytes = $3 || '';
-				my $duration = $4 || '';
-				if ($5 > $self->{"stat_usermax_$sum_type"}{$id}{largest_file_size}) {
-					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $5;
-					$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $6;
-				}
-				$hits =~ s/,$//;
-				$bytes =~ s/,$//;
-				$duration =~ s/,$//;
-				my %hits_tmp = split(/[:,]/, $hits);
-				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_user_$sum_type"}{$id}{$k}{hits} += $hits_tmp{$tmp};
-				}
-				my %bytes_tmp = split(/[:,]/, $bytes);
-				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_user_$sum_type"}{$id}{$k}{bytes} += $bytes_tmp{$tmp};
-				}
-				my %duration_tmp = split(/[:,]/, $duration);
-				foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_user_$sum_type"}{$id}{$k}{duration} += $duration_tmp{$tmp};
-				}
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_user->close();
-	}
-	close LOCK;
-
-	#### Read previous url statistics
-	if ($self->{UrlReport}) {
-		open(LOCK, ">$self->{Output}/$path/stat_user_url.dat.lock") or die "Can't open $self->{Output}/$path/stat_user_url.dat.lock ($!)";
-		flock(LOCK, LOCK_EX);
-		my $dat_file_user_url = new IO::File;
-		if ($dat_file_user_url->open("$self->{Output}/$path/stat_user_url.dat")) {
-			my $i = 1;
-			while (my $l = <$dat_file_user_url>) {
-				chomp($l);
-				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_hit} += $8;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_bytes} += $9;
-				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
-					$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
-				} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
-					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{hits} += $2;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{bytes} += $3;
-					$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{duration} += $4;
-				} else {
-					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
-					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
-				}
-				$i++;
-			}
-			$dat_file_user_url->close();
-		}
-		close LOCK;
-	}
-
-	#### Read previous network statistics
-	open(LOCK, ">$self->{Output}/$path/stat_network.dat.lock") or die "Can't open $self->{Output}/$path/stat_network.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
-	my $dat_file_network = new IO::File;
-	if ($dat_file_network->open("$self->{Output}/$path/stat_network.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_network>) {
-			chomp($l);
-			my ($net, $data) = split(/\t/, $l);
-			if (!$data) {
-				# Assume backward compatibility
-				$l =~ s/^(.*)\shits_$type=/hits_$type=/;
-				$net = $1;
-				$data = $l;
-			}
-			if ($data =~ s/^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-				my $hits = $1 || '';
-				my $bytes = $2 || '';
-				my $duration = $3 || '';
-				if ($4 > $self->{"stat_netmax_$sum_type"}{$net}{largest_file_size}) {
-					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_size} = $4;
-					$self->{"stat_netmax_$sum_type"}{$net}{largest_file_url} = $5;
-				}
-				$hits =~ s/,$//;
-				$bytes =~ s/,$//;
-				$duration =~ s/,$//;
-				my %hits_tmp = split(/[:,]/, $hits);
-				foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_network_$sum_type"}{$net}{$k}{hits} += $hits_tmp{$tmp};
-				}
-				my %bytes_tmp = split(/[:,]/, $bytes);
-				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_network_$sum_type"}{$net}{$k}{bytes} += $bytes_tmp{$tmp};
-				}
-				my %duration_tmp = split(/[:,]/, $duration);
-				foreach my $tmp (sort {$a <=> $b} keys %duration_tmp) {
-					if ($key ne '') { $k = $key; } else { $k = $tmp; }
-					$self->{"stat_network_$sum_type"}{$net}{$k}{duration} += $duration_tmp{$tmp};
-				}
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_network->close();
-	}
-	close LOCK;
-
-	#### Read previous user per network statistics
-	open(LOCK, ">$self->{Output}/$path/stat_netuser.dat.lock") or die "Can't open $self->{Output}/$path/stat_netuser.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
-	my $dat_file_netuser = new IO::File;
-	if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_netuser>) {
-			chomp($l);
-			my ($net, $id, $data) = split(/\t/, $l);
-			if (!$data) {
-				# Assume backward compatibility
-				$l =~ s/^(.*)\s([^\s]+)\shits=/hits=/;
-				$net = $1;
-				$id = $2;
-				$data = $l;
-			}
-			if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-				$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
-				$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
-				$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
-				if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
-					$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
-					$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
-				}
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_netuser->close();
-	}
-	close LOCK;
-
-	#### Read previous mime statistics
-	open(LOCK, ">$self->{Output}/$path/stat_mime_type.dat.lock") or die "Can't open $self->{Output}/$path/stat_mime_type.dat.lock ($!)";
-	flock(LOCK, LOCK_EX);
-	my $dat_file_mime_type = new IO::File;
-	if ($dat_file_mime_type->open("$self->{Output}/$path/stat_mime_type.dat")) {
-		my $i = 1;
-		while (my $l = <$dat_file_mime_type>) {
-			chomp($l);
-			if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
-				my $mime = $1;
-				$self->{"stat_mime_type_$sum_type"}{$mime}{hits} += $2;
-				$self->{"stat_mime_type_$sum_type"}{$mime}{bytes} += $3;
-			} else {
-				print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
-				print STDERR "$l\n";
-				unlink($self->{pidfile});
-				exit 0;
-			}
-			$i++;
-		}
-		$dat_file_mime_type->close();
-	}
-	close LOCK;
 
 }
 
@@ -1966,9 +2076,11 @@ sub buildHTML
 	my ($self, $outdir) = @_;
 
 	# No new log registered, no html buid required
-	if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
-		print STDERR "Skipping HTML build.\n" if (!$self->{QuietMode});
-		return;
+	if (!$self->{rebuild}) {
+		if (!$self->{last_year} && !$self->{last_month} && !$self->{last_day}) {
+			print STDERR "Skipping HTML build.\n" if (!$self->{QuietMode});
+			return;
+		}
 	}
 
 	$outdir ||= $self->{Output};
@@ -2002,12 +2114,13 @@ sub buildHTML
 	opendir(DIR, $outdir) || die "Error: can't opendir $outdir: $!";
 	my @years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
 	closedir DIR;
-	my $child_count = 0;
+	$self->{child_count} = 0;
 	my @years_cal = ();
 	my @months_cal = ();
 	my @weeks_cal = ();
+	my @day_count = ();
 	foreach my $y (sort {$a <=> $b} @years) {
-		next if (!$y);
+		next if (!$y || ($y < $self->{first_year}));
 		next if ($self->check_build_date($y));
 		# Remove the full year repository if it is older that the last date to preserve
 		if ($p_year && ($y < $p_year)) {
@@ -2016,13 +2129,13 @@ sub buildHTML
 			next;
 		}
 		next if (!$p_year && ($y < $old_year));
-		opendir(DIR, "$outdir/$y") || $self->localdie("Error: can't opendir $outdir/$y: $!");
+		opendir(DIR, "$outdir/$y") || $self->localdie("FATAL: can't opendir $outdir/$y: $!");
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		my @weeks  = grep { /^week\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		closedir DIR;
 		my @weeks_to_build = ();
 		foreach my $m (sort {$a <=> $b} @months) {
-			next if (!$m);
+			next if (!$m || ($m < $self->{first_month}));
 			next if ($self->check_build_date($y, $m));
 			# Remove the full month repository if it is older that the last date to preserve
 			if ($p_year && ("$y$m" < "$p_year$p_month")) {
@@ -2031,116 +2144,156 @@ sub buildHTML
 				next;
 			}
 			next if ("$y$m" < "$old_year$old_month");
-			opendir(DIR, "$outdir/$y/$m") || $self->localdie("Error: can't opendir $outdir/$y/$m: $!");
+			opendir(DIR, "$outdir/$y/$m") || $self->localdie("FATAL: can't opendir $outdir/$y/$m: $!");
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
 			closedir DIR;
 			foreach my $d (sort {$a <=> $b} @days) {
 				next if ($self->check_build_date($y, $m, $d));
 				next if ("$y$m$d" < "$old_year$old_month$old_day");
-				print STDERR "Generating daily statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
-				if ($self->{queue_size} > 1) {
-					$self->spawn(sub {
-						$self->gen_html_output($outdir, $y, $m, $d);
-					});
-					$child_count = $self->manage_queue_size(++$child_count);
-				} else {
-					$self->gen_html_output($outdir, $y, $m, $d);
-				}
+				print STDERR "Generating statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
+				$self->gen_html_output($outdir, $y, $m, $d);
+				push(@day_count, "$outdir/$y/$m/$d");
 				my $wn = &get_week_number($y,$m,$d);
 				push(@weeks_to_build, $wn) if (!grep(/^$wn$/, @weeks_to_build));
 			}
-			print STDERR "Generating monthly statistics for month $y-$m\n" if (!$self->{QuietMode});
+			print STDERR "Generating statistics for month $y-$m\n" if (!$self->{QuietMode});
 			push(@months_cal, "$outdir/$y/$m");
-			if ($self->{queue_size} > 1) {
-				$self->spawn(sub {
-					$self->gen_html_output($outdir, $y, $m);
-				});
-				$child_count = $self->manage_queue_size(++$child_count);
-			} else {
-				$self->gen_html_output($outdir, $y, $m);
-			}
+			$self->gen_html_output($outdir, $y, $m);
 		}
 		foreach my $w (sort @weeks_to_build) {
 			$w = sprintf("%02d", $w+1);
 			push(@weeks_cal, "$outdir/$y/week$w");
-			print STDERR "Generating weekly statistics for week $w on year $y\n" if (!$self->{QuietMode});
-			if ($self->{queue_size} > 1) {
-				$self->spawn(sub {
-					$self->gen_html_output($outdir, $y, '', '', $w);
-				});
-				$child_count = $self->manage_queue_size(++$child_count);
-			} else {
-				$self->gen_html_output($outdir, $y, '', '', $w);
-			}
+			print STDERR "Generating statistics for week $w on year $y\n" if (!$self->{QuietMode});
+			$self->gen_html_output($outdir, $y, '', '', $w);
 		}
-		print STDERR "Generating yearly statistics for year $y\n" if (!$self->{QuietMode});
-		if ($self->{queue_size} > 1) {
-			$self->spawn(sub {
-				$self->gen_html_output($outdir, $y);
-			});
-			$child_count = $self->manage_queue_size(++$child_count);
-		} else {
-			$self->gen_html_output($outdir, $y);
-		}
+		print STDERR "Generating statistics for year $y\n" if (!$self->{QuietMode});
+		$self->gen_html_output($outdir, $y);
 		push(@years_cal, "$outdir/$y");
+
 	}
 
 	# Wait for last child stop
 	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
-	# Set calendar in each new files by replace SA_CALENDAR be the right HTML code
+	# Set calendar in each new files by replacing SA_CALENDAR_SA in the right HTML code
+	# Same with number of users, urls and domains
 	foreach my $p (@years_cal) {
 		$p =~ /\/(\d+)$/;
 		my $stat_date = $self->set_date($1);
 		my $cal = $self->_get_calendar($stat_date, $1, $2, 'month', $p);
-		opendir(DIR, "$p") || $self->localdie("Error: can't opendir $p: $!\n");
+		my $nuser = '-';
+		my $nurl = '-';
+		my $ndomain = '-';
+		# Search for item count
+		if (-e "$p/stat_count.dat") {
+			open(IN, "$p/stat_count.dat") or die "FATAL: can't read file $p/stat_count.dat, $!\n";
+			while (my $l = <IN>) {
+				chomp($l);
+				if ($l =~ /^users:(\d+)/) {
+					$nuser = $1;
+				} elsif ($l =~ /^urls:(\d+)/) {
+					$nurl = $1;
+				} elsif ($l =~ /^domains:(\d+)/) {
+					$ndomain = $1;
+				}
+			}
+			close(IN);
+			unlink("$p/stat_count.dat");
+		}
+		opendir(DIR, "$p") || $self->localdie("FATAL: can't opendir $p: $!\n");
 		my @html = grep { /\.html$/ } readdir(DIR);
 		closedir DIR;
 		foreach my $f (@html) {
 			open(IN, "$p/$f") or $self->localdie("FATAL: can't read file $p/$f\n");
 			my @content = <IN>;
 			close IN;
-			map { s/SA_CALENDAR/$cal/ } @content;
+			map { s/SA_CALENDAR_SA/$cal/ } @content;
+			map { s/SA_NUSERS_SA/$nuser/ } @content;
+			map { s/SA_NURLS_SA/$nurl/ } @content;
+			map { s/SA_NDOMAINS_SA/$ndomain/ } @content;
 			open(OUT, ">$p/$f") or $self->localdie("FATAL: can't write to file $p/$f\n");
 			print OUT @content;
 			close OUT;
 		}
 	}
+
 	foreach my $p (@months_cal) {
 		$p =~ /\/(\d+)\/(\d+)$/;
 		my $stat_date = $self->set_date($1, $2);
 		my $cal = $self->_get_calendar($stat_date, $1, $2, 'day', $p);
-		opendir(DIR, "$p") || $self->localdie("Error: can't opendir $p: $!\n");
+		my $nuser = '-';
+		my $nurl = '-';
+		my $ndomain = '-';
+		# Search for item count
+		if (-e "$p/stat_count.dat") {
+			open(IN, "$p/stat_count.dat") or die "FATAL: can't read file $p/stat_count.dat, $!\n";
+			while (my $l = <IN>) {
+				chomp($l);
+				if ($l =~ /^users:(\d+)/) {
+					$nuser = $1;
+				} elsif ($l =~ /^urls:(\d+)/) {
+					$nurl = $1;
+				} elsif ($l =~ /^domains:(\d+)/) {
+					$ndomain = $1;
+				}
+			}
+			close(IN);
+			unlink("$p/stat_count.dat");
+		}
+		opendir(DIR, "$p") || $self->localdie("FATAL: can't opendir $p: $!\n");
 		my @html = grep { /\.html$/ } readdir(DIR);
 		closedir DIR;
 		foreach my $f (@html) {
 			open(IN, "$p/$f") or $self->localdie("FATAL: can't read file $p/$f\n");
 			my @content = <IN>;
 			close IN;
-			map { s/SA_CALENDAR/$cal/ } @content;
+			map { s/SA_CALENDAR_SA/$cal/ } @content;
+			map { s/SA_NUSERS_SA/$nuser/ } @content;
+			map { s/SA_NURLS_SA/$nurl/ } @content;
+			map { s/SA_NDOMAINS_SA/$ndomain/ } @content;
 			open(OUT, ">$p/$f") or $self->localdie("FATAL: can't write to file $p/$f\n");
 			print OUT @content;
 			close OUT;
 		}
 	}
-	# Remove lock files in all repository
-	$self->clean_lock_files(@years_cal, @months_cal, @weeks_cal);
 
-	$self->_gen_summary($outdir);
-}
-
-sub clean_lock_files
-{
-	my $self = shift;
-
-	foreach my $p (@_) {
-		opendir(DIR, "$p") || $self->localdie("Error: can't opendir $p: $!\n");
-		my @lock = grep { /\.lock$/ } readdir(DIR);
+	foreach my $p (@day_count) {
+		my $nuser = '-';
+		my $nurl = '-';
+		my $ndomain = '-';
+		# Search for item count
+		if (-e "$p/stat_count.dat") {
+			open(IN, "$p/stat_count.dat") or die "FATAL: can't read file $p/stat_count.dat, $!\n";
+			while (my $l = <IN>) {
+				chomp($l);
+				if ($l =~ /^users:(\d+)/) {
+					$nuser = $1;
+				} elsif ($l =~ /^urls:(\d+)/) {
+					$nurl = $1;
+				} elsif ($l =~ /^domains:(\d+)/) {
+					$ndomain = $1;
+				}
+			}
+			close(IN);
+			unlink("$p/stat_count.dat");
+		}
+		opendir(DIR, "$p") || $self->localdie("FATAL: can't opendir $p: $!\n");
+		my @html = grep { /\.html$/ } readdir(DIR);
 		closedir DIR;
-		foreach my $f (@lock) {
-			unlink("$p/$f");
+		foreach my $f (@html) {
+			open(IN, "$p/$f") or $self->localdie("FATAL: can't read file $p/$f\n");
+			my @content = <IN>;
+			close IN;
+			map { s/SA_NUSERS_SA/$nuser/ } @content;
+			map { s/SA_NURLS_SA/$nurl/ } @content;
+			map { s/SA_NDOMAINS_SA/$ndomain/ } @content;
+			open(OUT, ">$p/$f") or $self->localdie("FATAL: can't write to file $p/$f\n");
+			print OUT @content;
+			close OUT;
 		}
 	}
+
+	$self->_gen_summary($outdir);
 }
 
 sub gen_html_output
@@ -2164,29 +2317,44 @@ sub gen_html_output
 		$stat_date = "$Translate{Week} $week - $year";
 	}
 
-	my $nuser = 0;
-	my $nurl = 0;
-	my $ndomain = 0;
-
 	#### With huge log file we do not store detail statistics
 	if ( !$self->{no_year_stat} || ($self->{no_year_stat} && ($day || $week)) ) {
-		print STDERR "\tUser statistics in $dir...\n" if (!$self->{QuietMode});
-		$nuser = $self->_print_user_stat($dir, $year, $month, $day, $week);
-		print STDERR "\tMime type statistics in $dir...\n" if (!$self->{QuietMode});
-		$self->_print_mime_stat($dir, $year, $month, $day, $week);
-		print STDERR "\tNetwork statistics in $dir...\n" if (!$self->{QuietMode});
-		$self->_print_network_stat($dir, $year, $month, $day, $week);
-		if ($self->{UrlReport}) {
-			print STDERR "\tTop URL statistics in $dir...\n" if (!$self->{QuietMode});
-			$nurl = $self->_print_top_url_stat($dir, $year, $month, $day, $week);
-			print STDERR "\tTop domain statistics in $dir...\n" if (!$self->{QuietMode});
-			$ndomain = $self->_print_top_domain_stat($dir, $year, $month, $day, $week);
+		if ($self->{queue_size} <= 1) {
+			$self->_print_user_stat($dir, $year, $month, $day, $week);
+			$self->_print_mime_stat($dir, $year, $month, $day, $week);
+			$self->_print_network_stat($dir, $year, $month, $day, $week);
+			if ($self->{UrlReport}) {
+				$self->_print_top_url_stat($dir, $year, $month, $day, $week);
+				$self->_print_top_domain_stat($dir, $year, $month, $day, $week);
+			}
+		} else {
+			$self->spawn(sub {
+				$self->_print_user_stat($dir, $year, $month, $day, $week);
+			});
+			$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			$self->spawn(sub {
+				$self->_print_mime_stat($dir, $year, $month, $day, $week);
+			});
+			$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			$self->spawn(sub {
+				$self->_print_network_stat($dir, $year, $month, $day, $week);
+			});
+			$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			if ($self->{UrlReport}) {
+				$self->spawn(sub {
+					$self->_print_top_url_stat($dir, $year, $month, $day, $week);
+				});
+				$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+				$self->spawn(sub {
+					$self->_print_top_domain_stat($dir, $year, $month, $day, $week);
+				});
+				$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			}
+
 		}
 	}
-	print STDERR "\tCache statistics in $dir...\n" if (!$self->{QuietMode});
-	$self->_print_cache_stat($dir, $year, $month, $day, $nuser, $nurl, $ndomain, $week);
+	$self->_print_cache_stat($dir, $year, $month, $day, $week);
 
-	return ($nuser, $nurl, $ndomain);
 }
 
 sub parse_duration
@@ -2206,7 +2374,11 @@ sub parse_duration
 
 sub _print_cache_stat
 {
-	my ($self, $outdir, $year, $month, $day, $nuser, $nurl, $ndomain, $week) = @_;
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
+
+	print STDERR "\tCache statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing cache statistics in $outdir";
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2247,9 +2419,10 @@ sub _print_cache_stat
 		}
 		$infile->close();
 	}
-	my $total_request =  $code_stat{HIT}{request} + $code_stat{MISS}{request};
-	my $total_bytes = $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes};
-	my $total_denied =  $code_stat{DENIED}{request} + $code_stat{DENIED}{request};
+	my $total_request =  ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_bytes =  ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
+	my $total_all_request =  ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_all_bytes =  ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
 
 	if ($week && !-d "$outdir") {
 		return;
@@ -2258,7 +2431,7 @@ sub _print_cache_stat
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	if ( !$self->{no_year_stat} || ($type ne 'month') ) {
 		$self->_print_header(\$out, $self->{menu}, $cal);
@@ -2268,7 +2441,7 @@ sub _print_cache_stat
 		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 	}
 
-	my $total_cost = sprintf("%2.2f", int($total_bytes/1000000) * $self->{CostPrice});
+	my $total_cost = sprintf("%2.2f", int(($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes})/1000000) * $self->{CostPrice});
 	my $comma_bytes = $self->format_bytes($total_bytes);
 	my $hit_bytes = $self->format_bytes($code_stat{HIT}{bytes});
 	my $miss_bytes = $self->format_bytes($code_stat{MISS}{bytes});
@@ -2391,9 +2564,6 @@ sub _print_cache_stat
 	@miss = ();
 	@denied = ();
 	@total = ();
-	$nuser ||= '-';
-	$nurl ||= '-';
-	$ndomain ||= '-';
 
 	print $out qq{
 <table class="stata">
@@ -2418,23 +2588,29 @@ sub _print_cache_stat
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
+	my $percent_hit = sprintf("%.2f", ($code_stat{HIT}{request}/$total_all_request)*100);
+	my $percent_miss = sprintf("%.2f", ($code_stat{MISS}{request}/$total_all_request)*100);
+	my $percent_denied = sprintf("%.2f", ($code_stat{DENIED}{request}/$total_all_request)*100);
+	my $percent_bhit = sprintf("%.2f", ($code_stat{HIT}{bytes}/$total_all_bytes)*100);
+	my $percent_bmiss = sprintf("%.2f", ($code_stat{MISS}{bytes}/$total_all_bytes)*100);
+	my $percent_bdenied = sprintf("%.2f", ($code_stat{DENIED}{bytes}/$total_all_bytes)*100);
 	print $out qq{
 </tr>
 <tr>
-<td>$code_stat{HIT}{request}</td>
-<td>$code_stat{MISS}{request}</td>
-<td>$code_stat{DENIED}{request}</td>
-<td>$hit_bytes</td>
-<td>$miss_bytes</td>
-<td>$denied_bytes</td>
+<td>$code_stat{HIT}{request}<br><span class="italicPercent">($percent_hit%)</span></td>
+<td>$code_stat{MISS}{request}<br><span class="italicPercent">($percent_miss%)</span></td>
+<td>$code_stat{DENIED}{request}<br><span class="italicPercent">($percent_denied%)</span></td>
+<td>$hit_bytes<br><span class="italicPercent">($percent_bhit%)</span></td>
+<td>$miss_bytes<br><span class="italicPercent">($percent_bmiss%)</span></td>
+<td>$denied_bytes<br><span class="italicPercent">($percent_bdenied%)</span></td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
-<td>$nuser</td>
-<td>$nurl</td>
-<td>$ndomain</td>
+<td>SA_NUSERS_SA</td>
+<td>SA_NURLS_SA</td>
+<td>SA_NDOMAINS_SA</td>
 };
 	print $out qq{
-<td>$total_cost</td>
+<td class="cacheValues">$total_cost</td>
 } if ($self->{CostPrice});
 	print $out qq{
 </tr>
@@ -2468,6 +2644,10 @@ sub _print_cache_stat
 sub _print_mime_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
+
+	print STDERR "\tMime type statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing mime statistics in $outdir";
 
 	my $stat_date = $self->set_date($year, $month, $day);
 
@@ -2510,7 +2690,7 @@ sub _print_mime_stat
 	$sortpos = 3 if ($self->{OrderMime} eq 'duration');
 
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	# Print title and calendar view
@@ -2602,6 +2782,10 @@ sub _print_network_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
+	print STDERR "\tNetwork statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing network statistics in $outdir";
+
 	my $stat_date = $self->set_date($year, $month, $day);
 
 	my $type = 'hour';
@@ -2675,7 +2859,7 @@ sub _print_network_stat
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out $self->_print_title($Translate{'Network_title'}, $stat_date, $week);
@@ -2802,7 +2986,7 @@ sub _print_network_stat
 		my $outnet = new IO::File;
 		$outnet->open(">$outdir/networks/$net/$net.html") || return;
 		# Print the HTML header
-		my $cal = 'SA_CALENDAR';
+		my $cal = 'SA_CALENDAR_SA';
 		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date, $week);
 
@@ -2881,6 +3065,10 @@ sub _print_user_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
+	print STDERR "\tUser statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing user statistics in $outdir";
+
 	my $stat_date = $self->set_date($year, $month, $day);
 
 	my $type = 'hour';
@@ -2903,7 +3091,7 @@ sub _print_user_stat
         my $total_hit = 0;
         my $total_bytes = 0;
         my $total_duration = 0;
-	while(my $l = <$infile>) {
+	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 		$data =~ /hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
@@ -2938,7 +3126,14 @@ sub _print_user_stat
 		}
 	}
 	$infile->close();
+
+	# Store number of users
 	my $nuser = scalar keys %user_stat;
+	my $outf = new IO::File;
+	$outf->open(">>$outdir/stat_count.dat") || return;
+	flock($outf, 2) || die "FATAL: can't acquire lock on file $outdir/stat_count.dat, $!\n";
+	$outf->print("users:$nuser\n");
+	$outf->close;
 
 	my $file = $outdir . '/user.html';
 	my $out = new IO::File;
@@ -2949,7 +3144,7 @@ sub _print_user_stat
 	$sortpos = 3 if ($self->{OrderUser} eq 'duration');
 
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 
@@ -3048,7 +3243,7 @@ sub _print_user_stat
 		my $outusr = new IO::File;
 		$outusr->open(">$outdir/users/$url/$url.html") || return;
 		# Print the HTML header
-		my $cal = 'SA_CALENDAR';
+		my $cal = 'SA_CALENDAR_SA';
 		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date, $week);
 
@@ -3119,6 +3314,8 @@ sub _print_user_stat
 sub _print_netuser_stat
 {
 	my ($self, $outdir, $out, $usrnet) = @_;
+
+	$0 = "squid-analyzer: Printing network user statistics in $outdir";
 
 	# Load code statistics
 	my $infile = new IO::File;
@@ -3227,6 +3424,8 @@ sub _print_netuser_stat
 sub _print_user_detail
 {
 	my ($self, $out, $outdir, $usr, $type) = @_;
+
+	$0 = "squid-analyzer: Printing user details statistics in $outdir";
 
 	# Load code statistics
 	my $infile = new IO::File;
@@ -3362,6 +3561,10 @@ sub _print_top_url_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
+	print STDERR "\tTop URL statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing top urls statistics in $outdir";
+
 	my $stat_date = $self->set_date($year, $month, $day);
 
 	my $type = 'hour';
@@ -3384,7 +3587,7 @@ sub _print_top_url_stat
 	my $total_duration = 0;
 	my $total_cache_hit = 0;
 	my $total_cache_bytes = 0;
-	while(my $l = <$infile>) {
+	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
@@ -3422,7 +3625,13 @@ sub _print_top_url_stat
 	}
 	$infile->close();
 
+	# Store number of urls
 	my $nurl = scalar keys %url_stat;
+	my $outf = new IO::File;
+	$outf->open(">>$outdir/stat_count.dat") || return;
+	flock($outf, 2) || die "FATAL: can't acquire lock on file $outdir/stat_count.dat, $!\n";
+	$outf->print("urls:$nurl\n");
+	$outf->close;
 
 	my $file = $outdir . '/url.html';
 	my $out = new IO::File;
@@ -3433,7 +3642,7 @@ sub _print_top_url_stat
 	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
@@ -3550,6 +3759,10 @@ sub _print_top_domain_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
 
+	print STDERR "\tTop domain statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing top domain statistics in $outdir";
+
 	my $stat_date = $self->set_date($year, $month, $day);
 
 	my $type = 'hour';
@@ -3586,7 +3799,7 @@ sub _print_top_domain_stat
 	$tld_pattern1 = qr/([^\.]+)$tld_pattern1$/;
 	my $tld_pattern2 = '(' . join('|', @TLD2) . ')';
 	$tld_pattern2 = qr/([^\.]+)$tld_pattern2$/;
-	while(my $l = <$infile>) {
+	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
@@ -3665,7 +3878,13 @@ sub _print_top_domain_stat
 	}
 	$infile->close();
 
-	my $nurl = scalar keys %domain_stat;
+	# Store number of urls
+	my $ndom = scalar keys %domain_stat;
+	my $outf = new IO::File;
+	$outf->open(">>$outdir/stat_count.dat") || return;
+	flock($outf, 2) || die "FATAL: can't acquire lock on file $outdir/stat_count.dat, $!\n";
+	$outf->print("domains:$ndom\n");
+	$outf->close;
 
 	my $file = $outdir . '/domain.html';
 	my $out = new IO::File;
@@ -3676,10 +3895,10 @@ sub _print_top_domain_stat
 	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	# Print the HTML header
-	my $cal = 'SA_CALENDAR';
+	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
-	print $out "<h3>$Translate{'Domain_number'}: $nurl</h3>\n";
+	print $out "<h3>$Translate{'Domain_number'}: $ndom</h3>\n";
 
 	$total_hits ||= 1;
 	$total_bytes ||= 1;
@@ -3841,7 +4060,7 @@ sub _print_top_domain_stat
 	$self->_print_footer(\$out);
 	$out->close();
 
-	return $nurl;
+	return $ndom;
 }
 
 sub _gen_summary
@@ -3860,7 +4079,7 @@ sub _gen_summary
 		# Load code statistics
 		my $infile = new IO::File;
 		$infile->open("$outdir/$d/stat_code.dat") || return;
-		while(my $l = <$infile>) {
+		while (my $l = <$infile>) {
 			chomp($l);
 			my ($code, $data) = split(/\s/, $l);
 			$data =~ /hits_month=([^;]+);bytes_month=(.*)/;
@@ -3895,17 +4114,19 @@ sub _gen_summary
 	<thead>
 	<tr>
 	<th class="nobg"></th>
-	<th colspan="2" scope="col" class="headerBlack">$Translate{'Requests'}</th>
-	<th colspan="2" scope="col" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
+	<th colspan="3" scope="col" class="headerBlack">$Translate{'Requests'}</th>
+	<th colspan="3" scope="col" class="headerBlack">$Translate{$self->{TransfertUnit}}</th>
 	<th colspan="$colspn" scope="col" class="headerBlack">$Translate{'Total'}</th>
 	</tr>
 	<tr>
 	<th scope="col">$Translate{'Years'}</th>
 	<th scope="col">$Translate{'Hit'}</th>
 	<th scope="col">$Translate{'Miss'}</th>
+	<th scope="col">$Translate{'Denied'}</th>
 	<th scope="col">$Translate{'Hit'}</th>
 	<th scope="col">$Translate{'Miss'}</th>
 	<th scope="col">$Translate{'Requests'}</th>
+	<th scope="col">$Translate{'Denied'}</th>
 	<th scope="col">$Translate{$self->{TransfertUnit}}</th>
 };
 	print $out qq{
@@ -3920,14 +4141,17 @@ sub _gen_summary
 		my $comma_bytes = $self->format_bytes($total_bytes{$year});
 		my $hit_bytes = $self->format_bytes($code_stat{$year}{HIT}{bytes});
 		my $miss_bytes = $self->format_bytes($code_stat{$year}{MISS}{bytes});
+		my $denied_bytes = $self->format_bytes($code_stat{$year}{DENIED}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
 		print $out qq{
 	<tr>
 	<td><a href="$year/index.html">$Translate{'Stat_label'} $year *</a></td>
 	<td>$code_stat{$year}{HIT}{request}</td>
 	<td>$code_stat{$year}{MISS}{request}</td>
+	<td>$code_stat{$year}{DENIED}{request}</td>
 	<td>$hit_bytes</td>
 	<td>$miss_bytes</td>
+	<td>$denied_bytes</td>
 	<td>$total_request{$year}</td>
 	<td>$comma_bytes</td>
 };
