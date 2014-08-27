@@ -611,7 +611,6 @@ sub parseFile
 		}
 
 		# Force reordering and unique sorting of data files
-		$self->{overwrite_datafile} = 1;
 		my $child_count = 0;
 		if (!$self->{rebuild}) {
 			if (!$self->{QuietMode}) {
@@ -631,11 +630,11 @@ sub parseFile
 						if (-d "$self->{Output}/$y/$m/$d") {
 							if ($self->{queue_size} > 1) {
 								$self->spawn(sub {
-									$self->_save_data($y, $m, $d);
+									$self->_save_stat($y, $m, $d);
 								});
 								$child_count = $self->manage_queue_size(++$child_count);
 							} else {
-								$self->_save_data($y, $m, $d);
+								$self->_save_stat($y, $m, $d);
 							}
 							$self->_clear_stats();
 						}
@@ -644,6 +643,7 @@ sub parseFile
 			}
 			# Wait for last child stop
 			$self->wait_all_childs() if ($self->{queue_size} > 1);
+			$child_count = 0;
 		}
 
 		# Compute week statistics
@@ -651,7 +651,6 @@ sub parseFile
 			print STDERR "Generating weekly data files now...\n";
 		}
 
-		$child_count = 0;
 		foreach my $week (@{$self->{week_parsed}}) {
 			my ($y, $m, $wn) = split(/\//, $week);
 			my @wd = &get_wdays_per_month($wn, "$y-$m");
@@ -668,6 +667,9 @@ sub parseFile
 			}
 			$self->_clear_stats();
 		}
+		# Wait for last child stop
+		$self->wait_all_childs() if ($self->{queue_size} > 1);
+		$child_count = 0;
 
 		# Compute month statistics
 		if (!$self->{QuietMode}) {
@@ -1003,7 +1005,7 @@ sub _parse_file_part
 
 	if ($self->{last_year}) {
 		# Save last parsed data
-		$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+		$self->_append_data($self->{last_year}, $self->{last_month}, $self->{last_day});
 		# Stats can be cleared
 		$self->_clear_stats();
 
@@ -1326,7 +1328,7 @@ sub _parseData
 	# Store data when hour change to save memory
 	if ($self->{last_year} && ($self->{tmp_saving} ne '') && ($hour != $self->{tmp_saving}) ) {
 		# If the day has changed then we want to save stats of the previous one
-		$self->_save_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+		$self->_append_data($self->{last_year}, $self->{last_month}, $self->{last_day});
 		# Stats can be cleared
 		print STDERR "Clearing statistics storage hashes, for $self->{last_year}-$self->{last_month}-$self->{last_day} ", sprintf("%02d", $self->{tmp_saving}), ":00:00.\n" if (!$self->{QuietMode});
 		$self->_clear_stats();
@@ -1512,17 +1514,14 @@ sub _load_history
 
 }
 
-sub _save_stat
+sub _append_stat
 {
-	my ($self, $year, $month, $day, $wn, @wd) = @_;
+	my ($self, $year, $month, $day) = @_;
 
 	my $read_type = '';
 	my $type = 'hour';
 	if (!$day) {
 		$type = 'day';
-	}
-	if ($wn) {
-		$type = 'week';
 	}
 	if (!$month) {
 		$type = 'month';
@@ -1532,38 +1531,95 @@ sub _save_stat
 	my $path = join('/', $year, $month, $day);
 	$path =~ s/[\/]+$//;
 
-	if ($self->{overwrite_datafile}) {
-		print STDERR "Reloading data into $self->{Output}/$path\n" if (!$self->{QuietMode});
-	}
-	print STDERR "Dumping data into $self->{Output}/$path\n" if (!$self->{QuietMode});
+	print STDERR "Appending data into $self->{Output}/$path\n" if (!$self->{QuietMode});
 	
 
 	#### Save cache statistics
 	my $dat_file_code = new IO::File;
-	if (!$self->{overwrite_datafile}) {
-		$dat_file_code->open(">>$self->{Output}/$path/stat_code.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
-	} else {
-		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_code', $wn, @wd);
-		$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
-	}
+	$dat_file_code->open(">>$self->{Output}/$path/stat_code.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
 	flock($dat_file_code, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
-		$dat_file_code->print("$code " .
-			"hits_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
-			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
-		}
-		$dat_file_code->print(";bytes_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
-			$dat_file_code->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
-		}
-		$dat_file_code->print("\n");
-	}
+	$self->_write_stat_data($dat_file_code, $type, 'stat_code');
 	$dat_file_code->close();
-	$self->{"stat_code_$type"} = ();
-	$self->{stat_code} = ();
+
+	#### With huge log file we only store global statistics in year and month views
+	return if ( $self->{no_year_stat} && ($type ne 'hour') );
+
+	#### Save url statistics per user
+	if ($self->{UrlReport}) {
+		my $dat_file_user_url = new IO::File;
+		$dat_file_user_url->open(">>$self->{Output}/$path/stat_user_url.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
+		flock($dat_file_user_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_user_url, $type, 'stat_user_url');
+		$dat_file_user_url->close();
+	}
+
+	#### Save user statistics
+	my $dat_file_user = new IO::File;
+	$dat_file_user->open(">>$self->{Output}/$path/stat_user.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_user, $type, 'stat_user');
+	$dat_file_user->close();
+
+	#### Save network statistics
+	my $dat_file_network = new IO::File;
+	$dat_file_network->open(">>$self->{Output}/$path/stat_network.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	flock($dat_file_network, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_network, $type, 'stat_network');
+	$dat_file_network->close();
+
+	#### Save user per network statistics
+	my $dat_file_netuser = new IO::File;
+	$dat_file_netuser->open(">>$self->{Output}/$path/stat_netuser.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
+	$dat_file_netuser->close();
+
+	#### Save mime statistics
+	my $dat_file_mime_type = new IO::File;
+	$dat_file_mime_type->open(">>$self->{Output}/$path/stat_mime_type.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	flock($dat_file_mime_type, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_mime_type, $type, 'stat_mime_type');
+	$dat_file_mime_type->close();
+	
+}
+
+sub _save_stat
+{
+	my ($self, $year, $month, $day, $wn, @wd) = @_;
+
+	my $path = join('/', $year, $month, $day);
+	$path =~ s/[\/]+$//;
+
+	my $read_type = '';
+	my $type = 'hour';
+	if (!$day) {
+		$type = 'day';
+	}
+	if ($wn) {
+		$type = 'week';
+		$path = "$year/week$wn";
+	}
+	if (!$month) {
+		$type = 'month';
+	}
+	$read_type = $type;
+
+	print STDERR "Saving data into $self->{Output}/$path\n" if (!$self->{QuietMode});
+
+	#### Save cache statistics
+	my $dat_file_code = new IO::File;
+	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_code', $wn, @wd);
+	$dat_file_code->open(">$self->{Output}/$path/stat_code.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_code.dat, $!\n");
+	flock($dat_file_code, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_code, $type, 'stat_code');
+	$dat_file_code->close();
 
 	#### With huge log file we only store global statistics in year and month views
 	return if ( $self->{no_year_stat} && (($type ne 'hour') && !$wn) );
@@ -1571,18 +1627,80 @@ sub _save_stat
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
 		my $dat_file_user_url = new IO::File;
-		if (!$self->{overwrite_datafile}) {
-			$dat_file_user_url->open(">>$self->{Output}/$path/stat_user_url.dat")
-				or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
-		} else {
-			$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user_url', $wn, @wd);
-			$dat_file_user_url->open(">$self->{Output}/$path/stat_user_url.dat")
-				or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
-		}
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user_url', $wn, @wd);
+		$dat_file_user_url->open(">$self->{Output}/$path/stat_user_url.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user_url.dat, $!\n");
 		flock($dat_file_user_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_user_url, $type, 'stat_user_url');
+		$dat_file_user_url->close();
+	}
+
+	#### Save user statistics
+	my $dat_file_user = new IO::File;
+	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user', $wn, @wd);
+	$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_user, $type, 'stat_user');
+	$dat_file_user->close();
+
+	#### Save network statistics
+	my $dat_file_network = new IO::File;
+	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_network', $wn, @wd);
+	$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	flock($dat_file_network, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_network, $type, 'stat_network');
+	$dat_file_network->close();
+
+	#### Save user per network statistics
+	my $dat_file_netuser = new IO::File;
+	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_netuser', $wn, @wd);
+	$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
+	$dat_file_netuser->close();
+
+	#### Save mime statistics
+	my $dat_file_mime_type = new IO::File;
+	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_mime_type', $wn, @wd);
+	$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
+		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	flock($dat_file_mime_type, 2) || die "FATAL: can't acquire lock on file, $!\n";
+	$self->_write_stat_data($dat_file_mime_type, $type, 'stat_mime_type');
+	$dat_file_mime_type->close();
+
+}
+
+sub _write_stat_data
+{
+	my ($self, $fh, $type, $kind) = @_;
+
+	$type = 'day' if ($type eq 'week');
+
+	#### Save cache statistics
+	if ($kind eq 'stat_code') {
+		foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
+			$fh->print("$code " .
+				"hits_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
+			}
+			$fh->print(";bytes_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
+			}
+			$fh->print("\n");
+		}
+		$self->{"stat_code_$type"} = ();
+	}
+
+	#### Save url statistics per user
+	if ($kind eq 'stat_user_url') {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
-				$dat_file_user_url->print(
+				$fh->print(
 					"$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
 					"bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{bytes} . ";" .
 					"duration=" . $self->{"stat_user_url_$type"}{$id}{$dest}{duration} . ";" .
@@ -1593,115 +1711,78 @@ sub _save_stat
 					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . "\n");
 			}
 		}
-		$dat_file_user_url->close();
 		$self->{"stat_user_url_$type"} = ();
 	}
 
 	#### Save user statistics
-	my $dat_file_user = new IO::File;
-	if (!$self->{overwrite_datafile}) {
-		$dat_file_user->open(">>$self->{Output}/$path/stat_user.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
-	} else {
-		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user', $wn, @wd);
-		$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+	if ($kind eq 'stat_user') {
+		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
+			my $name = $id;
+			$name =~ s/\s+//g;
+			$fh->print("$name hits_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
+				$fh->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{hits} . ",");
+			}
+			$fh->print(";bytes_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
+				$fh->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";duration_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
+				$fh->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{duration} . ",");
+			}
+			$fh->print(";largest_file_size=" . $self->{"stat_usermax_$type"}{$id}{largest_file_size});
+			$fh->print(";largest_file_url=" . $self->{"stat_usermax_$type"}{$id}{largest_file_url} . "\n");
+		}
+		$self->{"stat_user_$type"} = ();
+		$self->{"stat_usermax_$type"} = ();
 	}
-	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_$type"}}) {
-		my $name = $id;
-		$name =~ s/\s+//g;
-		$dat_file_user->print("$name hits_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
-			$dat_file_user->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{hits} . ",");
-		}
-		$dat_file_user->print(";bytes_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
-			$dat_file_user->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{bytes} . ",");
-		}
-		$dat_file_user->print(";duration_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_user_$type"}{$id}}) {
-			$dat_file_user->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{duration} . ",");
-		}
-		$dat_file_user->print(";largest_file_size=" . $self->{"stat_usermax_$type"}{$id}{largest_file_size});
-		$dat_file_user->print(";largest_file_url=" . $self->{"stat_usermax_$type"}{$id}{largest_file_url} . "\n");
-	}
-	$dat_file_user->close();
-	$self->{"stat_user_$type"} = ();
-	$self->{"stat_usermax_$type"} = ();
 
 	#### Save network statistics
-	my $dat_file_network = new IO::File;
-	if (!$self->{overwrite_datafile}) {
-		$dat_file_network->open(">>$self->{Output}/$path/stat_network.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
-	} else {
-		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_network', $wn, @wd);
-		$dat_file_network->open(">$self->{Output}/$path/stat_network.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_network.dat, $!\n");
+	if ($kind eq 'stat_network') {
+		foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_network_$type"}}) {
+			$fh->print("$net\thits_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
+				$fh->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{hits} . ",");
+			}
+			$fh->print(";bytes_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
+				$fh->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";duration_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
+				$fh->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{duration} . ",");
+			}
+			$fh->print(";largest_file_size=" . $self->{"stat_netmax_$type"}{$net}{largest_file_size});
+			$fh->print(";largest_file_url=" . $self->{"stat_netmax_$type"}{$net}{largest_file_url} . "\n");
+		}
+		$self->{"stat_network_$type"} = ();
+		$self->{"stat_netmax_$type"} = ();
 	}
-	flock($dat_file_network, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_network_$type"}}) {
-		$dat_file_network->print("$net\thits_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
-			$dat_file_network->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{hits} . ",");
-		}
-		$dat_file_network->print(";bytes_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
-			$dat_file_network->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{bytes} . ",");
-		}
-		$dat_file_network->print(";duration_$type=");
-		foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_network_$type"}{$net}}) {
-			$dat_file_network->print("$tmp:" . $self->{"stat_network_$type"}{$net}{$tmp}{duration} . ",");
-		}
-		$dat_file_network->print(";largest_file_size=" . $self->{"stat_netmax_$type"}{$net}{largest_file_size});
-		$dat_file_network->print(";largest_file_url=" . $self->{"stat_netmax_$type"}{$net}{largest_file_url} . "\n");
-	}
-	$dat_file_network->close();
-	$self->{"stat_network_$type"} = ();
-	$self->{"stat_netmax_$type"} = ();
 
 	#### Save user per network statistics
-	my $dat_file_netuser = new IO::File;
-	if (!$self->{overwrite_datafile}) {
-		$dat_file_netuser->open(">>$self->{Output}/$path/stat_netuser.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
-	} else {
-		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_netuser', $wn, @wd);
-		$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
-	}
-	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}}) {
-		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}{$net}}) {
-			$dat_file_netuser->print("$net\t$id\thits=" . $self->{"stat_netuser_$type"}{$net}{$id}{hits} . ";" .
-				"bytes=" . $self->{"stat_netuser_$type"}{$net}{$id}{bytes} . ";" .
-				"duration=" . $self->{"stat_netuser_$type"}{$net}{$id}{duration} . ";");
-			$dat_file_netuser->print("largest_file_size=" .
-				$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size} . ";" .
-				"largest_file_url=" . $self->{"stat_netuser_$type"}{$net}{$id}{largest_file_url} . "\n");
+	if ($kind eq 'stat_netuser') {
+		foreach my $net (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}}) {
+			foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_netuser_$type"}{$net}}) {
+				$fh->print("$net\t$id\thits=" . $self->{"stat_netuser_$type"}{$net}{$id}{hits} . ";" .
+					"bytes=" . $self->{"stat_netuser_$type"}{$net}{$id}{bytes} . ";" .
+					"duration=" . $self->{"stat_netuser_$type"}{$net}{$id}{duration} . ";");
+				$fh->print("largest_file_size=" .
+					$self->{"stat_netuser_$type"}{$net}{$id}{largest_file_size} . ";" .
+					"largest_file_url=" . $self->{"stat_netuser_$type"}{$net}{$id}{largest_file_url} . "\n");
+			}
 		}
+		$self->{"stat_netuser_$type"} = ();
 	}
-	$dat_file_netuser->close();
-	$self->{"stat_netuser_$type"} = ();
 
 	#### Save mime statistics
-	my $dat_file_mime_type = new IO::File;
-	if (!$self->{overwrite_datafile}) {
-		$dat_file_mime_type->open(">>$self->{Output}/$path/stat_mime_type.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
-	} else {
-		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_mime_type', $wn, @wd);
-		$dat_file_mime_type->open(">$self->{Output}/$path/stat_mime_type.dat")
-			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_mime_type.dat, $!\n");
+	if ($kind eq 'stat_mime_type') {
+		foreach my $mime (sort {$a cmp $b} keys %{$self->{"stat_mime_type_$type"}}) {
+			$fh->print("$mime hits=" . $self->{"stat_mime_type_$type"}{$mime}{hits} . ";" .
+				"bytes=" . $self->{"stat_mime_type_$type"}{$mime}{bytes} .  "\n");
+		}
+		$self->{"stat_mime_type_$type"} = ();
 	}
-	flock($dat_file_mime_type, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	foreach my $mime (sort {$a cmp $b} keys %{$self->{"stat_mime_type_$type"}}) {
-		$dat_file_mime_type->print("$mime hits=" . $self->{"stat_mime_type_$type"}{$mime}{hits} . ";" .
-			"bytes=" . $self->{"stat_mime_type_$type"}{$mime}{bytes} .  "\n");
-	}
-	$dat_file_mime_type->close();
-	$self->{"stat_mime_type_$type"} = ();
 	
 }
 
@@ -1722,7 +1803,7 @@ sub _read_stat
 
 	return if (! -d "$self->{Output}/$path");
 
-	print STDERR "Reading data from previous dat files in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
+	print STDERR "Reading data from previous dat files for $sum_type($type) in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
 
 	my $k = '';
 	my $key = '';
@@ -1965,7 +2046,6 @@ sub _read_stat
 
 }
 
-
 sub _save_data
 {
 	my ($self, $year, $month, $day, $wn, @wd) = @_;
@@ -1983,10 +2063,32 @@ sub _save_data
 	if ($wn && !-d "$self->{Output}/$year/week$wn") {
 		mkdir("$self->{Output}/$year/week$wn", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n");
 	}
+
 	# Dumping data
 	$self->_save_stat($year, $month, $day, $wn, @wd);
 
 }
+
+sub _append_data
+{
+	my ($self, $year, $month, $day) = @_;
+
+	#### Create directory structure
+	if (!-d "$self->{Output}/$year") {
+		mkdir("$self->{Output}/$year", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year, $!\n");
+	}
+	if ($month && !-d "$self->{Output}/$year/$month") {
+		mkdir("$self->{Output}/$year/$month", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/$month, $!\n");
+	}
+	if ($day && !-d "$self->{Output}/$year/$month/$day") {
+		mkdir("$self->{Output}/$year/$month/$day", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n");
+	}
+
+	# Dumping data
+	$self->_append_stat($year, $month, $day);
+
+}
+
 
 sub _print_header
 {
@@ -2597,12 +2699,12 @@ sub _print_cache_stat
 	print $out qq{
 </tr>
 <tr>
-<td>$code_stat{HIT}{request}<br><span class="italicPercent">($percent_hit%)</span></td>
-<td>$code_stat{MISS}{request}<br><span class="italicPercent">($percent_miss%)</span></td>
-<td>$code_stat{DENIED}{request}<br><span class="italicPercent">($percent_denied%)</span></td>
-<td>$hit_bytes<br><span class="italicPercent">($percent_bhit%)</span></td>
-<td>$miss_bytes<br><span class="italicPercent">($percent_bmiss%)</span></td>
-<td>$denied_bytes<br><span class="italicPercent">($percent_bdenied%)</span></td>
+<td title="$percent_hit %">$code_stat{HIT}{request}</td>
+<td title="$percent_miss %">$code_stat{MISS}{request}</td>
+<td title="$percent_denied %">$code_stat{DENIED}{request}</td>
+<td title="$percent_bhit %">$hit_bytes</td>
+<td title="$percent_bmiss %">$miss_bytes</td>
+<td title="$percent_bdenied %">$denied_bytes</td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
 <td>SA_NUSERS_SA</td>
