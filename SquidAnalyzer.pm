@@ -517,18 +517,27 @@ sub parseFile
 				} else {
 					# move at ofset and see if next line is older than history time
 					$logfile->seek($history_offset, 0);
-					$line = <$logfile>;
-					chomp($line);
-					$line =~ /^([\d\.]+) /;
-					if ($1 < $self->{history_time}) {
-						print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected.\n" if (!$self->{QuietMode});
-						$logfile->close;
-						next;
+					for (my $i = 1; $i <= 10; $i++) {
+						$line = <$logfile>;
+						chomp($line);
+						if ($line =~ /^(\d{10}\.\d{3})/) {
+							if ($1 < $self->{history_time}) {
+								my $tmp_time = localtime($1);
+								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
+								$line = 'NOK';
+								last;
+							}
+						}
 					}
+					$logfile->close;
+					# This file should be ommitted jump to the next file
+					next if ($line eq 'NOK');
 				}
 				$logfile->close;
 			}
+
 		} else {
+			print STDERR "DEBUG: this file will be parsed, no history found.\n" if (!$self->{QuietMode});
 			# Initialise start offset for each file
 			$self->{end_offset} = 0;
 		}
@@ -557,19 +566,13 @@ sub parseFile
 
 	# Get the last information parsed in this file part
 	if (-e "$self->{pid_dir}/last_parsed.tmp") {
+
 		if (open(IN, "$self->{pid_dir}/last_parsed.tmp")) {
+			my %history_tmp = ();
 			while (my $l = <IN>) {
 				chomp($l);
 				my @data = split(/\s/, $l);
-				if (!$self->{last_year} || ("$data[0]$data[1]$data[2]" gt "$self->{last_year}$self->{last_month}$self->{last_day}")) {
-					$self->{last_year} = $data[0];
-					$self->{last_month} = $data[1];
-					$self->{last_day} = $data[2];
-				}
-				if (!$self->{end_time} || ($data[3] > $self->{end_time})) {
-					$self->{end_time} = $data[3];
-					$self->{end_offset} = $data[4];
-				} 
+				$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
 				$line_stored_count += $data[5];
 				$line_processed_count += $data[6];
 				$line_count += $data[7];
@@ -585,7 +588,19 @@ sub parseFile
 				}
 			}
 			close(IN);
-			unlink("$self->{pid_dir}/last_parsed.tmp");
+			foreach my $date (sort {$b <=> $a} keys %history_tmp) {
+				foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
+					my @data = split(/\s/, $history_tmp{$date}{$offset});
+					$self->{last_year} = $data[0];
+					$self->{last_month} = $data[1];
+					$self->{last_day} = $data[2];
+					$self->{end_time} = $data[3];
+					$self->{end_offset} = $data[4];
+					last;
+				}
+				last;
+			}
+			#unlink("$self->{pid_dir}/last_parsed.tmp");
 		} else {
 			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
@@ -818,7 +833,6 @@ sub _parse_file_part
 	# 	time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost type
 	# This is the default format of squid access log file.
 
-
 	# Read and parse each line of the access log file
 	while ($line = <$logfile>) {
 
@@ -1003,27 +1017,25 @@ sub _parse_file_part
 	}
 	$logfile->close();
 
-	if ($self->{last_year}) {
+	if ($self->{cur_year}) {
 		# Save last parsed data
-		$self->_append_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+		$self->_append_data($self->{cur_year}, $self->{cur_month}, $self->{cur_day});
 		# Stats can be cleared
 		$self->_clear_stats();
 
 		# Stores last week to process
-		my $wn = &get_week_number($self->{last_year}, $self->{last_month}, $self->{last_day});
-		if (!grep(/^$self->{last_year}\/$self->{last_month}\/$wn$/, @{$self->{week_parsed}})) {
-			push(@{$self->{week_parsed}}, "$self->{last_year}/$self->{last_month}/$wn");
+		my $wn = &get_week_number($self->{cur_year}, $self->{cur_month}, $self->{cur_day});
+		if (!grep(/^$self->{cur_year}\/$self->{cur_month}\/$wn$/, @{$self->{week_parsed}})) {
+			push(@{$self->{week_parsed}}, "$self->{cur_year}/$self->{cur_month}/$wn");
 		}
 
 		# Save the last information parsed in this file part
-		if ($self->{queue_size} > 1) {
-			if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
-				flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
-				print OUT "$self->{last_year} $self->{last_month} $self->{last_day} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month} ", join(',', @{$self->{week_parsed}}), "\n";
-				close(OUT);
-			} else {
-				print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
-			}
+		if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
+			flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
+			print OUT "$self->{last_year} $self->{last_month} $self->{last_day} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month} ", join(',', @{$self->{week_parsed}}), "\n";
+			close(OUT);
+		} else {
+			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
 	}
 
@@ -1203,6 +1215,9 @@ sub _init
         $self->{last_year} = 0;
         $self->{last_month} = 0;
         $self->{last_day} = 0;
+        $self->{cur_year} = 0;
+        $self->{cur_month} = 0;
+        $self->{cur_day} = 0;
         $self->{first_year} = 0;
         $self->{first_month} = 0;
 	$self->{begin_time} = 0;
@@ -1236,7 +1251,7 @@ sub _init
 			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
-			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{history_time})), "\n" if (!$self->{QuietMode});
+			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 		}
 	}
 
@@ -1326,16 +1341,16 @@ sub _parseData
 	$day = sprintf("%02d", $day);
 
 	# Store data when hour change to save memory
-	if ($self->{last_year} && ($self->{tmp_saving} ne '') && ($hour != $self->{tmp_saving}) ) {
+	if ($self->{cur_year} && ($self->{cur_hour} ne '') && ($hour != $self->{cur_hour}) ) {
 		# If the day has changed then we want to save stats of the previous one
-		$self->_append_data($self->{last_year}, $self->{last_month}, $self->{last_day});
+		$self->_append_data($self->{cur_year}, $self->{cur_month}, $self->{cur_day});
 		# Stats can be cleared
-		print STDERR "Clearing statistics storage hashes, for $self->{last_year}-$self->{last_month}-$self->{last_day} ", sprintf("%02d", $self->{tmp_saving}), ":00:00.\n" if (!$self->{QuietMode});
+		print STDERR "Clearing statistics storage hashes, for $self->{cur_year}-$self->{cur_month}-$self->{cur_day} ", sprintf("%02d", $self->{cur_hour}), ":00:00.\n" if (!$self->{QuietMode});
 		$self->_clear_stats();
 	}
 
 	# Stores weeks to process
-	if ("$year$month$day" ne "$self->{last_year}$self->{last_month}$self->{last_day}") {
+	if ("$year$month$day" ne "$self->{cur_year}$self->{cur_month}$self->{cur_day}") {
 		my $wn = &get_week_number($year, $month, $day);
 		if (!grep(/^$year\/$month\/$wn$/, @{$self->{week_parsed}})) {
 			push(@{$self->{week_parsed}}, "$year/$month/$wn");
@@ -1390,14 +1405,19 @@ sub _parseData
 		$self->{last_month} = $month;
 		$self->{last_day} = $day;
 	}
-	# Stores current processed hour
-	$self->{tmp_saving} = $hour;
-	$hour = sprintf("%02d", $hour);
+
 	# Stores first parsed date part
 	if (!$self->{first_year} || ("$self->{first_year}$self->{first_month}" gt "$year$month")) {
 		$self->{first_year} = $year;
 		$self->{first_month} = $month;
 	}
+
+	# Stores current processed values
+	$self->{cur_year} = $year;
+	$self->{cur_month} = $month;
+	$self->{cur_day} = $day;
+	$self->{cur_hour} = $hour;
+	$hour = sprintf("%02d", $hour);
 
 	#### Store access denied statistics
 	if ($code eq 'DENIED') {
@@ -1803,7 +1823,7 @@ sub _read_stat
 
 	return if (! -d "$self->{Output}/$path");
 
-	print STDERR "Reading data from previous dat files for $sum_type($type) in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
+	#print STDERR "Reading data from previous dat files for $sum_type($type) in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
 
 	my $k = '';
 	my $key = '';
@@ -2220,7 +2240,7 @@ sub buildHTML
 	my @years_cal = ();
 	my @months_cal = ();
 	my @weeks_cal = ();
-	my @day_count = ();
+	my @array_count = ();
 	foreach my $y (sort {$a <=> $b} @years) {
 		next if (!$y || ($y < $self->{first_year}));
 		next if ($self->check_build_date($y));
@@ -2254,7 +2274,7 @@ sub buildHTML
 				next if ("$y$m$d" < "$old_year$old_month$old_day");
 				print STDERR "Generating statistics for day $y-$m-$d\n" if (!$self->{QuietMode});
 				$self->gen_html_output($outdir, $y, $m, $d);
-				push(@day_count, "$outdir/$y/$m/$d");
+				push(@array_count, "$outdir/$y/$m/$d");
 				my $wn = &get_week_number($y,$m,$d);
 				push(@weeks_to_build, $wn) if (!grep(/^$wn$/, @weeks_to_build));
 			}
@@ -2264,7 +2284,7 @@ sub buildHTML
 		}
 		foreach my $w (sort @weeks_to_build) {
 			$w = sprintf("%02d", $w+1);
-			push(@weeks_cal, "$outdir/$y/week$w");
+			push(@array_count, "$outdir/$y/week$w");
 			print STDERR "Generating statistics for week $w on year $y\n" if (!$self->{QuietMode});
 			$self->gen_html_output($outdir, $y, '', '', $w);
 		}
@@ -2359,7 +2379,7 @@ sub buildHTML
 		}
 	}
 
-	foreach my $p (@day_count) {
+	foreach my $p (@array_count) {
 		my $nuser = '-';
 		my $nurl = '-';
 		my $ndomain = '-';
