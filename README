@@ -413,6 +413,24 @@ CONFIGURATION
 
         with a Locale set to fr_FR.
 
+SUPPORT
+  Release annoucement
+    Please follow us on twitter to receive release annoucement and latest
+    news : https://twitter.com/SquidAnalyzer
+
+  Bugs and Feature requests
+    Please report any bugs, patches, discussion and feature request using
+    tools on the git repository at https://github.com/darold/squidanalyzer.
+
+  How to contribute ?
+    Any contribution to build a better tool is welcome, you just have to
+    send me your ideas, features request or patches using the tools on the
+    git repository at https://github.com/darold/squidanalyzer
+
+    You can also support the developper by donate some contribution by
+    clicking on the "Donate" button on the SquidAnalyzer web site at
+    http://squidanalyzer.darold.net/
+
 AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
