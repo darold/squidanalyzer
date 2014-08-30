@@ -40,7 +40,7 @@ my $result = GetOptions (
 	"P|pid_dir=s"          => \$pid_dir,
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
-);  
+); 
 
 # Show warning for obsolete options
 if ($obsolete) {

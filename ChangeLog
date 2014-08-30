@@ -1,5 +1,78 @@
 Revision history for SquidAnalyzer
 
+6.0 - Sat Aug 30 21:48:14 CEST 2014
+
+This major release adds several new features, lot of speed improvement and
+some major bug fixes.
+
+  * Multiple access.log files can be processed at the same time.
+  * Multiprocess mode can be activated using the -j N command line option.
+  * New ExcludedMimes configuration directive to exclude from statistics
+    a comma separated list of mime-type or using regex like text/.*.
+  * New ExcludedMethods configuration directive to exclude from statistics
+    a comma separated list of HTTP methods (GET,POST,CONNECT,...).
+  * New translation available: pl_PL
+
+Using 4 CPU cores (-j 4) to run SquidAnalyzer can divide by 4 the time used
+in single process mode. In single process mode building a 1.4GB access.log
+file takes 50 minutes on my computer, using 4 cpus take around 15 minutes.
+
+	squid-analyzer --no-year-stat -j 4 /var/log/squid3/access.log*
+
+Here the full list of changes:
+
+	- Freshmeat/Freecode site is down, release announcement will be done on
+	  twitter now, see https://twitter.com/SquidAnalyzer
+	- Allow multiple log files to be given at command line arguments.
+	- Add support to ETCDIR instead of CONFDIR during installation process,
+	  Where real config files are installed on some distributions (BSD).
+	- Add support to parse multiple access log file at a time in multi-
+	  process mode.
+	- Add documentation about multiprocess usage.
+	- Add multiprocess support to SquidAnalyzer, see -j option. This can
+	  improve a lot speed performances. See notes at bottom of issue #18
+	  for more details. Great thanks to Francisco Rodriguez for his help.
+	- Add more timing information during SquidAnalyzer execution.
+	- Add some other minor speed improvement.
+	- Removed call to tell,  we were spending too much time in this method
+	  unnecessary.
+	- Fix reports with --no-year-stat. It now reports cache stat only in year
+	  and month view instead of empty page.
+	- Remove intermediate build of week reports.
+	- Fix Mime-Type transfer's chart title to reflect the unit used: MBytes.
+	  Thanks to IMiGS for the report.
+	- Little fix in a translation. Thanks to atlhon for the patch.
+	- Fix case where days in calendar does not appear when DateFormat was
+	  changed. Thanks to joseh-henrique for the report.
+	- Update Makefile with META_MERGE and MAN3PODS informations.
+	- Fix missing cleaning of pid file when early error occurs.
+	- Automatically remove \r when reading configuration file.
+	- Improve incremental mode by seeking directly to last position in
+	  logfile and automatic detection of already parsed log.
+	- Fix issue on calendar when days of a month are over 6 week. Thanks
+	  to Michael Gauthier for the report.
+	- Update cs_CZ language file. Thanks to Martin Kylian for the patch.
+	- Fix weeks graph when a week overlaps over 2 months.
+	- Add missing install of included file. Thanks to Klaus Tachtler for
+	  the patch.
+	- Force removing of pid file after die of the process. Thanks to Klaus
+	  Tachtler for the report.
+	- Fix german language de_DE.txt. Thanks to Klaus Tachtler for the patch.
+	- Add ExcludedMimes configuration directive to allow exclusion from
+	  statistics of a comma separated list of mime-type full name or using
+	  regex like text/.*. Thanks to Ajayaks for the feature request.
+	- Add ExcludedMethods configuration directive to allow exclusion from
+	  statistics of a comma separated list of HTTP methods. Thanks to Ajayaks
+	  for the feature request.
+	- Fix error when rebuilding with old data repository that does not have
+	  week view repository. Thanks to Adam Ciarcinski for the report.
+	- Add pl_PL translation. Thanks to Adam Ciarcinski for the patch.
+	- Fix en_US translation. Thanks to Adam Ciarcinski for the patch.
+
+UPDATE: you must override all your installation, Perl scripts, configuration file,
+CSS and Javascript files. Backward compatibility with 5.x data files is preserved.
+
+
 5.4 - Sun May  4 18:57:27 CEST 2014
 
 This release fixes several bugs and adds more translation files (Ukrainian,
