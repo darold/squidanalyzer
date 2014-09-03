@@ -22,6 +22,9 @@ BEGIN {
 	use Time::HiRes qw/ualarm/;
 	use Time::Local 'timelocal_nocheck';
 	use Fcntl qw(:flock);
+	use IO::Handle;
+	use FileHandle;
+
 
 	# Set all internal variable
 	$VERSION = '6.0';
