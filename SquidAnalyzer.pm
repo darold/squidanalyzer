@@ -4550,7 +4550,7 @@ sub _print_title
 
 sub _get_calendar
 {
-	my ($self, $stat_date, $year, $month, $type, $outdir, $prefix) = @_;
+	my ($self, $stat_date, $year, $month, $type, $outdir) = @_;
 
 	my $para = "<div id=\"calendar\">\n";
 	if ($type eq 'day') {
@@ -4584,7 +4584,7 @@ sub _get_calendar
 			next if ($wd == -1);
 			$wn_ok = $wn;
 			if (-f "$outdir/$d/index.html") {
-				$currow[$wd-1] = "<td><a href=\"$prefix$d/index.html\">$d</a></td>";
+				$currow[$wd-1] = "<td><a href=\"$d/index.html\">$d</a></td>";
 			} else {
 				$currow[$wd-1] = "<td>$d</td>";
 			}
@@ -4600,6 +4600,8 @@ sub _get_calendar
 		}
 		my $path = $outdir;
 		$path =~ s/(\/\d{4})\/\d{2}.*/$1/;
+		my $prefix = $self->{WebUrl};
+		$prefix = '' if ($self->{WebUrl} eq '/');
 		foreach my $w (sort { $a <=> $b } keys %weeks_num) {
 			my $ww = sprintf("%02d", $w+1);
 			my $week = "<tr><th>$ww</th>";
@@ -4616,7 +4618,7 @@ sub _get_calendar
 		for my $i ('01' .. '12') {
 			$para .= "<tr>" if (grep(/^$i$/, '01', '04', '07','10'));
 			if (-f "$outdir/$i/index.html") {
-				$para .= "<td><a href=\"$prefix$i/index.html\">$Translate{$i}</a></td>";
+				$para .= "<td><a href=\"$i/index.html\">$Translate{$i}</a></td>";
 			} else {
 				$para .= "<td>$Translate{$i}</td>";
 			}
