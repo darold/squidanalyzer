@@ -4604,7 +4604,7 @@ sub _get_calendar
 			my $ww = sprintf("%02d", $w+1);
 			my $week = "<tr><th>$ww</th>";
 			if (-d "$path/week$ww") {
-				$week = "<tr><th><a href=\"$self->{WebUrl}/$year/week$ww\">$ww</a></th>";
+				$week = "<tr><th><a href=\"$prefix/$year/week$ww\">$ww</a></th>";
 			}
 			$para .= $week . join('', @{$weeks_num{$w}}) . "</tr>\n";
 		}
