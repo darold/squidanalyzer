@@ -2386,6 +2386,11 @@ sub buildHTML
 		my $nuser = '-';
 		my $nurl = '-';
 		my $ndomain = '-';
+		my $cal = '';
+		if ($p =~ /^(.*)\/(\d{4})\/(\d{2})\/\d{2}/) {
+			my $stat_date = $self->set_date($2, $3);
+			$cal = $self->_get_calendar($stat_date, $2, $3, 'day', "$1/$2/$3", '../');
+		}
 		# Search for item count
 		if (-e "$p/stat_count.dat") {
 			open(IN, "$p/stat_count.dat") or die "FATAL: can't read file $p/stat_count.dat, $!\n";
@@ -2409,6 +2414,7 @@ sub buildHTML
 			open(IN, "$p/$f") or $self->localdie("FATAL: can't read file $p/$f\n");
 			my @content = <IN>;
 			close IN;
+			map { s/SA_CALENDAR_SA/$cal/ } @content;
 			map { s/SA_NUSERS_SA/$nuser/ } @content;
 			map { s/SA_NURLS_SA/$nurl/ } @content;
 			map { s/SA_NDOMAINS_SA/$ndomain/ } @content;
@@ -4550,7 +4556,7 @@ sub _print_title
 
 sub _get_calendar
 {
-	my ($self, $stat_date, $year, $month, $type, $outdir) = @_;
+	my ($self, $stat_date, $year, $month, $type, $outdir, $rewind) = @_;
 
 	my $para = "<div id=\"calendar\">\n";
 	if ($type eq 'day') {
@@ -4584,7 +4590,7 @@ sub _get_calendar
 			next if ($wd == -1);
 			$wn_ok = $wn;
 			if (-f "$outdir/$d/index.html") {
-				$currow[$wd-1] = "<td><a href=\"$d/index.html\">$d</a></td>";
+				$currow[$wd-1] = "<td><a href=\"$rewind$d/index.html\">$d</a></td>";
 			} else {
 				$currow[$wd-1] = "<td>$d</td>";
 			}
