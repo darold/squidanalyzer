@@ -467,6 +467,18 @@ sub manage_queue_size
 	return $child_count;
 }
 
+sub save_current_line
+{
+	my $self = shift;
+
+	if ($self->{end_time}) {
+		my $current = new IO::File;
+		$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
+		print $current "$self->{end_time}\t$self->{end_offset}";
+		$current->close;
+	}
+}
+
 sub parseFile
 {
 	my ($self) = @_;
@@ -621,12 +633,7 @@ sub parseFile
 		}
 
 		# Set the current start time into history file
-		if ($self->{end_time}) {
-			my $current = new IO::File;
-			$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
-			print $current "$self->{end_time}\t$self->{end_offset}";
-			$current->close;
-		}
+		$self->save_current_line();
 
 		# Force reordering and unique sorting of data files
 		my $child_count = 0;
