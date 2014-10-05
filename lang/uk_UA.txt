@@ -10,7 +10,7 @@
 # may vary.
 #
 # Author: Gilles Darold
-# Ukrainian translation by Oleg A. Deordiev. Version 1.0
+# Ukrainian translation by Oleg A. Deordiev. Version 1.1
 #------------------------------------------------------------------------------
 CharSet				utf-8
 01				Січ
@@ -30,25 +30,25 @@ MB				Мегабайт
 GB				Гігабайт
 Requests			Запити
 Bytes				Байти
-Megabytes			Мегабайты
+Megabytes			Мегабайти
 Total				Всього
 Years				Рік
 Months				Місяці
 Days				Дні
-Hit				Hit
-Miss				Miss
-Denied				Denied
+Hit				Влучив
+Miss				Промах
+Denied				Відмовлено
 Cost				Вартість
 Users				Користувачі
-Sites				Сайты
+Sites				Сайти
 Domains				Домени
 Requests_graph			Запити
-Megabytes_graph			Магабайты
+Megabytes_graph			Магабайти
 Months_graph			Місяці
 Days_graph			Дні
-Hit_graph			Hit
-Miss_graph			Miss
-Denied_graph			Denied
+Hit_graph			Влучив
+Miss_graph			Промах
+Denied_graph			Відмовлено
 Total_graph			Усього
 Domains_graph			Домени
 Users_help			Статистика по користувачам за обраний період
@@ -62,7 +62,7 @@ Generation			Дата створення звіта
 Main_cache_title		Статистика Проксі
 Cache_title			Статистика Проксі
 Stat_label			Статистика
-Mime_link			MIME-Типы
+Mime_link			MIME-Типи
 Network_link			Підмережі
 User_link			Користувачі
 Top_url_link			Топ URL
@@ -76,8 +76,8 @@ Daily				Подобова
 Days				Число
 Monthly				Помісячна
 Months				Місяців
-Mime_title			MIME-Типы Статистика за
-Mime_number			Кількість MIME-Типов
+Mime_title			MIME Типи Статистика за
+Mime_number			Кількість MIME-Типів
 Network_title			Статистика по Підмережам за
 Network_number			Кількість Подмереж
 Duration			Тривалість
@@ -85,14 +85,14 @@ Time				Час
 Largest				Найбільший
 Url				URL
 User_title			Статистика по Користувачам за
-User_number			Кількість Користувачей
-Url_Hits_title			Top %d URL запитів за
-Url_Bytes_title			Top %d URL трафік за
-Url_Duration_title		Top %d URL тривалість за
+User_number			Кількість Користувачів
+Url_Hits_title			Toп %d URL запитів за
+Url_Bytes_title			Toп %d URL трафік за
+Url_Duration_title		Toп %d URL тривалість за
 Url_number			Кількість URL
-Domain_Hits_title		Top %d запитів по Доменам за
-Domain_Bytes_title		Top %d трафік по Доменам за
-Domain_Duration_title		Top %d тривалість по Доменам за
+Domain_Hits_title		Toп %d запитів по Доменам за
+Domain_Bytes_title		Toп %d трафік по Доменам за
+Domain_Duration_title		Toп %d тривалість по Доменам за
 Domain_number			Кількість Доменов
 Domain_graph_hits_title		Статистика запитів по Доменам за
 Domain_graph_bytes_title	Статистика трафіка по Доменам за
@@ -105,8 +105,8 @@ Legend				Підсказка
 File_Generated			Звіт був згенерований за допомогою
 Up_link				Вгору
 Click_year_stat			Натисніть на готову статистику для отримання докладної інформації
-Mime_graph_hits_title		MIME-Типы запитів за
-Mime_graph_bytes_title		MIME-Типы Мегабайты за
+Mime_graph_hits_title		MIME-Типи запитів за
+Mime_graph_bytes_title		MIME-Типи Мегабайти за
 User				Користувач
 Count				Кількість
 WeekDay				Нд Пн Вт Ср Чт Пт Сб
