@@ -103,6 +103,9 @@ sub terminate
 
 	$sa->{terminate} = 1;
 
+	# Save last parse line
+	$sa->save_current_line();
+
         # Wait for all child processes to die except for the logger
 	my $kid = 0;
 	do {
