@@ -172,6 +172,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
     -v | version               : show version and exit.
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
+    --no-week-stat             : disable weekly statistics.
 
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will

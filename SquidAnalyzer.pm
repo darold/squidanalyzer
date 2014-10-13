@@ -672,25 +672,27 @@ sub parseFile
 		}
 
 		# Compute week statistics
-		if (!$self->{QuietMode}) {
-			print STDERR "Generating weekly data files now...\n";
-		}
-
-		foreach my $week (@{$self->{week_parsed}}) {
-			my ($y, $m, $wn) = split(/\//, $week);
-			my @wd = &get_wdays_per_month($wn, "$y-$m");
-			$wn++;
-
-			print STDERR "Compute and dump weekly statistics for week $wn on $y\n" if (!$self->{QuietMode});
-			if ($self->{queue_size} > 1) {
-				$self->spawn(sub {
-					$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
-				});
-				$child_count = $self->manage_queue_size(++$child_count);
-			} else {
-				$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
+		if (!$self->{no_week_stat}) {
+			if (!$self->{QuietMode}) {
+				print STDERR "Generating weekly data files now...\n";
 			}
-			$self->_clear_stats();
+
+			foreach my $week (@{$self->{week_parsed}}) {
+				my ($y, $m, $wn) = split(/\//, $week);
+				my @wd = &get_wdays_per_month($wn, "$y-$m");
+				$wn++;
+
+				print STDERR "Compute and dump weekly statistics for week $wn on $y\n" if (!$self->{QuietMode});
+				if ($self->{queue_size} > 1) {
+					$self->spawn(sub {
+						$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
+					});
+					$child_count = $self->manage_queue_size(++$child_count);
+				} else {
+					$self->_save_data($y, $m, undef, sprintf("%02d", $wn), @wd);
+				}
+				$self->_clear_stats();
+			}
 		}
 		# Wait for last child stop
 		$self->wait_all_childs() if ($self->{queue_size} > 1);
@@ -1133,6 +1135,7 @@ sub _init
 	$self->{Locale} = $options{Locale} || '';
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
+	$self->{no_week_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
 	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
 	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
@@ -1360,10 +1363,12 @@ sub _parseData
 	}
 
 	# Stores weeks to process
-	if ("$year$month$day" ne "$self->{cur_year}$self->{cur_month}$self->{cur_day}") {
-		my $wn = &get_week_number($year, $month, $day);
-		if (!grep(/^$year\/$month\/$wn$/, @{$self->{week_parsed}})) {
-			push(@{$self->{week_parsed}}, "$year/$month/$wn");
+	if (!$self->{no_week_stat}) {
+		if ("$year$month$day" ne "$self->{cur_year}$self->{cur_month}$self->{cur_day}") {
+			my $wn = &get_week_number($year, $month, $day);
+			if (!grep(/^$year\/$month\/$wn$/, @{$self->{week_parsed}})) {
+				push(@{$self->{week_parsed}}, "$year/$month/$wn");
+			}
 		}
 	}
 
@@ -2090,8 +2095,10 @@ sub _save_data
 	if ($day && !-d "$self->{Output}/$year/$month/$day") {
 		mkdir("$self->{Output}/$year/$month/$day", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/$month/$day, $!\n");
 	}
-	if ($wn && !-d "$self->{Output}/$year/week$wn") {
-		mkdir("$self->{Output}/$year/week$wn", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n");
+	if (!$self->{no_week_stat}) {
+		if ($wn && !-d "$self->{Output}/$year/week$wn") {
+			mkdir("$self->{Output}/$year/week$wn", 0755) || $self->localdie("ERROR: can't create directory $self->{Output}/$year/week$wn, $!\n");
+		}
 	}
 
 	# Dumping data
@@ -2292,11 +2299,13 @@ sub buildHTML
 			push(@months_cal, "$outdir/$y/$m");
 			$self->gen_html_output($outdir, $y, $m);
 		}
-		foreach my $w (sort @weeks_to_build) {
-			$w = sprintf("%02d", $w+1);
-			push(@array_count, "$outdir/$y/week$w");
-			print STDERR "Generating statistics for week $w on year $y\n" if (!$self->{QuietMode});
-			$self->gen_html_output($outdir, $y, '', '', $w);
+		if (!$self->{no_week_stat}) {
+			foreach my $w (sort @weeks_to_build) {
+				$w = sprintf("%02d", $w+1);
+				push(@array_count, "$outdir/$y/week$w");
+				print STDERR "Generating statistics for week $w on year $y\n" if (!$self->{QuietMode});
+				$self->gen_html_output($outdir, $y, '', '', $w);
+			}
 		}
 		print STDERR "Generating statistics for year $y\n" if (!$self->{QuietMode});
 		$self->gen_html_output($outdir, $y);
