@@ -12,6 +12,8 @@ BuildRequires:	perl
 BuildArch:	noarch
 
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n) 
+BuildRequires: perl-ExtUtils-MakeMaker, perl-ExtUtils-Install, perl-ExtUtils-Manifest, perl-ExtUtils-ParseXS, perl-Time-HiRes
+BuildRequires: gdbm-devel, libdb-devel, perl-devel, systemtap-sdt-devel
 
 %description
 Squid proxy native log analyzer and reports generator with full
@@ -30,7 +32,7 @@ or more often with heavy proxy usage.
 %setup -q
 
 %build
-perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_sbindir} HTMLDIR=%{contentdir}/html/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
+perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_bindir} HTMLDIR=%{contentdir}/html/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
 
 make
 
@@ -40,7 +42,7 @@ rm -rf %{buildroot}
 make DESTDIR=%{buildroot} install
 install etc/* %{buildroot}%{_sysconfdir}/%{name}/
 install -d %{buildroot}%{_sysconfdir}/cron.daily
-echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron.daily/0%{name}
+echo -e "#!/bin/sh\n%{_bindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron.daily/0%{name}
 
 
 %files
@@ -48,7 +50,9 @@ echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cro
 %doc README ChangeLog
 %{_mandir}/man3/*
 %{perl_vendorlib}/SquidAnalyzer.pm
-%attr(0755,root,root) %{_sbindir}/squid-analyzer
+%attr(0755,root,root) %{_bindir}/squid-analyzer
+%attr(0755,root,root) %{_libdir}/perl5/perllocal.pod
+%attr(0755,root,root) %{_libdir}/perl5/vendor_perl/auto/SquidAnalyzer/.packlist
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0664,root,root) %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/excluded
@@ -67,3 +71,4 @@ echo -e "#!/bin/sh\n%{_sbindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cro
 
 %clean
 rm -rf %{buildroot}
+
