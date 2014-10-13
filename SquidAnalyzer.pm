@@ -1373,7 +1373,7 @@ sub _parseData
 	}
 
 	# Extract the domainname part of the URL
-	$url =~ s/:.*//;
+	$url =~ s/:\d+.*//;
 	$url =~ m/^[^\/]+\/\/([^\/]+)/;
 	my $dest = $1 || $url;
 
