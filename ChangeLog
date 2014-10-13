@@ -1,5 +1,26 @@
 Revision history for SquidAnalyzer
 
+6.1 - Mon Oct 13 11:36:52 CEST 2014
+
+This release fix severals major issues and adds a new feature to disable weekly
+reports with a new command line option --no-week-stat.
+
+	- Fix top domains report where url with port was reported in unknown
+	  domains. Thanks to Michael Gauthier for the report.
+	- Add --no-week-stat to disable weekly reports generation. Thanks to
+	  Mang0uste for the feature request.
+	- Fix and update Ukrainian translation file. Thanks to Oleg A. Deordiev
+	  for the patch.
+	- Save the last line parsed line when squid-analyzer is interrupted to
+	  avoid loading twice the same data after restarting. Thanks to Michael
+	  Gauthier for the report.
+	- Fix missing calendar menu on daily report. Thanks to Cesar Vazquez for
+	  the report.
+	- Fix problem with links to weekly summaries in SquidAnalyzer.pm Thanks
+	  to David Murrel for the patch.
+	- Add IO::Handle and FileHandle in Perl modules that should be loaded.
+	  Thanks to Jeetendra Poojari  for the report.
+
 6.0 - Sat Aug 30 21:48:14 CEST 2014
 
 This major release adds several new features, lot of speed improvement and

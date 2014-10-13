@@ -27,7 +27,7 @@ BEGIN {
 
 
 	# Set all internal variable
-	$VERSION = '6.0';
+	$VERSION = '6.1';
 	$COPYRIGHT = 'Copyright (c) 2001-2014 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
