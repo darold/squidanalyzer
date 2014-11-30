@@ -526,11 +526,24 @@ sub parseFile
 					$self->{end_offset} = 0;
 				# If the size of the file is lower than the history offset, skip this file
 				} elsif ((lstat($lfile))[7] <= $history_offset) {
-					print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
+					# move at begining of the file to see if this is a new one
+					$logfile->seek(0, 0);
+					for (my $i = 1; $i <= 10; $i++) {
+						$line = <$logfile>;
+						chomp($line);
+						if ($line =~ /^(\d{10}\.\d{3})/) {
+							if ($1 < $self->{history_time}) {
+								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
+								$line = 'NOK';
+								last;
+							}
+						}
+					}
 					$logfile->close;
-					next;
+					# This file should be ommitted jump to the next file
+					next if ($line eq 'NOK');
 				} else {
-					# move at ofset and see if next line is older than history time
+					# move at offset and see if next line is older than history time
 					$logfile->seek($history_offset, 0);
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
