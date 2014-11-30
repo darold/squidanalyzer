@@ -946,7 +946,8 @@ sub _parse_file_part
 					# check for user inclusion
 					if (exists $self->{Include}{users}) {
 						foreach my $e (@{$self->{Include}{users}}) {
-							if ($login =~ m#^$e$#i) {
+							# look for users using the following format: user@domain.tld, domain\user and user 
+							if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
 								$found = 1;
 								last;
 							}
@@ -985,7 +986,8 @@ sub _parse_file_part
 				# check for user exclusion
 				if (exists $self->{Exclude}{users}) {
 					foreach my $e (@{$self->{Exclude}{users}}) {
-						if ($login =~ m#^$e$#i) {
+						# look for users using the following format: user@domain.tld, domain\user and user 
+						if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
 							$found = 1;
 							last;
 						}
