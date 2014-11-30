@@ -1,0 +1,113 @@
+#------------------------------------------------------------------------------
+# File di traduzione del programma SquidAnalyzer.
+# La prima colonna contiene la chiave della stringa da tradurre, la seconda
+# il valore tradotto.
+# Le chiavi non dovrebbero essere modificate e sono case-sensitive.
+# Il separatore di colonna è il carattere TAB
+#
+# Le variabili speciali %s e %d nelle stringhe tradotte sono usate dal programma
+# per sostittuire valori dinamici. A seconda della lingua la loro posizione può
+# variare 
+#------------------------------------------------------------------------------
+
+# Autore: Stefano Cailotto 
+#------------------------------------------------------------------------------
+CharSet				iso-8859-1
+01				Gen
+02				Feb
+03				Mar
+04				Apr
+05				Mag
+06				Giu
+07				Lug
+08				Ago
+09				Set
+10				Ott
+11				Nov
+12				Dic
+KB				Kilobyte
+MB				Megabyte
+GB				Gigabyte
+Requests			Richieste
+Bytes				Byte
+Megabytes			Megabyte
+Total				Totale
+Years				Anni
+Months				Mesi
+Days				Giorni
+Hit				Hit
+Miss				Miss
+Denied                          Negato
+Cost				Costo
+Users				Utenti
+Sites				Siti
+Domains				Dominii
+Requests_graph			Richieste
+Megabytes_graph			Megabyte
+Months_graph			Mesi
+Days_graph			Giorni
+Hit_graph			Hit
+Miss_graph			Miss
+Denied_graph			Negati
+Total_graph			Totale
+Domains_graph			Dominii
+Users_help			Numero di utenti totali differenti nel periodo 
+Sites_help			Numero totale di siti diversi visitati nel periodo
+Domains_help			Numero totale di dominii di secondo livello diversi visitati nel periodo
+Hit_help			Oggetti trovati in cache
+Miss_help			Oggetti non trovati in cache
+Denied_help			Oggetti con accesso negato
+Cost_help			1 Megabyte =
+Generation			Rapporto generato il
+Main_cache_title		Statistiche della cache
+Cache_title			Statistiche della cache per
+Stat_label			Statistiche
+Mime_link			Tipi MIME
+Network_link			Rete
+User_link			Utenti
+Top_url_link			Url più visitati
+Top_domain_link			Dominii più visitati
+Back_link			Indietro
+Graph_cache_hit_title		Statistiche %s di richieste per
+Graph_cache_byte_title		Statistiche %s di trasferimento dati per
+Hourly				per ora
+Hours				Ore
+Daily				Giornaliero
+Days				Giorni
+Monthly				Mensili
+Months				Mesi
+Mime_title			Statistiche dei tipi MIME per
+Mime_number			Numero di tipi MIME
+Network_title			Statistiche di rete per
+Network_number			Numero di reti 
+Duration			Durata
+Time				Tempo
+Largest				Dim. Max DL
+Url				Url
+User_title			Statistiche utente per
+User_number			Numero di utenti
+Url_Hits_title			Principali %d Url acceduti con successo
+Url_Bytes_title			Principali  %d Url per numero di byte per  
+Url_Duration_title		Principali %d Url per durata temporale
+Url_number			Numero di URL
+Domain_Hits_title		Principali %d dominii richiesti per 
+Domain_Bytes_title		Principali %d dominii per dati trasferiti per
+Domain_Duration_title		Principali %d dominii per durata temporale
+Domain_number			Numero dei dominii
+Domain_graph_hits_title		Statistiche di richieste per dominii per
+Domain_graph_bytes_title	Statistiche di trasferimento dati per dominii per 
+Second_domain_graph_hits_title  Statistiche di richieste per dominii di secondo livello per
+Second_domain_graph_bytes_title Statistiche di trasferimento dati per dominii secondo livello per
+First_visit			Prima visita
+Last_visit			Ultima visita
+Globals_Statistics		Statistiche Globali
+Legend				Legenda
+File_Generated			Generato il 
+Up_link				Inizio
+Click_year_stat			Clicca sulle statistiche annuali per ulteriori dettagli
+Mime_graph_hits_title		Statistiche di richieste per il tipo MIME per
+Mime_graph_bytes_title		Statistiche di trasferimento dati per tipo MIME per
+User				Utente
+WeekDay				Do Lu Ma Me Gi Ve Sa
+Week				Settimana
+Weekly				Settimanali
