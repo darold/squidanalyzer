@@ -874,9 +874,11 @@ sub _parse_file_part
 			$method = $6;
 			$line = $7;
 
-			# Determine if we have to reset the 
 			# Do not parse some unwanted method
 			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
+
+			# Do not parse some unwanted code; e.g. TCP_DENIED/403
+			next if (($#{$self->{ExcludedCodes}} >= 0) && grep(m#^$code$#, @{$self->{ExcludedCodes}}));
 
 			# Go to last parsed date (incremental mode)
 			next if ($self->{history_time} && ($time <= $self->{history_time}));
@@ -1153,6 +1155,10 @@ sub _init
 	$self->{ExcludedMethods} = ();
 	if ($options{ExcludedMethods}) {
 		push(@{$self->{ExcludedMethods}}, split(/\s*,\s*/, $options{ExcludedMethods}));
+	}
+	$self->{ExcludedCodes} = ();
+	if ($options{ExcludedCodes}) {
+		push(@{$self->{ExcludedCodes}}, split(/\s*,\s*/, $options{ExcludedCodes}));
 	}
 	$self->{ExcludedMimes} = ();
 	if ($options{ExcludedMimes}) {

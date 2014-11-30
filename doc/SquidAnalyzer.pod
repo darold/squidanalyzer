@@ -412,6 +412,13 @@ Used to set the translation file to be used. Value must be set to
 a file containing all string translated. See the lang directory
 for translation files. Default is defined internally in English.
 
+=item ExcludedCodes
+
+This directive allow exclusion of some unwanted codes in report statistics
+like TCP_DENIED/403 which are generated when a user accesses a page the first
+time without authentication. Can be a comma separated list of methods.
+Default is none, all codes will be parsed.
+
 =item DateFormat
 
 Date format used to display date (year = %y, month = %m and day = %d)
