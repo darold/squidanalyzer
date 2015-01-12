@@ -604,9 +604,9 @@ sub parseFile
 				$line_stored_count += $data[5];
 				$line_processed_count += $data[6];
 				$line_count += $data[7];
-				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}") ) {
+				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}{$data[8]}}") ) {
 					$self->{first_year} = $data[8];
-					$self->{first_month} = $data[9];
+					$self->{first_month}{$data[8]} = $data[9];
 				}
 				my @tmp = split(/,/, $data[10]);
 				foreach my $w (@tmp) {
@@ -620,8 +620,8 @@ sub parseFile
 				foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
 					my @data = split(/\s/, $history_tmp{$date}{$offset});
 					$self->{last_year} = $data[0];
-					$self->{last_month} = $data[1];
-					$self->{last_day} = $data[2];
+					$self->{last_month}{$data[0]} = $data[1];
+					$self->{last_day}{$data[0]} = $data[2];
 					$self->{end_time} = $data[3];
 					$self->{end_offset} = $data[4];
 					last;
@@ -654,7 +654,7 @@ sub parseFile
 			if (!$self->{QuietMode}) {
 				print STDERR "Reordering daily data files now...\n";
 			}
-			for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
+			for my $date ("$self->{first_year}$self->{first_month}{$self->{first_year}}" .. "$self->{last_year}$self->{last_month}{$self->{last_year}}") {
 				$date =~ /^(\d{4})(\d{2})$/;
 				my $y = $1;
 				my $m = $2;
@@ -716,7 +716,7 @@ sub parseFile
 			print STDERR "Generating monthly data files now...\n";
 		}
 
-		for my $date ("$self->{first_year}$self->{first_month}" .. "$self->{last_year}$self->{last_month}") {
+		for my $date ("$self->{first_year}$self->{first_month}{$self->{first_year}}" .. "$self->{last_year}$self->{last_month}{$self->{last_year}}") {
 			$date =~ /^(\d{4})(\d{2})$/;
 			my $y = $1;
 			my $m = $2;
@@ -1061,7 +1061,7 @@ sub _parse_file_part
 		# Save the last information parsed in this file part
 		if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
 			flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
-			print OUT "$self->{last_year} $self->{last_month} $self->{last_day} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month} ", join(',', @{$self->{week_parsed}}), "\n";
+			print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
 			close(OUT);
 		} else {
 			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
@@ -1247,13 +1247,13 @@ sub _init
 
 	# Used to store the first and last date parsed
         $self->{last_year} = 0;
-        $self->{last_month} = 0;
-        $self->{last_day} = 0;
+        $self->{last_month} = ();
+        $self->{last_day} = ();
         $self->{cur_year} = 0;
         $self->{cur_month} = 0;
         $self->{cur_day} = 0;
         $self->{first_year} = 0;
-        $self->{first_month} = 0;
+        $self->{first_month} = ();
 	$self->{begin_time} = 0;
 	$self->{end_time} = 0;
 	$self->{end_offset} = 0;
@@ -1437,16 +1437,16 @@ sub _parseData
 	}
 
 	# Stores last parsed date part
-	if (!$self->{last_year} || ("$year$month$day" gt "$self->{last_year}$self->{last_month}$self->{last_day}")) {
+	if (!$self->{last_year} || ("$year$month$day" gt "$self->{last_year}$self->{last_month}{$self->{last_year}}$self->{last_day}{$self->{last_year}}")) {
 		$self->{last_year} = $year;
-		$self->{last_month} = $month;
-		$self->{last_day} = $day;
+		$self->{last_month}{$self->{last_year}} = $month;
+		$self->{last_day}{$self->{last_year}} = $day;
 	}
 
 	# Stores first parsed date part
-	if (!$self->{first_year} || ("$self->{first_year}$self->{first_month}" gt "$year$month")) {
+	if (!$self->{first_year} || ("$self->{first_year}$self->{first_month}{$self->{first_year}}" gt "$year$month")) {
 		$self->{first_year} = $year;
-		$self->{first_month} = $month;
+		$self->{first_month}{$self->{first_year}} = $month;
 	}
 
 	# Stores current processed values
@@ -2296,7 +2296,7 @@ sub buildHTML
 		closedir DIR;
 		my @weeks_to_build = ();
 		foreach my $m (sort {$a <=> $b} @months) {
-			next if (!$m || ($m < $self->{first_month}));
+			next if (!$m || ($m < $self->{first_month}{$y}));
 			next if ($self->check_build_date($y, $m));
 			# Remove the full month repository if it is older that the last date to preserve
 			if ($p_year && ("$y$m" < "$p_year$p_month")) {
@@ -2629,14 +2629,14 @@ sub _print_cache_stat
 				push(@xaxis, "$_");
 			}
 		} else {
-			@xaxis = &get_wdays_per_year($week - 1, $year);
+			@xaxis = &get_wdays_per_year($week - 1, $year, $month);
 			foreach my $x (@xaxis) {
 				push(@xstick, POSIX::strftime("%F", localtime($x/1000)));
 			}
 			map { s/\d{4}-\d{2}-//; } @xstick;
 			$title = $Translate{'Weekly'} || 'Weekly';
 			$type = 'week';
-			$type = '[' . join(',', @xaxis) . ']';
+			$type = '[' . join(',', @xstick) . ']';
 		}
 		$unit = $Translate{'Days'} || 'Days';
 	} elsif ($type eq 'month') {
@@ -4726,6 +4726,9 @@ sub flotr2_bargraph
 		$numticks = 31;
 	} elsif ($xtype =~ /\[.*\]/) {
 		$xmode = 'time';
+		$xlabel = qq{var days = $xtype;
+		return days[(pos - 1) % 7];
+};
 		$numticks = 7;
 	} else  {
 		$xlabel = qq{var hours = [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
@@ -5074,7 +5077,6 @@ sub get_wdays_per_month
 
 	$month ||= '01';
 	push(@months, "$year$month");
-	my $start_month = $month;
 	if ($month eq '01') {
 		unshift(@months, ($year - 1) . "12");
 	} else {
@@ -5111,17 +5113,28 @@ sub get_wdays_per_month
 # Returns all days following the week number
 sub get_wdays_per_year
 {
-	my ($wn, $year) = @_;
+	my ($wn, $year, $mon) = @_;
 
-	my @months = ();
+	$mon ||= '01';
+
+	my @months = ("$year$mon");
 	my @retdays = ();
-
-	foreach ("01" .. "12") {
-		push(@months, "$year$_");
+	foreach my $a ($months[0] .. "${year}12") {
+		push(@months, $a) if (!grep(/^$a$/, @months));
 	}
-	my $start_month = "01";;
-	unshift(@months, ($year - 1) . "12");
-	push(@months, ($year+1) . "01");
+
+	if ($mon == 1) {
+		unshift(@months, ($year - 1) . "12");
+	} else {
+		my $d = $year . sprintf("%02d", $mon - 1);
+		unshift(@months, $d) if (!grep(/^$d$/, @months));
+	}
+	if ($mon == 12) {
+		push(@months, ($year+1) . "01");
+	} else {
+		my $d = $year . sprintf("%02d", $mon + 1);
+		push(@months, $d) if (!grep(/^$d$/, @months));
+	}
 
 	foreach my $d (@months) {
 		$d =~ /^(\d{4})(\d{2})$/;
@@ -5134,12 +5147,12 @@ sub get_wdays_per_year
 				next;
 			}
 			my $weekNumber = POSIX::strftime("%W", 1, 1, 1, $day, $m - 1, $y - 1900);
-			if ( ($weekNumber == $wn) || ( ($weekNumber eq '00') && (($wn == 1) || ($wn >= 52)) ) ) {
+			#if ( ($weekNumber == $wn) || ( (($weekNumber eq '00') || ($weekNumber == 53) ) && (($wn == 1) || ($wn >= 52)) ) ) {
+			if ( ($weekNumber == $wn) || (($weekNumber == 0) && ($wn == 52)) || (($weekNumber == 52) && ($wn == 0)) ) {
 				my $time = timelocal_nocheck(0, 0, 0, $day, $m - 1, $y - 1900);
 				push(@retdays, $time*1000);
 				return @retdays if ($#retdays == 6);
 			}
-			next if ($weekNumber > $wn);
 		}
 	}
 	return @retdays;
