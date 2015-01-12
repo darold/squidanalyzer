@@ -1918,9 +1918,20 @@ sub _read_stat
 					my $hits = $2 || '';
 					my $bytes = $3 || '';
 					my $duration = $4 || '';
-					if ($5 > $self->{"stat_usermax_$sum_type"}{$id}{largest_file_size}) {
-						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $5;
-						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $6;
+					my $lsize = $5 || 0;
+					my $lurl = $6 || 0;
+
+					# Anonymize all users
+					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+						if (!exists $self->{AnonymizedId}{$id}) {
+							$self->{AnonymizedId}{$id} = &anonymize_id();
+						}
+						$id = $self->{AnonymizedId}{$id};
+					}
+
+					if ($lsize > $self->{"stat_usermax_$sum_type"}{$id}{largest_file_size}) {
+						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_size} = $lsize;
+						$self->{"stat_usermax_$sum_type"}{$id}{largest_file_url} = $lurl;
 					}
 					$hits =~ s/,$//;
 					$bytes =~ s/,$//;
@@ -1960,24 +1971,37 @@ sub _read_stat
 				my $i = 1;
 				while (my $l = <$dat_file_user_url>) {
 					chomp($l);
+					my $id = '';
+					if ($l =~ /^([^\s]+)\s+hits=/) {
+						$id = $1;
+					}
+
+					# Anonymize all users
+					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+						if (!exists $self->{AnonymizedId}{$id}) {
+							$self->{AnonymizedId}{$id} = &anonymize_id();
+						}
+						$id = $self->{AnonymizedId}{$id};
+					}
+
 					if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_hit} += $8;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{cache_bytes} += $9;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit}));
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit}));
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{cache_hit} += $8;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{cache_bytes} += $9;
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{hits} += $2;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{duration} += $4;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{firsthit}));
-						$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$1}{"$7"}{lasthit}));
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit}));
+						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit}));
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
-						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{hits} += $2;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$1}{"$5"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{hits} += $2;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{bytes} += $3;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{duration} += $4;
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
 						print STDERR "$l\n";
@@ -2058,6 +2082,14 @@ sub _read_stat
 					$id = $2;
 					$data = $l;
 				}
+				# Anonymize all users
+				if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+					if (!exists $self->{AnonymizedId}{$id}) {
+						$self->{AnonymizedId}{$id} = &anonymize_id();
+					}
+					$id = $self->{AnonymizedId}{$id};
+				}
+
 				if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
 					$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
 					$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
@@ -3263,6 +3295,15 @@ sub _print_user_stat
 	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
+
+		# Anonymize all users
+		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+			if (!exists $self->{AnonymizedId}{$user}) {
+				$self->{AnonymizedId}{$user} = &anonymize_id();
+			}
+			$user = $self->{AnonymizedId}{$user};
+		}
+
 		$data =~ /hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
@@ -3504,6 +3545,15 @@ sub _print_netuser_stat
 			$data = $l;
 		}
 		next if ($network ne $usrnet);
+
+		# Anonymize all users
+		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+			if (!exists $self->{AnonymizedId}{$user}) {
+				$self->{AnonymizedId}{$user} = &anonymize_id();
+			}
+			$user = $self->{AnonymizedId}{$user};
+		}
+
 		$data =~ /^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)/;
 		$netuser_stat{$user}{hits} = $1;
 		$netuser_stat{$user}{bytes} = $2;
@@ -3612,6 +3662,7 @@ sub _print_user_detail
 		last if (($user ne $usr) && $ok);
 		next if ($user ne $usr);
 		$ok = 1;
+
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
@@ -3759,6 +3810,15 @@ sub _print_top_url_stat
 	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
+
+		# Anonymize all users
+		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+			if (!exists $self->{AnonymizedId}{$user}) {
+				$self->{AnonymizedId}{$user} = &anonymize_id();
+			}
+			$user = $self->{AnonymizedId}{$user};
+		}
+
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
