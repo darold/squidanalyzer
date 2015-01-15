@@ -1198,9 +1198,11 @@ sub _init
 	if (! -d $self->{Output}) {
 		die "ERROR: 'Output' directory $self->{Output} doesn't exists.\n";
 	}
-	push(@{$self->{LogFile}}, @{$options{LogFile}});
-	if ($#{$self->{LogFile}} < 0) {
-		die "ERROR: 'LogFile' configuration directive must be set or use -l option at command line.\n";
+	if (!$self->{rebuild}) {
+		push(@{$self->{LogFile}}, @{$options{LogFile}});
+		if ($#{$self->{LogFile}} < 0) {
+			die "ERROR: 'LogFile' configuration directive must be set or a log file given at command line.\n";
+		}
 	}
 	$self->{OrderUser} = lc($options{OrderUser}) || 'bytes';
 	$self->{OrderNetwork} = lc($options{OrderNetwork}) || 'bytes';
