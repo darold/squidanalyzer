@@ -10,7 +10,8 @@
 # may vary.
 #
 # Author: Gilles Darold
-# Russian translation by oxygen121. Version 1.0
+# Russian translation by oxygen121. Version 1.1
+# Additions and corrections by yvoinov.
 #------------------------------------------------------------------------------
 CharSet				utf-8
 01				Янв
@@ -35,10 +36,10 @@ Total				Всего
 Years				Год
 Months				Месяца
 Days				Дни
-Hit				Hit
-Miss				Miss
-Denied				Denied
-Cost				Стоимось
+Hit				Кэш-попадания
+Miss				Кэш-промахи
+Denied				Запрещено
+Cost				Стоимость
 Users				Пользователи
 Sites				Сайты
 Domains				Домены
@@ -46,9 +47,9 @@ Requests_graph			Запросы
 Megabytes_graph			Магабайты
 Months_graph			Месяца
 Days_graph			Дни
-Hit_graph			Hit
-Miss_graph			Miss
-Denied_graph			Denied
+Hit_graph			Кэш-попадания
+Miss_graph			Кэш-промахи
+Denied_graph			Запрещено
 Total_graph			Всего
 Domains_graph			Домены
 Users_help			Статистика по пользователям за выбранный период
@@ -56,8 +57,8 @@ Sites_help			Статистика по Сайтам за выбранный пе
 Domains_help			Статистика по Доменам за выбранный период
 Hit_help			Объекты, найденные в кэше
 Miss_help			Объекты, не найденные в кэше
-Denied_help			Object with access denied
-Cost_help			1 Мега байт =
+Denied_help			Объекты, доступ запрещен
+Cost_help			1 Мегабайт =
 Generation			Дата создания отчета
 Main_cache_title		Статистика Прокси
 Cache_title			Статистика Прокси
@@ -86,13 +87,13 @@ Largest				Наибольший
 Url				URL
 User_title			Статистика по Пользователям за
 User_number			Количество Пользователей
-Url_Hits_title			Top %d URL запросов за
-Url_Bytes_title			Top %d URL траффик за
-Url_Duration_title		Top %d URL продолжительность за
+Url_Hits_title			Топ %d URL запросов за
+Url_Bytes_title			Топ %d URL траффик за
+Url_Duration_title		Топ %d URL продолжительность за
 Url_number			Количество URL
-Domain_Hits_title		Top %d запросов по Доменам за
-Domain_Bytes_title		Top %d траффик по Доменам за
-Domain_Duration_title		Top %d продолжительность по Доменам за
+Domain_Hits_title		Топ %d запросов по Доменам за
+Domain_Bytes_title		Топ %d траффик по Доменам за
+Domain_Duration_title		Топ %d продолжительность по Доменам за
 Domain_number			Кол-во Доменов
 Domain_graph_hits_title		Статистика запросов по Доменам за
 Domain_graph_bytes_title	Статистика траффика по Доменам за
@@ -109,5 +110,5 @@ Mime_graph_hits_title		MIME-Типы запросы за
 Mime_graph_bytes_title		MIME-Типы Мегабайты за
 User				Пользователь
 Count				Считать
-WeekDay				Su Mo Tu We Th Fr Sa
-Week				Week
+WeekDay				Вс Пн Вт Ср Чт Пт Сб
+Week				Неделя
