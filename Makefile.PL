@@ -24,8 +24,8 @@ if (! -d $default_log ) {
 # Default install path
 my $LOGFILE = $ENV{LOGFILE} || $default_log;
 my $BINDIR = $ENV{BINDIR} || '/usr/local/bin';
-my $ETCDIR = $ENV{ETCDIR} || '';
 my $CONFDIR = $ENV{CONFDIR} || '/etc/squidanalyzer';
+my $ETCDIR = $ENV{ETCDIR} || $CONFDIR;
 my $HTMLDIR = $ENV{HTMLDIR} || '/var/www/squidanalyzer';
 my $BASEURL = $ENV{BASEURL} || '/squidreport';
 my $DOCDIR = $ENV{DOCDIR} || '';
@@ -39,8 +39,8 @@ unless(open(INST, ">install_all.sh")) {
 }
 print INST qq{#!/bin/sh
 test ! -d "$DESTDIR$BINDIR" && mkdir -p $DESTDIR$BINDIR
-test ! -d "$DESTDIR$CONFDIR" && mkdir -p $DESTDIR$CONFDIR
-test ! -d "$DESTDIR$CONFDIR/lang" && mkdir -p $DESTDIR$CONFDIR/lang
+test ! -d "$DESTDIR$ETCDIR" && mkdir -p $DESTDIR$ETCDIR
+test ! -d "$DESTDIR$ETCDIR/lang" && mkdir -p $DESTDIR$ETCDIR/lang
 test ! -d "$DESTDIR$HTMLDIR" && mkdir -p $DESTDIR$HTMLDIR
 test ! -d "$DESTDIR$HTMLDIR/images" && mkdir -p $DESTDIR$HTMLDIR/images
 };
@@ -52,14 +52,14 @@ test ! -d "$DESTDIR$DOCDIR" && mkdir -p $DESTDIR$DOCDIR
 }
 
 print INST qq{
-test ! -d "$DESTDIR$MANDIR" mkdir -p $DESTDIR$MANDIR
+test ! -d "$DESTDIR$MANDIR" && mkdir -p $DESTDIR$MANDIR
 
 # Copy files that must not be overriden 
 for file in squidanalyzer.conf network-aliases user-aliases excluded included; do
-if [ -r $DESTDIR$CONFDIR/\$file ]; then
-	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file.sample
+if [ -r $DESTDIR$ETCDIR/\$file ]; then
+	install -m 644 etc/\$file $DESTDIR$ETCDIR/\$file.sample
 else
-	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file
+	install -m 644 etc/\$file $DESTDIR$ETCDIR/\$file
 fi
 done
 install -m 755 squid-analyzer $DESTDIR$BINDIR/
@@ -73,14 +73,20 @@ install -m 644 resources/images/back-arrow.png $DESTDIR$HTMLDIR/images/
 install -m 644 resources/images/info.png $DESTDIR$HTMLDIR/images/
 install -m 644 resources/images/network.png $DESTDIR$HTMLDIR/images/
 install -m 644 resources/images/user.png $DESTDIR$HTMLDIR/images/
-install -m 644 lang/* $DESTDIR$CONFDIR/lang/
+install -m 644 lang/* $DESTDIR$ETCDIR/lang/
 pod2text doc/SquidAnalyzer.pod README
+pod2man doc/SquidAnalyzer.pod squid-analyzer.3
 };
 if ($DOCDIR ne '') {
         print INST qq{
 	install -m 644 README $DESTDIR$DOCDIR/
 	install -m 644 INSTALL $DESTDIR$DOCDIR/
 	install -m 644 ChangeLog $DESTDIR$DOCDIR/
+};
+}
+if ($MANDIR ne '') {
+        print INST qq{
+	install -m 644 squid-analyzer.3 $DESTDIR$MANDIR/
 };
 }
 
@@ -115,14 +121,16 @@ close(INST);
 `chmod 755 install_all.sh`;
 
 # Change path into the default configuration file
-if ($ETCDIR ne '') {
-	`perl -p -i -e 's#/etc/squidanalyzer#$ETCDIR#' etc/squidanalyzer.conf squid-analyzer`;
-} else {
-	`perl -p -i -e 's#/etc/squidanalyzer#$CONFDIR#' etc/squidanalyzer.conf squid-analyzer`;
-}
+`perl -p -i -e 's#/.*/squidanalyzer.conf#$ETCDIR/squidanalyzer.conf#' etc/squidanalyzer.conf squid-analyzer`;
 `perl -p -i -e 's#^Output.*#Output	$HTMLDIR#' etc/squidanalyzer.conf`;
 `perl -p -i -e 's#^LogFile.*#LogFile	$LOGFILE#' etc/squidanalyzer.conf`;
 `perl -p -i -e 's#^WebUrl.*#WebUrl	$BASEURL#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^NetworkAlias.*#NetworkAlias	$ETCDIR/network-aliases#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^UserAlias.*#UserAlias	$ETCDIR/user-aliases#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^Exclude.*#Exclude	$ETCDIR/excluded#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#^Include.*#Include	$ETCDIR/included#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's#Lang.*\.txt#Lang	$ETCDIR/lang/en_US.txt#' etc/squidanalyzer.conf`;
+
 my $zcat = `which zcat`;
 chomp($zcat);
 `perl -p -i -e 's#^\\\$ZCAT_PROG.*#\\\$ZCAT_PROG = "$zcat";#' SquidAnalyzer.pm`;
@@ -142,10 +150,10 @@ WriteMakefile(
 	'AUTHOR'       => 'Gilles Darold (gilles@darold.net)',
 	'ABSTRACT'     => 'Squid log analyzer',
 	'EXE_FILES'    => [ qw(squid-analyzer) ],
-	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/squidanalyzer.3' },
+	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/SquidAnalyzer.3' },
 	'DESTDIR'      => $ENV{DESTDIR},
 	'INSTALLDIRS'  => $ENV{INSTALLDIRS},
-	'clean'	       => { FILES => "install_all.sh lib/blib/" },
+	'clean'	       => { FILES => "install_all.sh lib/blib/ squid-analyzer.3" },
 	'META_MERGE'   => {
 		resources  => {
 			homepage => 'http://squidanalyzer.darold.net/',
