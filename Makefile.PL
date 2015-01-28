@@ -24,7 +24,7 @@ if (! -d $default_log ) {
 # Default install path
 my $LOGFILE = $ENV{LOGFILE} || $default_log;
 my $BINDIR = $ENV{BINDIR} || '/usr/local/bin';
-my $ETCDIR = $ENV{ETCDIR} || '/etc/squidanalyzer';
+my $ETCDIR = $ENV{ETCDIR} || '';
 my $CONFDIR = $ENV{CONFDIR} || '/etc/squidanalyzer';
 my $HTMLDIR = $ENV{HTMLDIR} || '/var/www/squidanalyzer';
 my $BASEURL = $ENV{BASEURL} || '/squidreport';
@@ -38,38 +38,25 @@ unless(open(INST, ">install_all.sh")) {
         exit 0;
 }
 print INST qq{#!/bin/sh
-if [ ! -d "$DESTDIR$BINDIR" ]; then
-        mkdir -p $DESTDIR$BINDIR
-fi
-if [ ! -d "$DESTDIR$CONFDIR" ]; then
-        mkdir -p $DESTDIR$CONFDIR
-fi
-if [ ! -d "$DESTDIR$CONFDIR/lang" ]; then
-        mkdir -p $DESTDIR$CONFDIR/lang
-fi
-if [ ! -d "$DESTDIR$HTMLDIR" ]; then
-        mkdir -p $DESTDIR$HTMLDIR
-fi
-if [ ! -d "$DESTDIR$HTMLDIR/images" ]; then
-        mkdir -p $DESTDIR$HTMLDIR/images
-fi
+test ! -d "$DESTDIR$BINDIR" && mkdir -p $DESTDIR$BINDIR
+test ! -d "$DESTDIR$CONFDIR" && mkdir -p $DESTDIR$CONFDIR
+test ! -d "$DESTDIR$CONFDIR/lang" && mkdir -p $DESTDIR$CONFDIR/lang
+test ! -d "$DESTDIR$HTMLDIR" && mkdir -p $DESTDIR$HTMLDIR
+test ! -d "$DESTDIR$HTMLDIR/images" && mkdir -p $DESTDIR$HTMLDIR/images
 };
 
 if ($DOCDIR ne '') {
 	print INST qq{
-if [ ! -d "$DESTDIR$DOCDIR" ]; then
-	mkdir -p $DESTDIR$DOCDIR
-fi
+test ! -d "$DESTDIR$DOCDIR" && mkdir -p $DESTDIR$DOCDIR
 };
 }
 
 print INST qq{
-if [ ! -d "$DESTDIR$MANDIR" ]; then
-	mkdir -p $DESTDIR$MANDIR
-fi
+test ! -d "$DESTDIR$MANDIR" mkdir -p $DESTDIR$MANDIR
+
 # Copy files that must not be overriden 
 for file in squidanalyzer.conf network-aliases user-aliases excluded included; do
-if [ -e $DESTDIR$CONFDIR/\$file ]; then
+if [ -r $DESTDIR$CONFDIR/\$file ]; then
 	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file.sample
 else
 	install -m 644 etc/\$file $DESTDIR$CONFDIR/\$file
