@@ -1141,6 +1141,7 @@ sub _init
 	$self->{MinPie} = $options{MinPie} || 2;
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
+	$self->{UserReport} = $options{UserReport} || 0;
 	$self->{Output} = $options{Output} || '';
 	$self->{WebUrl} = $options{WebUrl} || '';
 	$self->{WebUrl} .= '/' if ($self->{WebUrl} && ($self->{WebUrl} !~ /\/$/));
@@ -1302,8 +1303,12 @@ sub _init
 <li><a href="url.html"><span class="iconUrl">$Translate{'Top_url_link'}</span></a></li>
 };
 	}
-	$self->{menu} .= qq{
+	if ($self->{UserReport}) {
+		$self->{menu} .= qq{
 <li><a href="user.html"><span class="iconUser">$Translate{'User_link'}</span></a></li>
+};
+	}
+	$self->{menu} .= qq{
 <li><a href="network.html"><span class="iconNetwork">$Translate{'Network_link'}</span></a></li>
 <li><a href="mime_type.html"><span class="iconMime">$Translate{'Mime_link'}</span></a></li>
 </ul>
@@ -1321,8 +1326,12 @@ sub _init
 <li><a href="../../url.html"><span class="iconUrl">$Translate{'Top_url_link'}</span></a></li>A
 };
 	}
-	$self->{menu2} .= qq{
+	if ($self->{UserReport}) {
+		$self->{menu2} .= qq{
 <li><a href="../../user.html"><span class="iconUser">$Translate{'User_link'}</span></a></li>
+};
+	}
+	$self->{menu2} .= qq{
 <li><a href="../../network.html"><span class="iconNetwork">$Translate{'Network_link'}</span></a></li>
 <li><a href="../../mime_type.html"><span class="iconMime">$Translate{'Mime_link'}</span></a></li>
 </ul>
@@ -1468,19 +1477,21 @@ sub _parseData
 	}
 	
 	#### Store client statistics
-	$self->{stat_user_hour}{$id}{$hour}{hits}++;
-	$self->{stat_user_hour}{$id}{$hour}{bytes} += $bytes;
-	$self->{stat_user_hour}{$id}{$hour}{duration} += $elapsed;
-	$self->{stat_user_day}{$id}{$self->{last_day}}{hits}++;
-	$self->{stat_user_day}{$id}{$self->{last_day}}{bytes} += $bytes;
-	$self->{stat_user_day}{$id}{$self->{last_day}}{duration} += $elapsed;
-	if ($bytes > $self->{stat_usermax_hour}{$id}{largest_file_size}) {
-		$self->{stat_usermax_hour}{$id}{largest_file_size} = $bytes;
-		$self->{stat_usermax_hour}{$id}{largest_file_url} = $url;
-	}
-	if ($bytes > $self->{stat_usermax_day}{$id}{largest_file_size}) {
-		$self->{stat_usermax_day}{$id}{largest_file_size} = $bytes;
-		$self->{stat_usermax_day}{$id}{largest_file_url} = $url;
+	if ($self->{UserReport}) {
+		$self->{stat_user_hour}{$id}{$hour}{hits}++;
+		$self->{stat_user_hour}{$id}{$hour}{bytes} += $bytes;
+		$self->{stat_user_hour}{$id}{$hour}{duration} += $elapsed;
+		$self->{stat_user_day}{$id}{$self->{last_day}}{hits}++;
+		$self->{stat_user_day}{$id}{$self->{last_day}}{bytes} += $bytes;
+		$self->{stat_user_day}{$id}{$self->{last_day}}{duration} += $elapsed;
+		if ($bytes > $self->{stat_usermax_hour}{$id}{largest_file_size}) {
+			$self->{stat_usermax_hour}{$id}{largest_file_size} = $bytes;
+			$self->{stat_usermax_hour}{$id}{largest_file_url} = $url;
+		}
+		if ($bytes > $self->{stat_usermax_day}{$id}{largest_file_size}) {
+			$self->{stat_usermax_day}{$id}{largest_file_size} = $bytes;
+			$self->{stat_usermax_day}{$id}{largest_file_url} = $url;
+		}
 	}
 
 	#### Store networks statistics
@@ -1524,19 +1535,21 @@ sub _parseData
 	}
 
 	#### Store user per networks statistics
-	$self->{stat_netuser_hour}{$network}{$id}{duration} += $elapsed;
-	$self->{stat_netuser_hour}{$network}{$id}{bytes} += $bytes;
-	$self->{stat_netuser_hour}{$network}{$id}{hits}++;
-	if ($bytes > $self->{stat_netuser_hour}{$network}{$id}{largest_file_size}) {
-		$self->{stat_netuser_hour}{$network}{$id}{largest_file_size} = $bytes;
-		$self->{stat_netuser_hour}{$network}{$id}{largest_file_url} = $url;
-	}
-	$self->{stat_netuser_day}{$network}{$id}{duration} += $elapsed;
-	$self->{stat_netuser_day}{$network}{$id}{bytes} += $bytes;
-	$self->{stat_netuser_day}{$network}{$id}{hits}++;
-	if ($bytes > $self->{stat_netuser_day}{$network}{$id}{largest_file_size}) {
-		$self->{stat_netuser_day}{$network}{$id}{largest_file_size} = $bytes;
-		$self->{stat_netuser_day}{$network}{$id}{largest_file_url} = $url;
+	if ($self->{UserReport}) {
+		$self->{stat_netuser_hour}{$network}{$id}{duration} += $elapsed;
+		$self->{stat_netuser_hour}{$network}{$id}{bytes} += $bytes;
+		$self->{stat_netuser_hour}{$network}{$id}{hits}++;
+		if ($bytes > $self->{stat_netuser_hour}{$network}{$id}{largest_file_size}) {
+			$self->{stat_netuser_hour}{$network}{$id}{largest_file_size} = $bytes;
+			$self->{stat_netuser_hour}{$network}{$id}{largest_file_url} = $url;
+		}
+		$self->{stat_netuser_day}{$network}{$id}{duration} += $elapsed;
+		$self->{stat_netuser_day}{$network}{$id}{bytes} += $bytes;
+		$self->{stat_netuser_day}{$network}{$id}{hits}++;
+		if ($bytes > $self->{stat_netuser_day}{$network}{$id}{largest_file_size}) {
+			$self->{stat_netuser_day}{$network}{$id}{largest_file_size} = $bytes;
+			$self->{stat_netuser_day}{$network}{$id}{largest_file_url} = $url;
+		}
 	}
 
 	#### Store mime type statistics
@@ -1615,12 +1628,14 @@ sub _append_stat
 	}
 
 	#### Save user statistics
-	my $dat_file_user = new IO::File;
-	$dat_file_user->open(">>$self->{Output}/$path/stat_user.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
-	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	$self->_write_stat_data($dat_file_user, $type, 'stat_user');
-	$dat_file_user->close();
+	if ($self->{UserReport}) {
+		my $dat_file_user = new IO::File;
+		$dat_file_user->open(">>$self->{Output}/$path/stat_user.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+		flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_user, $type, 'stat_user');
+		$dat_file_user->close();
+	}
 
 	#### Save network statistics
 	my $dat_file_network = new IO::File;
@@ -1631,12 +1646,14 @@ sub _append_stat
 	$dat_file_network->close();
 
 	#### Save user per network statistics
-	my $dat_file_netuser = new IO::File;
-	$dat_file_netuser->open(">>$self->{Output}/$path/stat_netuser.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
-	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
-	$dat_file_netuser->close();
+	if ($self->{UserReport}) {
+		my $dat_file_netuser = new IO::File;
+		$dat_file_netuser->open(">>$self->{Output}/$path/stat_netuser.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+		flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
+		$dat_file_netuser->close();
+	}
 
 	#### Save mime statistics
 	my $dat_file_mime_type = new IO::File;
@@ -1695,13 +1712,15 @@ sub _save_stat
 	}
 
 	#### Save user statistics
-	my $dat_file_user = new IO::File;
-	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user', $wn, @wd);
-	$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
-	flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	$self->_write_stat_data($dat_file_user, $type, 'stat_user');
-	$dat_file_user->close();
+	if ($self->{UserReport}) {
+		my $dat_file_user = new IO::File;
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_user', $wn, @wd);
+		$dat_file_user->open(">$self->{Output}/$path/stat_user.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_user.dat, $!\n");
+		flock($dat_file_user, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_user, $type, 'stat_user');
+		$dat_file_user->close();
+	}
 
 	#### Save network statistics
 	my $dat_file_network = new IO::File;
@@ -1713,13 +1732,15 @@ sub _save_stat
 	$dat_file_network->close();
 
 	#### Save user per network statistics
-	my $dat_file_netuser = new IO::File;
-	$self->_load_history($read_type, $year, $month, $day, $path, 'stat_netuser', $wn, @wd);
-	$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
-		or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
-	flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
-	$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
-	$dat_file_netuser->close();
+	if ($self->{UserReport}) {
+		my $dat_file_netuser = new IO::File;
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_netuser', $wn, @wd);
+		$dat_file_netuser->open(">$self->{Output}/$path/stat_netuser.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_netuser.dat, $!\n");
+		flock($dat_file_netuser, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_netuser, $type, 'stat_netuser');
+		$dat_file_netuser->close();
+	}
 
 	#### Save mime statistics
 	my $dat_file_mime_type = new IO::File;
@@ -1759,6 +1780,8 @@ sub _write_stat_data
 	if ($kind eq 'stat_user_url') {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
+				my $u = $id;
+				$u = '-' if (!$self->{UserReport});
 				$fh->print(
 					"$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
 					"bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{bytes} . ";" .
@@ -1977,6 +2000,7 @@ sub _read_stat
 					if ($l =~ /^([^\s]+)\s+hits=/) {
 						$id = $1;
 					}
+					$id = '-' if (!$self->{UserReport});
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -2070,45 +2094,47 @@ sub _read_stat
 	}
 
 	#### Read previous user per network statistics
-	if (!$kind || ($kind eq 'stat_netuser')) {
-		my $dat_file_netuser = new IO::File;
-		if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
-			my $i = 1;
-			while (my $l = <$dat_file_netuser>) {
-				chomp($l);
-				my ($net, $id, $data) = split(/\t/, $l);
-				if (!$data) {
-					# Assume backward compatibility
-					$l =~ s/^(.*)\s([^\s]+)\shits=/hits=/;
-					$net = $1;
-					$id = $2;
-					$data = $l;
-				}
-				# Anonymize all users
-				if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
-					if (!exists $self->{AnonymizedId}{$id}) {
-						$self->{AnonymizedId}{$id} = &anonymize_id();
+	if ($self->{UserReport}) {
+		if (!$kind || ($kind eq 'stat_netuser')) {
+			my $dat_file_netuser = new IO::File;
+			if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
+				my $i = 1;
+				while (my $l = <$dat_file_netuser>) {
+					chomp($l);
+					my ($net, $id, $data) = split(/\t/, $l);
+					if (!$data) {
+						# Assume backward compatibility
+						$l =~ s/^(.*)\s([^\s]+)\shits=/hits=/;
+						$net = $1;
+						$id = $2;
+						$data = $l;
 					}
-					$id = $self->{AnonymizedId}{$id};
-				}
+					# Anonymize all users
+					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+						if (!exists $self->{AnonymizedId}{$id}) {
+							$self->{AnonymizedId}{$id} = &anonymize_id();
+						}
+						$id = $self->{AnonymizedId}{$id};
+					}
 
-				if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
-					$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
-					$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
-					$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
-					if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
-						$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
-						$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
+					if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
+						if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
+							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
+							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
+						}
+					} else {
+						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
+						print STDERR "$l\n";
+						unlink($self->{pidfile});
+						exit 0;
 					}
-				} else {
-					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
-					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					$i++;
 				}
-				$i++;
+				$dat_file_netuser->close();
 			}
-			$dat_file_netuser->close();
 		}
 	}
 
@@ -2523,7 +2549,9 @@ sub gen_html_output
 	#### With huge log file we do not store detail statistics
 	if ( !$self->{no_year_stat} || ($self->{no_year_stat} && ($day || $week)) ) {
 		if ($self->{queue_size} <= 1) {
-			$self->_print_user_stat($dir, $year, $month, $day, $week);
+			if ($self->{UserReport}) {
+				$self->_print_user_stat($dir, $year, $month, $day, $week);
+			}
 			$self->_print_mime_stat($dir, $year, $month, $day, $week);
 			$self->_print_network_stat($dir, $year, $month, $day, $week);
 			if ($self->{UrlReport}) {
@@ -2531,10 +2559,12 @@ sub gen_html_output
 				$self->_print_top_domain_stat($dir, $year, $month, $day, $week);
 			}
 		} else {
-			$self->spawn(sub {
-				$self->_print_user_stat($dir, $year, $month, $day, $week);
-			});
-			$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			if ($self->{UserReport}) {
+				$self->spawn(sub {
+					$self->_print_user_stat($dir, $year, $month, $day, $week);
+				});
+				$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+			}
 			$self->spawn(sub {
 				$self->_print_mime_stat($dir, $year, $month, $day, $week);
 			});
@@ -3082,46 +3112,7 @@ sub _print_network_stat
 		$title = $Translate{'Monthly'} || 'Monthly';
 		$unit = $Translate{'Months'} || 'Months';
 	}
-#
-#	my @hits = ();
-#	my @bytes = ();
-#	for ("$first" .. "$last") {
-#		if (exists $total_net_detail{$_}{hits}) {
-#			push(@hits, "[ $_, $total_net_detail{$_}{hits} ]");
-#		} else {
-#			push(@hits, "[ $_, 0 ]");
-#		}
-#		if (exists $total_net_detail{$_}{bytes}) {
-#			push(@bytes, "[ $_, " . int($total_net_detail{$_}{bytes}/1000000) . " ]");
-#		} else {
-#			push(@bytes, "[ $_, 0 ]");
-#		}
-#	}
-#	%total_net_detail = ();
-#
-#	my $t1 = $Translate{'Graph_cache_hit_title'};
-#	$t1 =~ s/\%s/$title/;
-#	$t1 = "$t1 $stat_date";
-#	my $xlabel = $unit || '';
-#	my $ylabel = $Translate{'Requests_graph'} || 'Requests';
-#	my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
-#				join(',', @hits), $Translate{'Hit_graph'} );
-#	@hits = ();
-#	print $out qq{<table class="graphs"><tr><td>$network_hits</td>};
-#	$network_hits = '';
-#
-#
-#	$t1 = $Translate{'Graph_cache_byte_title'};
-#	$t1 =~ s/\%s/$title/;
-#	$t1 = "$t1 $stat_date";
-#	$xlabel = $unit || '';
-#	$ylabel = $Translate{'Megabytes_graph'} || $Translate{'Megabytes'};
-#	my $network_bytes = $self->flotr2_bargraph(1, 'network_bytes', $type, $t1, $xlabel, $ylabel,
-#				join(',', @bytes), $Translate{'Bytes'} );
-#	@bytes = ();
-#
-#	print $out qq{<td>$network_bytes</td></tr></table>};
-#	$network_bytes = '';
+
 	print $out "<h3>$Translate{'Network_number'}: $nnet</h3>\n";
 	print $out qq{
 <table class="sortable stata">
@@ -3137,6 +3128,8 @@ sub _print_network_stat
 } if ($self->{CostPrice});
 	print $out qq{
 <th>$Translate{'Users'}</th>
+} if ($self->{UserReport});
+	print $out qq{
 <th>$Translate{'Largest'}</th>
 <th style="text-align: left;">$Translate{'Url'}</th>
 </tr>
@@ -3235,6 +3228,8 @@ sub _print_network_stat
 		my $comma_largest = $self->format_bytes($network_stat{$net}{largest_file});
 		print $out qq{
 <td>$retuser</td>
+} if ($self->{UserReport});
+		print $out qq{
 <td>$comma_largest</td>
 <td style="text-align: left;">$network_stat{$net}{url}</td>
 </tr>
@@ -3814,11 +3809,15 @@ sub _print_top_url_stat
 		my ($user, $data) = split(/\s/, $l);
 
 		# Anonymize all users
-		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
-			if (!exists $self->{AnonymizedId}{$user}) {
-				$self->{AnonymizedId}{$user} = &anonymize_id();
+		if ($self->{UserReport}) {
+			if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+				if (!exists $self->{AnonymizedId}{$user}) {
+					$self->{AnonymizedId}{$user} = &anonymize_id();
+				}
+				$user = $self->{AnonymizedId}{$user};
 			}
-			$user = $self->{AnonymizedId}{$user};
+		} else {
+			$user = '-';
 		}
 
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
@@ -3840,7 +3839,7 @@ sub _print_top_url_stat
 			$url_stat{$6}{duration} = $3;
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
-			$url_stat{$6}{users}{$user}++ if ($self->{TopUrlUser});
+			$url_stat{$6}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -3848,7 +3847,7 @@ sub _print_top_url_stat
 			$url_stat{$4}{hits} = $1;
 			$url_stat{$4}{bytes} = $2;
 			$url_stat{$4}{duration} = $3;
-			$url_stat{$4}{users}{$user}++ if ($self->{TopUrlUser});
+			$url_stat{$4}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			$total_hits += $1;
 			$total_bytes += $2;
 			$total_duration += $3;
@@ -3938,7 +3937,7 @@ sub _print_top_url_stat
 				}
 			}
 			print $out "<tr><td>\n";
-			if (exists $url_stat{$u}{users}) {
+			if (exists $url_stat{$u}{users} && $self->{UserReport}) {
 				print $out qq{
 <div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
 <table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
@@ -4033,6 +4032,7 @@ sub _print_top_domain_stat
 	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
+		$user = '-' if (!$self->{UserReport});
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url = lc($6);
 			$hits = $1;
@@ -4063,7 +4063,7 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
-				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
 				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
@@ -4077,7 +4077,7 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
-				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser});
+				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
 				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
@@ -4095,7 +4095,7 @@ sub _print_top_domain_stat
 			$domain_stat{'unknown'}{duration} = $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
-			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser});
+			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			$domain_stat{'unknown'}{cache_hit} += $cache_hit;
 			$domain_stat{'unknown'}{cache_bytes} += $cache_bytes;
 			$perdomain{'others'}{cache_hit} += $cache_hit;
@@ -4244,7 +4244,7 @@ sub _print_top_domain_stat
 				}
 			}
 			print $out "<tr><td>\n";
-			if (exists $domain_stat{$u}{users}) {
+			if (exists $domain_stat{$u}{users} && $self->{UserReport}) {
 				my $dname = "*.$u";
 				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown'));
 				print $out qq{
