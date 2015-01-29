@@ -1141,7 +1141,14 @@ sub _init
 	$self->{MinPie} = $options{MinPie} || 2;
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
-	$self->{UserReport} = $options{UserReport} || 0;
+	if (defined $options{UserReport}) {
+		$self->{UserReport} = $options{UserReport};
+	} else {
+		# Assure backward compatibility after update otherwize
+		# data files will lost users information if directive
+		# is not found in the configuration file
+		$self->{UserReport} = 1;
+	}
 	$self->{Output} = $options{Output} || '';
 	$self->{WebUrl} = $options{WebUrl} || '';
 	$self->{WebUrl} .= '/' if ($self->{WebUrl} && ($self->{WebUrl} !~ /\/$/));
