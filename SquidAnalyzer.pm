@@ -376,6 +376,21 @@ my @TLD2 = (
 	'\.onion','\.root','\.uucp','\.tld','\.nato'
 );
 
+my %month_number = (
+	'Jan' => '01',
+	'Feb' => '02',
+	'Mar' => '03',
+	'Apr' => '04',
+	'May' => '05',
+	'Jun' => '06',
+	'Jul' => '07',
+	'Aug' => '08',
+	'Sep' => '09',
+	'Oct' => '10',
+	'Nov' => '11',
+	'Dec' => '12',
+);
+
 # Regex to match ipv4 and ipv6 address
 my $ip_regexp = qr/^([a-fA-F0-9\.\:]+)$/;
 my $cidr_regex = qr/^[a-fA-F0-9\.\:]+\/\d+$/;
@@ -383,6 +398,9 @@ my $cidr_regex = qr/^[a-fA-F0-9\.\:]+\/\d+$/;
 # Native log format squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
 my $native_format_regex1 = qr/^(\d+\.\d{3})\s+(\d+)\s+([^\s]+)\s+([^\s]+)\s+(\d+)\s+([^\s]+)\s+(.*)/;
 my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+)\s*/;
+#logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
+#logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
+my $common_format_regex1 = qr/([^\s]+)\s([^\s]+)\s([^\s]+)\s\[(\d+\/...\/\d+:\d+:\d+:\d+\s[\d\+\-]+)\]\s"([^\s]+)\s([^\s]+)\s([^\s]+)"\s(\d+)\s+(\d+)(.*)\s([^\s:]+:[^\s]+)$/;
 
 sub new
 {
@@ -872,11 +890,11 @@ sub _parse_file_part
 		# Number of log lines parsed
 		$line_count++;
 
-		#logformat squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
-		#logformat squidmime %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt [%>h] [%<h]
-		# The log format below are not supported
-		#logformat common %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
-		#logformat combined %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
+		# SquidAnalyzer supports the following squid log format:
+		#logformat squid      %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
+		#logformat squidmime  %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt [%>h] [%<h]
+		#logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
+		#logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 		# Parse log with format: time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost mime_type
 		if ( $line =~ $native_format_regex1 ) {
 			$time = $1;
@@ -886,7 +904,25 @@ sub _parse_file_part
 			$bytes = $5;
 			$method = $6;
 			$line = $7;
+		} elsif ( $line =~ $common_format_regex1 ) {
+			$client_ip = $1;
+			$elapsed = $2;
+			$login = lc($3);
+			$time = $4;
+			$method = $5;
+			$url = lc($6);
+			$status = $8;
+			$bytes = $9;
+			$line = $10;
+			$code = $11;
+			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
+			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
 
+		} else {
+			next;
+		}
+		
+		if ($time) {
 			# Do not parse some unwanted method
 			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
 
@@ -905,11 +941,11 @@ sub _parse_file_part
 				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($time)), "\n" if (!$self->{QuietMode});
 			}
 			# Only store (HIT|UNMODIFIED)/MISS status and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
-			if ( ($code =~ m#(HIT|UNMODIFIED)/#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
+			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
 				$code = 'HIT';
-			} elsif ($code =~ m#MISS|MODIFIED/#) {
+			} elsif ($code =~ m#MISS|MODIFIED[:/]#) {
 				$code = 'MISS';
-			} elsif ($code =~ m#DENIED/#) {
+			} elsif ($code =~ m#DENIED[:/]#) {
 				$code = 'DENIED';
 			} else {
 				next;
@@ -920,6 +956,9 @@ sub _parse_file_part
 				$login = lc($2);
 				$status = lc($3);
 				$mime_type = lc($4);
+			}
+
+			if ($url) {
 				if (!$mime_type || ($mime_type eq '-') || ($mime_type !~ /^[a-z]+\/[a-z]+/)) {
 					$mime_type = 'none';
 				}

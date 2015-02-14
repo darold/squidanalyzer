@@ -4,7 +4,8 @@ NAME
 DESCRIPTION
     SquidAnalyzer parse native access log format of the Squid proxy and
     generate general statistics about hits, bytes, users, networks, top url,
-    top second level domain and denied URLs.
+    top second level domain and denied URLs. Common and combined log format
+    are also supported.
 
     Statistic reports are oriented to user and bandwidth control, this is
     not a pure cache statistics generator. SquidAnalyzer use flat files to
