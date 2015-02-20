@@ -204,6 +204,29 @@ SquidAnalyzer to use as many cores/cpus as wanted.
 Here SquidAnalyzer will use 8 cpus to parse the file and compute all statistics
 reports. It will also use much more memory at the same time.
 
+=head1 LOGFORMAT
+
+SquidAnalyzer supports the following predefined log format:
+
+    logformat squid %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<A %mt
+    logformat common %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
+    logformat combined %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
+
+The common and combined log format can have one more field to add mime-type
+report like with the native squid log format:
+
+    logformat common %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh %mt
+    logformat combined %>a %ui %un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh %mt
+
+Those are the default format used by squid, you can switch to any of the three
+log format by giving the name at end of the access_log directive:
+
+	access_log /var/log/squid3/access.log squid
+
+or
+
+	access_log /var/log/squid3/access.log common
+
 
 =head1 CONFIGURATION
 
