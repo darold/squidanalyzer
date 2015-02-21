@@ -341,9 +341,16 @@ Value can be: bytes or hits. Default is bytes.
 
 =item UrlReport 0|1
 
-Should SquidAnalyzer display user details. This will show all
+Should SquidAnalyzer display user url details. This will show all
 URL read by user. Take care to have enougth space disk for large
 user. Default is 0, no url detail report.
+
+=item UserReport 0|1
+
+Should SquidAnalyzer display user details. This will show statistics
+about user. Default is 1, show user detail report. Disable it to be
+able to remove any user related reports, statistics about URL and domains
+will remain.
 
 =item QuietMode 0|1
 
@@ -430,7 +437,7 @@ separated list of perl regular expression. Ex:
 
 	ExcludedMimes   text/.*,image/.*
 
-=item Lang language_file
+=item Lang
 
 Used to set the translation file to be used. Value must be set to
 a file containing all string translated. See the lang directory
