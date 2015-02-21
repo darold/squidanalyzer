@@ -502,7 +502,7 @@ Gilles DAROLD <gilles@darold.net>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2014 Gilles DAROLD
+Copyright (c) 2001-2015 Gilles DAROLD
     
 This package is free software and published under the GPL v3 or above
 license.
