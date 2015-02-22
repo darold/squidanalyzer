@@ -1,5 +1,13 @@
 Revision history for SquidAnalyzer
 
+6.2.1 - Sun Feb 22 10:27:34 CET 2015
+
+This is a maintenance release to fix a major bug introduced in last release.
+
+	- Fix major bug when parsing native squid log format. Thanks to
+	  @ST_Ungulant for the report.
+	- Add documentation about UserReport configuration directive.
+
 6.2 - Sat Feb 21 16:50:25 CET 2015
 
 This release adds support to common or combined squid log format and a new
