@@ -896,6 +896,7 @@ sub _parse_file_part
 		#logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
 		#logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 		# Parse log with format: time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost mime_type
+		my $format = 'native';
 		if ( $line =~ $native_format_regex1 ) {
 			$time = $1;
 			$elapsed = $2;
@@ -905,6 +906,7 @@ sub _parse_file_part
 			$method = $6;
 			$line = $7;
 		} elsif ( $line =~ $common_format_regex1 ) {
+			$format = 'http';
 			$client_ip = $1;
 			$elapsed = $2;
 			$login = lc($3);
@@ -918,7 +920,6 @@ sub _parse_file_part
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
-
 		} else {
 			next;
 		}
@@ -953,7 +954,7 @@ sub _parse_file_part
 			}
 
 			# With common and combined log format those fields have already been parsed
-			if (!$url && ($line =~ $native_format_regex2) ) {
+			if (($format eq 'native') && ($line =~ $native_format_regex2) ) {
 				$url = lc($1);
 				$login = lc($2);
 				$status = lc($3);
