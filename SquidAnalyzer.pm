@@ -568,7 +568,7 @@ sub parseFile
 						chomp($line);
 						if ($line =~ /^(\d{10}\.\d{3})/) {
 							if ($1 < $self->{history_time}) {
-								my $tmp_time = localtime($1);
+								my $tmp_time = CORE::localtime($1);
 								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
@@ -659,7 +659,7 @@ sub parseFile
 	} else {
 
 		if (!$self->{QuietMode}) {
-			print STDERR "END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{end_time})), "\n";
+			print STDERR "END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
 			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
 
@@ -939,7 +939,7 @@ sub _parse_file_part
 			# Register the first parsing time
 			if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
 				$self->{begin_time} = $time;
-				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($time)), "\n" if (!$self->{QuietMode});
+				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 			}
 			# Only store (HIT|UNMODIFIED)/MISS status and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
@@ -1336,7 +1336,7 @@ sub _init
 			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
-			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 		}
 	}
 
@@ -1428,7 +1428,7 @@ sub _parseData
 	my $client_ip_addr = $client;
 
 	# Get the current year and month
-	my ($sec,$min,$hour,$day,$month,$year,$wday,$yday,$isdst) = localtime($time);
+	my ($sec,$min,$hour,$day,$month,$year,$wday,$yday,$isdst) = CORE::localtime($time);
 	$year += 1900;
 	$month = sprintf("%02d", $month + 1);
 	$day = sprintf("%02d", $day);
@@ -2261,7 +2261,7 @@ sub _print_header
 {
 	my ($self, $fileout, $menu, $calendar, $sortpos) = @_;
 
-	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", localtime);
+	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", CORE::localtime);
 	$sortpos ||= 2;
 	my $sorttable = '';
 	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);" if ($sortpos != 100);
@@ -2363,7 +2363,7 @@ sub buildHTML
 	my $p_month = 0;
 	my $p_year = 0;
 	if ($self->{history_time}) {
-		my @ltime = localtime($self->{history_time});
+		my @ltime = CORE::localtime($self->{history_time});
 		$old_year = $ltime[5]+1900;
 		$old_month = $ltime[4]+1;
 		$old_month = "0$old_month" if ($old_month < 10);
@@ -2371,7 +2371,7 @@ sub buildHTML
 		$old_day = "0$old_day" if ($old_day < 10);
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
-			@ltime = localtime($self->{history_time}-($self->{preserve}*2592000));
+			@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
 			$p_year = $ltime[5]+1900;
 			$p_month = $ltime[4]+1;
 			$p_month = sprintf("%02d", $p_month);
@@ -2743,7 +2743,7 @@ sub _print_cache_stat
 		} else {
 			@xaxis = &get_wdays_per_year($week - 1, $year, $month);
 			foreach my $x (@xaxis) {
-				push(@xstick, POSIX::strftime("%F", localtime($x/1000)));
+				push(@xstick, POSIX::strftime("%F", CORE::localtime($x/1000)));
 			}
 			map { s/\d{4}-\d{2}-//; } @xstick;
 			$title = $Translate{'Weekly'} || 'Weekly';
@@ -3777,20 +3777,20 @@ sub _print_user_detail
 		my $comma_bytes = $self->format_bytes($url_stat{$url}{bytes});
 		my $firsthit = '-';
 		if ($url_stat{$url}{firsthit}) {
-			$firsthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$url}{firsthit})));
+			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$url}{firsthit})));
 		}
 		my $lasthit = '-';
 		if ($url_stat{$url}{lasthit}) {
-			$lasthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$url}{lasthit})));
+			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$url}{lasthit})));
 		}
 		if ($type eq 'hour') {
 			if ($url_stat{$url}{firsthit}) {
-				$firsthit = ucfirst(strftime("%T", localtime($url_stat{$url}{firsthit})));
+				$firsthit = ucfirst(strftime("%T", CORE::localtime($url_stat{$url}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
 			if ($url_stat{$url}{lasthit}) {
-				$lasthit = ucfirst(strftime("%T", localtime($url_stat{$url}{lasthit})));
+				$lasthit = ucfirst(strftime("%T", CORE::localtime($url_stat{$url}{lasthit})));
 			} else {
 				$firsthit = '-';
 			}
@@ -3966,20 +3966,20 @@ sub _print_top_url_stat
 			my $comma_bytes = $self->format_bytes($url_stat{$u}{bytes});
 			my $firsthit = '-';
 			if ($url_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$u}{firsthit})));
+				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$u}{firsthit})));
 			}
 			my $lasthit = '-';
 			if ($url_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%b %d %T", localtime($url_stat{$u}{lasthit})));
+				$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$u}{lasthit})));
 			}
 			if ($type eq 'hour') {
 				if ($url_stat{$u}{firsthit}) {
-					$firsthit = ucfirst(strftime("%T", localtime($url_stat{$u}{firsthit})));
+					$firsthit = ucfirst(strftime("%T", CORE::localtime($url_stat{$u}{firsthit})));
 				} else {
 					$firsthit = '-';
 				}
 				if ($url_stat{$u}{lasthit}) {
-					$lasthit = ucfirst(strftime("%T", localtime($url_stat{$u}{lasthit})));
+					$lasthit = ucfirst(strftime("%T", CORE::localtime($url_stat{$u}{lasthit})));
 				} else {
 					$firsthit = '-';
 				}
@@ -4273,20 +4273,20 @@ sub _print_top_domain_stat
 			my $comma_bytes = $self->format_bytes($domain_stat{$u}{bytes});
 			my $firsthit = '-';
 			if ($domain_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$u}{firsthit})));
+				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($domain_stat{$u}{firsthit})));
 			}
 			my $lasthit = '-';
 			if ($domain_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%b %d %T", localtime($domain_stat{$u}{lasthit})));
+				$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($domain_stat{$u}{lasthit})));
 			}
 			if ($type eq 'hour') {
 				if ($domain_stat{$u}{firsthit}) {
-					$firsthit = ucfirst(strftime("%T", localtime($domain_stat{$u}{firsthit})));
+					$firsthit = ucfirst(strftime("%T", CORE::localtime($domain_stat{$u}{firsthit})));
 				} else {
 					$firsthit = '-';
 				}
 				if ($domain_stat{$u}{lasthit}) {
-					$lasthit = ucfirst(strftime("%T", localtime($domain_stat{$u}{lasthit})));
+					$lasthit = ucfirst(strftime("%T", CORE::localtime($domain_stat{$u}{lasthit})));
 				} else {
 					$lasthit = '-';
 				}
