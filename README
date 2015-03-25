@@ -322,9 +322,15 @@ CONFIGURATION
         can be: bytes or hits. Default is bytes.
 
     UrlReport 0|1
-        Should SquidAnalyzer display user details. This will show all URL
-        read by user. Take care to have enougth space disk for large user.
-        Default is 0, no url detail report.
+        Should SquidAnalyzer display user url details. This will show all
+        URL read by user. Take care to have enougth space disk for large
+        user. Default is 0, no url detail report.
+
+    UserReport 0|1
+        Should SquidAnalyzer display user details. This will show statistics
+        about user. Default is 1, show user detail report. Disable it to be
+        able to remove any user related reports, statistics about URL and
+        domains will remain.
 
     QuietMode 0|1
         Run in quiet mode for batch processing or print debug information.
@@ -405,7 +411,7 @@ CONFIGURATION
 
                 ExcludedMimes   text/.*,image/.*
 
-    Lang language_file
+    Lang
         Used to set the translation file to be used. Value must be set to a
         file containing all string translated. See the lang directory for
         translation files. Default is defined internally in English.
@@ -466,7 +472,7 @@ AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
 COPYRIGHT
-    Copyright (c) 2001-2014 Gilles DAROLD
+    Copyright (c) 2001-2015 Gilles DAROLD
 
     This package is free software and published under the GPL v3 or above
     license.

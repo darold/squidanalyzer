@@ -1,5 +1,58 @@
 Revision history for SquidAnalyzer
 
+6.2.1 - Sun Feb 22 10:27:34 CET 2015
+
+This is a maintenance release to fix a major bug introduced in last release.
+
+	- Fix major bug when parsing native squid log format. Thanks to
+	  @ST_Ungulant for the report.
+	- Add documentation about UserReport configuration directive.
+
+6.2 - Sat Feb 21 16:50:25 CET 2015
+
+This release adds support to common or combined squid log format and a new
+Italian translation file. There's also a new configuration directive UserReport
+to be able to remove any user related reports, statistics about URL and domains
+will remain. The second new directive is ExcludedCodes to be able to exclude
+some log entries following the TCP code returned.
+
+It also included several bug fixes since last release.
+
+	- Update year in copyright
+	- Add documentation about log format.
+	- Allow mime type report for common or combined log format. This require
+	  the use of %mt at end of the log format.
+	- Add support to common and combined (http like) log format.
+	- Fix hidden control character in configuration file.
+	- Add UserReport configuration directive to not produce any report about
+	  users. Thanks to Razerlikes for the feature request.
+	- Fix several issues with non default installation path. Thanks to Yuri
+	  Voinov for the report.
+	- Force squid-analyzer to find perl executable from env. Thanks to Yuri
+	  Voinov for the report.
+	- Fix russian translation. Thanks to Yuri Voinov for the patch.
+	- Fix install on Solaris. Thanks to Yuri Voinov for the report.
+	- Fix error message when --rebuild is used and configuration directive
+	  LogFile is empty. Thanks to Michael Gauthier for the report.
+	- Remove any access.log file from the parser list when --rebuild is used
+	  to avoid double entry. Thanks to Michael Gauthier for the report.
+	- Fix user anonymization with --rebuild option.
+	- Fix issues in week reports when the week overlaps two years. Thanks to
+	  Michael Gauthier for the report.
+	- SquidAnalyzer will look for include/exclude users using format: user,
+	  user@domain.tld and domain\user. Thanks to Jacques Serfontein for the
+	  feature request.
+	- Fix case where file was not parsed in incremental mode when log file
+	  size was lower than history offset. Thanks to Amir Mottaghian for the
+	  report.
+	- Add Italian translation file. Thanks to Stefano Cailotto for the patch
+	- Add ExcludedCodes configuration directive to be able to remove some
+	  log entries from statistics based on the TCP code. Thanks to Peter C.
+	  Ndikuwera for the feature request. For example: TCP_DENIED/403, which
+	  are generated when a user accesses a page the first time without
+	  authentication.
+	- Fix previous commit on top domains.
+
 6.1 - Mon Oct 13 11:36:52 CEST 2014
 
 This release fix severals major issues and adds a new feature to disable weekly
