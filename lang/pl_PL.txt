@@ -110,3 +110,4 @@ User				Użytkownik
 Count				Ilość
 WeekDay				Nd Pn Wt Śr Cz Pt So
 Week				Tydzień
+Top_denied_link			Top Denied

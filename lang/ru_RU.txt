@@ -112,3 +112,4 @@ User				Пользователь
 Count				Считать
 WeekDay				Вс Пн Вт Ср Чт Пт Сб
 Week				Неделя
+Top_denied_link			Top Denied

@@ -111,3 +111,4 @@ User				Користувач
 Count				Кількість
 WeekDay				Нд Пн Вт Ср Чт Пт Сб
 Week				Тиждень
+Top_denied_link			Top Denied

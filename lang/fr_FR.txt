@@ -110,3 +110,4 @@ User				Utilisateur
 Count				Compte
 WeekDay				Di Lu Ma Me Je Ve Sa
 Week				Semaine
+Top_denied_link			Top Rejets

@@ -112,3 +112,4 @@ User				Usu&aacute;rios
 Count				N&uacute;mero
 WeekDay				Su Mo Tu We Th Fr Sa
 Week				Week
+Top_denied_link			Top Denied

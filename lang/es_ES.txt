@@ -110,3 +110,4 @@ User				Ususario
 Count				Contador
 WeekDay				Do Lu Ma Mi Ju Vi Sa
 Week				Semana
+Top_denied_link			Top Denied

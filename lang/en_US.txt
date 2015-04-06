@@ -110,3 +110,4 @@ User				User
 Count				Count
 WeekDay				Su Mo Tu We Th Fr Sa
 Week				Week
+Top_denied_link			Top Denied
