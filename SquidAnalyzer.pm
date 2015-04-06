@@ -149,6 +149,7 @@ my %Translate = (
 	'Count' => 'Count',
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 	'Week' => 'Week',
+	'Top_denied_link' => 'Top Denied',
 );
 
 my @TLD1 = (
@@ -1350,6 +1351,7 @@ sub _init
 		$self->{menu} .= qq{
 <li><a href="domain.html"><span class="iconDomain">$Translate{'Top_domain_link'}</span></a></li>
 <li><a href="url.html"><span class="iconUrl">$Translate{'Top_url_link'}</span></a></li>
+<li><a href="denied.html"><span class="iconUrl">$Translate{'Top_denied_link'}</span></a></li>
 };
 	}
 	if ($self->{UserReport}) {
@@ -1373,6 +1375,7 @@ sub _init
 		$self->{menu2} .= qq{
 <li><a href="../../domain.html"><span class="iconDomain">$Translate{'Top_domain_link'}</span></a></li>
 <li><a href="../../url.html"><span class="iconUrl">$Translate{'Top_url_link'}</span></a></li>A
+<li><a href="../../denied.html"><span class="iconUrl">$Translate{'Top_denied_link'}</span></a></li>A
 };
 	}
 	if ($self->{UserReport}) {
@@ -1522,6 +1525,16 @@ sub _parseData
 		$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+		
+		#### Store url statistics
+		if ($self->{UrlReport}) {
+			$self->{stat_denied_url_hour}{$id}{$dest}{hits}++;
+			$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_hour}{$id}{$dest}{firsthit}));
+			$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_hour}{$id}{$dest}{lasthit}));
+			$self->{stat_denied_url_day}{$id}{$dest}{hits}++;
+			$self->{stat_denied_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_day}{$id}{$dest}{firsthit}));
+			$self->{stat_denied_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_day}{$id}{$dest}{lasthit}));
+		}
 		return;
 	}
 	
@@ -1674,6 +1687,13 @@ sub _append_stat
 		flock($dat_file_user_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
 		$self->_write_stat_data($dat_file_user_url, $type, 'stat_user_url');
 		$dat_file_user_url->close();
+		# Denied URL
+		my $dat_file_denied_url = new IO::File;
+		$dat_file_denied_url->open(">>$self->{Output}/$path/stat_denied_url.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_denied_url.dat, $!\n");
+		flock($dat_file_denied_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_denied_url, $type, 'stat_denied_url');
+		$dat_file_denied_url->close();
 	}
 
 	#### Save user statistics
@@ -1758,6 +1778,14 @@ sub _save_stat
 		flock($dat_file_user_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
 		$self->_write_stat_data($dat_file_user_url, $type, 'stat_user_url');
 		$dat_file_user_url->close();
+		# Denied URL
+		my $dat_file_denied_url = new IO::File;
+		$self->_load_history($read_type, $year, $month, $day, $path, 'stat_denied_url', $wn, @wd);
+		$dat_file_denied_url->open(">$self->{Output}/$path/stat_denied_url.dat")
+			or $self->localdie("ERROR: Can't write to file $self->{Output}/$path/stat_denied_url.dat, $!\n");
+		flock($dat_file_denied_url, 2) || die "FATAL: can't acquire lock on file, $!\n";
+		$self->_write_stat_data($dat_file_denied_url, $type, 'stat_denied_url');
+		$dat_file_denied_url->close();
 	}
 
 	#### Save user statistics
@@ -1823,6 +1851,22 @@ sub _write_stat_data
 			$fh->print("\n");
 		}
 		$self->{"stat_code_$type"} = ();
+	}
+
+	#### Save denied url statistics per user
+	if ($kind eq 'stat_denied_url') {
+		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_denied_url_$type"}}) {
+			foreach my $dest (keys %{$self->{"stat_denied_url_$type"}{$id}}) {
+				my $u = $id;
+				$u = '-' if (!$self->{UserReport});
+				$fh->print(
+					"$id hits=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{hits} . ";" .
+					"first=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{firsthit} . ";" .
+					"last=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{lasthit} . ";" .
+					"url=$dest" . "\n");
+			}
+		}
+		$self->{"stat_denied_url_$type"} = ();
 	}
 
 	#### Save url statistics per user
@@ -2039,6 +2083,7 @@ sub _read_stat
 
 	#### Read previous url statistics
 	if ($self->{UrlReport}) {
+
 		if (!$kind || ($kind eq 'stat_user_url')) {
 			my $dat_file_user_url = new IO::File;
 			if ($dat_file_user_url->open("$self->{Output}/$path/stat_user_url.dat")) {
@@ -2088,6 +2133,43 @@ sub _read_stat
 				$dat_file_user_url->close();
 			}
 		}
+
+		if (!$kind || ($kind eq 'stat_denied_url')) {
+			my $dat_file_denied_url = new IO::File;
+			if ($dat_file_denied_url->open("$self->{Output}/$path/stat_denied_url.dat")) {
+				my $i = 1;
+				while (my $l = <$dat_file_denied_url>) {
+					chomp($l);
+					my $id = '';
+					if ($l =~ /^([^\s]+)\s+hits=/) {
+						$id = $1;
+					}
+					$id = '-' if (!$self->{UserReport});
+
+					# Anonymize all denieds
+					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+						if (!exists $self->{AnonymizedId}{$id}) {
+							$self->{AnonymizedId}{$id} = &anonymize_id();
+						}
+						$id = $self->{AnonymizedId}{$id};
+					}
+
+					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{hits} += $2;
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} = $3 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} || ($3 < $self->{"stat_denied_url_$sum_type"}{$id}{"$7"}{firsthit}));
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} = $4 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} || ($4 > $self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit}));
+					} else {
+						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_denied_url.dat\n";
+						print STDERR "$l\n";
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$i++;
+				}
+				$dat_file_denied_url->close();
+			}
+		}
+
 	}
 
 	#### Read previous network statistics
@@ -2605,6 +2687,7 @@ sub gen_html_output
 			$self->_print_network_stat($dir, $year, $month, $day, $week);
 			if ($self->{UrlReport}) {
 				$self->_print_top_url_stat($dir, $year, $month, $day, $week);
+				$self->_print_top_denied_stat($dir, $year, $month, $day, $week);
 				$self->_print_top_domain_stat($dir, $year, $month, $day, $week);
 			}
 		} else {
@@ -2625,6 +2708,10 @@ sub gen_html_output
 			if ($self->{UrlReport}) {
 				$self->spawn(sub {
 					$self->_print_top_url_stat($dir, $year, $month, $day, $week);
+				});
+				$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
+				$self->spawn(sub {
+					$self->_print_top_denied_stat($dir, $year, $month, $day, $week);
 				});
 				$self->{child_count} = $self->manage_queue_size(++$self->{child_count});
 				$self->spawn(sub {
@@ -3997,12 +4084,11 @@ sub _print_top_url_stat
 					$k++;
 					last if ($k > $self->{TopUrlUser});
 				}
-				print $out "</table>\n";
+				print $out "</table>\n</div></div>\n";
 			} else {
 				print $out "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>\n";
 			}
 			print $out qq{
-</div></div>
 </td>
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
@@ -4032,6 +4118,162 @@ sub _print_top_url_stat
 	$out->close();
 
 	return $nurl;
+}
+
+sub _print_top_denied_stat
+{
+	my ($self, $outdir, $year, $month, $day, $week) = @_;
+
+	print STDERR "\tTop denied URL statistics in $outdir...\n" if (!$self->{QuietMode});
+
+	$0 = "squid-analyzer: Printing top denied url statistics in $outdir";
+
+	my $stat_date = $self->set_date($year, $month, $day);
+
+	my $type = 'hour';
+	if (!$day) {
+		$type = 'day';
+	}
+	if (!$month) {
+		$type = 'month';
+	}
+	if ($week) {
+		$type = 'day';
+	}
+
+	# Load user URL statistics
+	my $infile = new IO::File;
+	$infile->open("$outdir/stat_denied_url.dat") || return;
+	my %denied_stat = ();
+	my $total_hits = 0;
+	while (my $l = <$infile>) {
+		chomp($l);
+		my ($user, $data) = split(/\s/, $l);
+
+		# Anonymize all users
+		if ($self->{UserReport}) {
+			if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
+				if (!exists $self->{AnonymizedId}{$user}) {
+					$self->{AnonymizedId}{$user} = &anonymize_id();
+				}
+				$user = $self->{AnonymizedId}{$user};
+			}
+		} else {
+			$user = '-';
+		}
+
+		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+			$denied_stat{$4}{hits} = $1;
+			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
+			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
+			$total_hits += $1;
+			$denied_stat{$4}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+		}
+	}
+	$infile->close();
+
+	# Store number of denieds
+	my $ndenied = scalar keys %denied_stat;
+	my $outf = new IO::File;
+	$outf->open(">>$outdir/stat_count.dat") || return;
+	flock($outf, 2) || die "FATAL: can't acquire lock on file $outdir/stat_count.dat, $!\n";
+	$outf->print("denied:$ndenied\n");
+	$outf->close;
+
+	my $file = $outdir . '/denied.html';
+	my $out = new IO::File;
+	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
+
+	my $sortpos = 1;
+	# Print the HTML header
+	my $cal = 'SA_CALENDAR_SA';
+	$cal = '' if ($week);
+	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	print $out "<h3>$Translate{'Url_number'}: $ndenied</h3>\n";
+	my $t1 = $Translate{"Url_Hits_title"};
+	$t1 =~ s/\%d/$self->{TopNumber}/;
+	print $out $self->_print_title($t1, $stat_date, $week);
+	print $out qq{
+<table class="sortable stata">
+<thead>
+<tr>
+<th>$Translate{'Url'}</th>
+<th>$Translate{'Requests'} (%)</th>
+};
+	print $out qq{
+<th>$Translate{'First_visit'}</th>
+<th>$Translate{'Last_visit'}</th>
+} if ($type eq 'hour');
+	print $out qq{
+</tr>
+</thead>
+<tbody>
+};
+	my $i = 0;
+	foreach my $u (sort { $denied_stat{$b}{hits} <=> $denied_stat{$a}{hits} } keys %denied_stat) {
+		my $h_percent = '0.0';
+		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
+		my $firsthit = '-';
+		if ($denied_stat{$u}{firsthit}) {
+			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+		}
+		my $lasthit = '-';
+		if ($denied_stat{$u}{lasthit}) {
+			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+		}
+		if ($type eq 'hour') {
+			if ($denied_stat{$u}{firsthit}) {
+				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+			} else {
+				$firsthit = '-';
+			}
+			if ($denied_stat{$u}{lasthit}) {
+				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+			} else {
+				$firsthit = '-';
+			}
+		}
+		print $out "<tr><td>\n";
+
+		if (exists $denied_stat{$u}{users} && $self->{UserReport}) {
+			print $out qq{
+<div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
+<table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
+};
+			my $k = 1;
+			foreach my $user (sort { $denied_stat{$u}{users}{$b} <=> $denied_stat{$u}{users}{$a} } keys %{$denied_stat{$u}{users}}) {
+				print $out "<tr><td>$user</td><td>$denied_stat{$u}{users}{$user}</td></tr>\n";
+				$k++;
+				last if ($k > $self->{TopUrlUser});
+			}
+			print $out "</table>\n</div></div>";
+		} else {
+			print $out "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>\n";
+		}
+		print $out qq{
+</td>
+<td>$denied_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+};
+		print $out qq{
+<td>$firsthit</td>
+<td>$lasthit</td>
+} if ($type eq 'hour');
+		print $out qq{
+</tr>};
+		$i++;
+		last if ($i > $self->{TopNumber});
+	}
+	print $out qq{</tbody></table>};
+
+	print $out qq{
+<div class="uplink">
+    <a href="#atop"><span class="iconUpArrow">$Translate{'Up_link'}</span></a>
+</div>
+};
+	$self->_print_footer(\$out);
+	$out->close();
+
+	return $ndenied;
 }
 
 sub _print_top_domain_stat
