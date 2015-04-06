@@ -332,6 +332,12 @@ CONFIGURATION
         able to remove any user related reports, statistics about URL and
         domains will remain.
 
+    UrlHitsOnly 0|1
+        Enable this directive if you don't want the tree Top URL and Domain
+        tables. You will just have the table of Url/Domain ordered per hits
+        then you can still sort the URL/Domain order by clicking on each
+        column. This is useful when you have set a high value to TopNumber.
+
     QuietMode 0|1
         Run in quiet mode for batch processing or print debug information.
         Default is 0, verbose mode.

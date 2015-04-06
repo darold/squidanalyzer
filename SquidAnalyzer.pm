@@ -1184,6 +1184,7 @@ sub _init
 	$self->{MinPie} = $options{MinPie} || 2;
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
+	$self->{UrlHitsOnly} = $options{UrlHitsOnly} || 0;
 	if (defined $options{UserReport}) {
 		$self->{UserReport} = $options{UserReport};
 	} else {
@@ -4107,6 +4108,8 @@ sub _print_top_url_stat
 			last if ($i > $self->{TopNumber});
 		}
 		print $out qq{</tbody></table>};
+		# Do not show other tables if required
+		last if ($self->{UrlHitsOnly});
 	}
 
 	print $out qq{
@@ -4572,6 +4575,8 @@ sub _print_top_domain_stat
 			last if ($i > $self->{TopNumber});
 		}
 		print $out qq{</tbody></table>};
+		# Do not show other tables if required
+		last if ($self->{UrlHitsOnly});
 	}
 
 	print $out qq{
