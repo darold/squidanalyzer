@@ -1858,6 +1858,7 @@ sub _write_stat_data
 	if ($kind eq 'stat_denied_url') {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_denied_url_$type"}}) {
 			foreach my $dest (keys %{$self->{"stat_denied_url_$type"}{$id}}) {
+				next if (!$dest);
 				my $u = $id;
 				$u = '-' if (!$self->{UserReport});
 				$fh->print(
@@ -2159,6 +2160,8 @@ sub _read_stat
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{hits} += $2;
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} = $3 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} || ($3 < $self->{"stat_denied_url_$sum_type"}{$id}{"$7"}{firsthit}));
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} = $4 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} || ($4 > $self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit}));
+					} elsif ($l =~ /^([^\s]+)\s+hits=;first=;last=;url=/) {
+						# do nothing, this should not appears, but fixes issue #81
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_denied_url.dat\n";
 						print STDERR "$l\n";
