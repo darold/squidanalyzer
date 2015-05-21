@@ -772,7 +772,7 @@ sub parseFile
 				return;
 			}
 			if (-d "$self->{Output}/$year") {
-				print STDERR "Compute and dump year statistics for $year\n";
+				print STDERR "Compute and dump year statistics for $year\n" if (!$self->{QuietMode});
 				if ($self->{queue_size} > 1) {
 					$self->spawn(sub {
 						$self->_save_data("$year");
