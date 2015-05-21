@@ -136,9 +136,11 @@ my $t1;
 # Run parsing only if we have a log file or that we are not in rebuild mode
 if (!$rebuild || ($#logfile >= 0)) {
 	$sa->parseFile();
-	$t1 = Benchmark->new;
-	my $td = timediff($t1, $t0);
-	print STDERR "DEBUG: the log statistics gathering took:", timestr($td), "\n";
+	if ($debug) {
+		$t1 = Benchmark->new;
+		my $td = timediff($t1, $t0);
+		print STDERR "DEBUG: the log statistics gathering took:", timestr($td), "\n";
+	}
 }
 
 # Remove old statistics
@@ -155,14 +157,16 @@ if ($rebuild) {
 
 # Generate graphics and html
 $sa->buildHTML();
-my $t2 = Benchmark->new;
-if (defined $t1) {
-	my $td = timediff($t2, $t1);
-	print STDERR "DEBUG: generating HTML output took:", timestr($td), "\n";
-}
+if ($degug) {
+	my $t2 = Benchmark->new;
+	if (defined $t1) {
+		my $td = timediff($t2, $t1);
+		print STDERR "DEBUG: generating HTML output took:", timestr($td), "\n";
+	}
 
-my $td = timediff($t2, $t0);
-print STDERR "DEBUG: total execution time:", timestr($td), "\n";
+	my $td = timediff($t2, $t0);
+	print STDERR "DEBUG: total execution time:", timestr($td), "\n";
+}
 
 # Remove PID file
 unlink("$pid_dir/$pidfile");
