@@ -157,7 +157,7 @@ if ($rebuild) {
 
 # Generate graphics and html
 $sa->buildHTML();
-if ($degug) {
+if ($debug) {
 	my $t2 = Benchmark->new;
 	if (defined $t1) {
 		my $td = timediff($t2, $t1);
