@@ -832,6 +832,90 @@ sub split_logfile
 	return @chunks;
 }
 
+sub check_exclusions
+{
+	my ($self, $login, $client_ip, $url) = @_;
+
+	return 0 if (!exists $self->{Exclude}{users} && !exists $self->{Exclude}{clients} && !exists $self->{Exclude}{networks} && !exists $self->{Exclude}{uris});
+
+	# check for user exclusion
+	if (exists $self->{Exclude}{users} && $login) {
+		foreach my $e (@{$self->{Exclude}{users}}) {
+			# look for users using the following format: user@domain.tld, domain\user and user 
+			if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
+				return 1;
+			}
+		}
+	}
+
+	# check for client exclusion
+	if (exists $self->{Exclude}{clients} && $client_ip) {
+		foreach my $e (@{$self->{Exclude}{clients}}) {
+			if ($client_ip =~ m#^$e$#i) {
+				return 1;
+			}
+		}
+	}
+
+	# check for Network exclusion
+	if (exists $self->{Exclude}{networks} && $client_ip) {
+		foreach my $e (@{$self->{Exclude}{networks}}) {
+			if (&check_ip($client_ip, $e)) {
+				return 1;
+			}
+		}
+	}
+
+	# check for URL exclusion
+	if (exists $self->{Exclude}{uris} && $url) {
+		foreach my $e (@{$self->{Exclude}{uris}}) {
+			if ($url =~ m#^$e$#i) {
+				return 1;
+				last;
+			}
+		}
+	}
+
+	return 0;
+}
+
+sub check_inclusions
+{
+	my ($self, $login, $client_ip) = @_;
+
+	return 1 if (!exists $self->{Include}{users} && !exists $self->{Include}{clients} && !exists $self->{Include}{networks});
+
+	# check for user inclusion
+	if (exists $self->{Include}{users} && $login) {
+		foreach my $e (@{$self->{Include}{users}}) {
+			# look for users using the following format: user@domain.tld, domain\user and user 
+			if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
+				return 1;
+			}
+		}
+	}
+
+	# check for client inclusion
+	if (exists $self->{Include}{clients} && $client_ip) {
+		foreach my $e (@{$self->{Include}{clients}}) {
+			if ($client_ip =~ m#^$e$#i) {
+				return 1;
+			}
+		}
+	}
+
+	# check for Network inclusion
+	if (exists $self->{Include}{networks} && $client_ip) {
+		foreach my $e (@{$self->{Include}{networks}}) {
+			if (&check_ip($client_ip, $e)) {
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 sub _parse_file_part
 {
 	my ($self, $file, $start_offset, $stop_offset) = @_;
@@ -980,96 +1064,17 @@ sub _parse_file_part
 				}
 				next if (!$id || !$bytes);
 
-				my $found = 0;
-
 				#####
 				# If there's some mandatory inclusion, check the entry against the definitions
+				# The entry is skipped directly if it is not in an inclusion list
 				#####
-				if (exists $self->{Include}{users} || exists $self->{Include}{clients} || exists $self->{Include}{networks}) {
-					# check for user inclusion
-					if (exists $self->{Include}{users}) {
-						foreach my $e (@{$self->{Include}{users}}) {
-							# look for users using the following format: user@domain.tld, domain\user and user 
-							if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
-								$found = 1;
-								last;
-							}
-						}
-					}
-
-					# check for client inclusion
-					if (exists $self->{Include}{clients}) {
-						foreach my $e (@{$self->{Include}{clients}}) {
-							if ($client_ip =~ m#^$e$#i) {
-								$found = 1;
-								last;
-							}
-						}
-					}
-
-					# check for Network inclusion
-					if (exists $self->{Include}{networks}) {
-						foreach my $e (@{$self->{Include}{networks}}) {
-							if (&check_ip($client_ip, $e)) {
-								$found = 1;
-								last;
-							}
-						}
-					}
-
-					# The entry is not allowed in included file so skip it
-					next if (!$found);
-					$found = 0;
-				}
+				next if (!$self->check_inclusions($login, $client_ip));
 
 				#####
 				# Check the entry against the exclusion definitions. The entry
 				# is skipped directly when it match an exclusion definition.
 				#####
-				# check for user exclusion
-				if (exists $self->{Exclude}{users}) {
-					foreach my $e (@{$self->{Exclude}{users}}) {
-						# look for users using the following format: user@domain.tld, domain\user and user 
-						if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
-							$found = 1;
-							last;
-						}
-					}
-					next if ($found);
-				}
-
-				# check for client exclusion
-				if (exists $self->{Exclude}{clients}) {
-					foreach my $e (@{$self->{Exclude}{clients}}) {
-						if ($client_ip =~ m#^$e$#i) {
-							$found = 1;
-							last;
-						}
-					}
-					next if ($found);
-				}
-
-				# check for Network exclusion
-				if (exists $self->{Exclude}{networks}) {
-					foreach my $e (@{$self->{Exclude}{networks}}) {
-						if (&check_ip($client_ip, $e)) {
-							$found = 1;
-							last;
-						}
-					}
-					next if ($found);
-				}
-
-				# check for URL exclusion
-				if (exists $self->{Exclude}{uris}) {
-					foreach my $e (@{$self->{Exclude}{uris}}) {
-						if ($url =~ m#^$e$#i) {
-							$found = 1;
-							last;
-						}
-					}
-					next if ($found);
-				}
+				next if ($self->check_exclusions($login, $client_ip, $url));
 
 				# Anonymize all users
 				if ($self->{AnonymizeLogin} && ($client_ip ne $id)) {
@@ -2041,6 +2046,11 @@ sub _read_stat
 					my $lsize = $5 || 0;
 					my $lurl = $6 || 0;
 
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id, '', $lurl));
+					}
+
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 						if (!exists $self->{AnonymizedId}{$id}) {
@@ -2098,6 +2108,11 @@ sub _read_stat
 					}
 					$id = '-' if (!$self->{UserReport});
 
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id));
+					}
+
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 						if (!exists $self->{AnonymizedId}{$id}) {
@@ -2107,6 +2122,9 @@ sub _read_stat
 					}
 
 					if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $7));
+						}
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{bytes} += $3;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{duration} += $4;
@@ -2115,12 +2133,18 @@ sub _read_stat
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{cache_hit} += $8;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{cache_bytes} += $9;
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $7));
+						}
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{bytes} += $3;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{duration} += $4;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{firsthit}));
 						$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$id}{"$7"}{lasthit}));
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $7));
+						}
 						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{bytes} += $3;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$5"}{duration} += $4;
@@ -2148,6 +2172,11 @@ sub _read_stat
 					}
 					$id = '-' if (!$self->{UserReport});
 
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id));
+					}
+
 					# Anonymize all denieds
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 						if (!exists $self->{AnonymizedId}{$id}) {
@@ -2157,6 +2186,9 @@ sub _read_stat
 					}
 
 					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $5));
+						}
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{hits} += $2;
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} = $3 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} || ($3 < $self->{"stat_denied_url_$sum_type"}{$id}{"$7"}{firsthit}));
 						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} = $4 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} || ($4 > $self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit}));
@@ -2190,10 +2222,21 @@ sub _read_stat
 					$net = $1;
 					$data = $l;
 				}
+
+				if ($self->{rebuild}) {
+					next if (!$self->check_inclusions('', $net));
+					next if ($self->check_exclusions('', $net));
+				}
+
 				if ($data =~ s/^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+
+					if ($self->{rebuild}) {
+						next if ($self->check_exclusions('', '', $5));
+					}
 					my $hits = $1 || '';
 					my $bytes = $2 || '';
 					my $duration = $3 || '';
+
 					if ($4 > $self->{"stat_netmax_$sum_type"}{$net}{largest_file_size}) {
 						$self->{"stat_netmax_$sum_type"}{$net}{largest_file_size} = $4;
 						$self->{"stat_netmax_$sum_type"}{$net}{largest_file_url} = $5;
@@ -2244,6 +2287,12 @@ sub _read_stat
 						$id = $2;
 						$data = $l;
 					}
+
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id, $net));
+						next if ($self->check_exclusions($id, $net));
+					}
+
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 						if (!exists $self->{AnonymizedId}{$id}) {
@@ -2253,6 +2302,9 @@ sub _read_stat
 					}
 
 					if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $5));
+						}
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
@@ -3191,6 +3243,12 @@ sub _print_network_stat
 			$data = $l;
 		}
 		$data =~ /^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
+
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions('',$network));
+			next if ($self->check_exclusions('',$network,$5));
+		}
+
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
 		my $duration = $3 || '';
@@ -3433,6 +3491,10 @@ sub _print_user_stat
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
 		# Anonymize all users
 		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 			if (!exists $self->{AnonymizedId}{$user}) {
@@ -3442,6 +3504,10 @@ sub _print_user_stat
 		}
 
 		$data =~ /hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
+		if ($self->{rebuild}) {
+			next if ($self->check_exclusions('', '', $5));
+		}
+
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
 		my $duration = $3 || '';
@@ -3683,6 +3749,11 @@ sub _print_netuser_stat
 		}
 		next if ($network ne $usrnet);
 
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user, $network));
+			next if ($self->check_exclusions($user, $network));
+		}
+
 		# Anonymize all users
 		if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
 			if (!exists $self->{AnonymizedId}{$user}) {
@@ -3692,6 +3763,11 @@ sub _print_netuser_stat
 		}
 
 		$data =~ /^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)/;
+
+		if ($self->{rebuild}) {
+			next if ($self->check_exclusions('','',$5));
+		}
+
 		$netuser_stat{$user}{hits} = $1;
 		$netuser_stat{$user}{bytes} = $2;
 		$netuser_stat{$user}{duration} = $3;
@@ -3800,7 +3876,15 @@ sub _print_user_detail
 		next if ($user ne $usr);
 		$ok = 1;
 
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
+
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$6));
+			}
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
@@ -3814,6 +3898,9 @@ sub _print_user_detail
 			$total_cache_hit += $7;
 			$total_cache_bytes += $8;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$6));
+			}
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
@@ -3823,6 +3910,9 @@ sub _print_user_detail
 			$total_bytes += $2;
 			$total_duration += $3;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$4));
+			}
 			$url_stat{$4}{hits} = $1;
 			$url_stat{$4}{bytes} = $2;
 			$url_stat{$4}{duration} = $3;
@@ -3948,6 +4038,11 @@ sub _print_top_url_stat
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
+
 		# Anonymize all users
 		if ($self->{UserReport}) {
 			if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -3961,6 +4056,9 @@ sub _print_top_url_stat
 		}
 
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$6));
+			}
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
@@ -3974,6 +4072,9 @@ sub _print_top_url_stat
 			$total_cache_hit += $7;
 			$total_cache_bytes += $8;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$6));
+			}
 			$url_stat{$6}{hits} = $1;
 			$url_stat{$6}{bytes} = $2;
 			$url_stat{$6}{duration} = $3;
@@ -3984,6 +4085,9 @@ sub _print_top_url_stat
 			$total_bytes += $2;
 			$total_duration += $3;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$4));
+			}
 			$url_stat{$4}{hits} = $1;
 			$url_stat{$4}{bytes} = $2;
 			$url_stat{$4}{duration} = $3;
@@ -4156,6 +4260,11 @@ sub _print_top_denied_stat
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
+
 		# Anonymize all users
 		if ($self->{UserReport}) {
 			if ($self->{AnonymizeLogin} && ($user !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -4169,6 +4278,9 @@ sub _print_top_denied_stat
 		}
 
 		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$4));
+			}
 			$denied_stat{$4}{hits} = $1;
 			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
 			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
@@ -4330,6 +4442,12 @@ sub _print_top_domain_stat
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
 		$user = '-' if (!$self->{UserReport});
+
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
+
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url = lc($6);
 			$hits = $1;
@@ -4352,6 +4470,11 @@ sub _print_top_domain_stat
 			$bytes = $2;
 			$duration = $3;
 		}
+
+		if ($self->{rebuild}) {
+			next if ($self->check_exclusions('','',$url));
+		}
+
 		my $done = 0;
 		if ($url !~ /\.\d+$/) {
 			if ($url =~ $tld_pattern1) {
