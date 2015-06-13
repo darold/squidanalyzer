@@ -551,8 +551,9 @@ sub parseFile
 						$line = <$logfile>;
 						chomp($line);
 						if ($line =~ /^(\d{10}\.\d{3})/) {
-							if ($1 < $self->{history_time}) {
+							if ($self->{history_time} > $1) {
 								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: and $1 is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
