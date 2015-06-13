@@ -543,7 +543,7 @@ sub parseFile
 				if ($1 > $self->{history_time}) {
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
 					$self->{end_offset} = 0;
-				# If the size of the file is lower than the history offset, skip this file
+				# If the size of the file is lower than the history offset, parse this file from the beginning
 				} elsif ((lstat($lfile))[7] <= $history_offset) {
 					# move at begining of the file to see if this is a new one
 					$logfile->seek(0, 0);
