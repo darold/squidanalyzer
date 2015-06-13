@@ -1027,10 +1027,11 @@ sub _parse_file_part
 				$self->{begin_time} = $time;
 				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 			}
-			# Only store (HIT|UNMODIFIED)/MISS status and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
+			# Only store (HIT|UNMODIFIED)/(MISS|MODIFIED|TUNNEL)/DENIED status
+			# and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
 				$code = 'HIT';
-			} elsif ($code =~ m#MISS|MODIFIED[:/]#) {
+			} elsif ($code =~ m#(MISS|MODIFIED|TUNNEL)[:/]#) {
 				$code = 'MISS';
 			} elsif ($code =~ m#DENIED[:/]#) {
 				$code = 'DENIED';
@@ -1578,7 +1579,7 @@ sub _parseData
 		$self->{stat_netmax_day}{$network}{largest_file_url} = $url;
 	}
 
-	#### Store HIT/MISS statistics
+	#### Store HIT/MISS/DENIED statistics
 	$self->{stat_code_hour}{$code}{$hour}{hits}++;
 	$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
