@@ -50,9 +50,9 @@ if ($obsolete) {
 }
 
 # Show version and exit
-if ($version) {
+if ($version || $debug) {
 	print "SquidAnalyzer version $SquidAnalyzer::VERSION\n";
-	exit 0;
+	exit 0 if ($version);
 }
 
 if ($build_date) {
