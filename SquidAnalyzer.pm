@@ -1030,13 +1030,13 @@ sub _parse_file_part
 				$self->{begin_time} = $time;
 				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 			}
-			# Only store (HIT|UNMODIFIED)/(MISS|MODIFIED|TUNNEL)/DENIED status
+			# Only store (HIT|UNMODIFIED)/(MISS|MODIFIED|TUNNEL)/(DENIED|REDIRECT) status
 			# and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
 				$code = 'HIT';
 			} elsif ($code =~ m#(MISS|MODIFIED|TUNNEL)[:/]#) {
 				$code = 'MISS';
-			} elsif ($code =~ m#DENIED[:/]#) {
+			} elsif ($code =~ m#(DENIED|REDIRECT)[:/]#) {
 				$code = 'DENIED';
 			} else {
 				next;
