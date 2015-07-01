@@ -11,7 +11,7 @@ package SquidAnalyzer;
 # Function : Main perl module for Squid Log Analyzer
 # Usage    : See documentation.
 #------------------------------------------------------------------------------
-use strict;             # make things properly
+use strict qw/vars/;
 
 BEGIN {
 	use Exporter();
@@ -24,7 +24,9 @@ BEGIN {
 	use Fcntl qw(:flock);
 	use IO::Handle;
 	use FileHandle;
-
+	use POSIX qw(locale_h);
+	setlocale(LC_NUMERIC, '');
+	setlocale(LC_ALL,     'C');
 
 	# Set all internal variable
 	$VERSION = '6.2';
