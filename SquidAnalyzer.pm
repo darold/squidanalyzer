@@ -5141,12 +5141,12 @@ sub _get_calendar
 		my $path = $outdir;
 		$path =~ s/(\/\d{4})\/\d{2}.*/$1/;
 		my $prefix = $self->{WebUrl};
-		$prefix = '' if ($self->{WebUrl} eq '/');
+		#$prefix = '' if ($self->{WebUrl} eq '/');
 		foreach my $w (sort { $a <=> $b } keys %weeks_num) {
 			my $ww = sprintf("%02d", $w+1);
 			my $week = "<tr><th>$ww</th>";
 			if (-d "$path/week$ww") {
-				$week = "<tr><th><a href=\"$prefix/$year/week$ww\">$ww</a></th>";
+				$week = "<tr><th><a href=\"$prefix$year/week$ww\">$ww</a></th>";
 			}
 			$para .= $week . join('', @{$weeks_num{$w}}) . "</tr>\n";
 		}
