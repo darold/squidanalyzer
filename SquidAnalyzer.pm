@@ -874,7 +874,6 @@ sub check_exclusions
 		foreach my $e (@{$self->{Exclude}{uris}}) {
 			if ($url =~ m#^$e$#i) {
 				return 1;
-				last;
 			}
 		}
 	}
