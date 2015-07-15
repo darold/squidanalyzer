@@ -1344,7 +1344,9 @@ sub _init
 			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
-			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+			if ($self->{history_time}) {
+				print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+			}
 		}
 	}
 
