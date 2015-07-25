@@ -500,6 +500,25 @@ sub save_current_line
 	}
 }
 
+# Extract number of seconds since epoch from timestamp in log line
+sub look_for_timestamp
+{
+	my $line = shift;
+
+	my $time = 0;
+	# Squid native format
+	if ( $line =~ $native_format_regex1 ) {
+		$time = $1;
+	# Squid common HTTP format
+	} elsif ( $line =~ $common_format_regex1 ) {
+		$time = $4;
+		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
+		$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+	}
+
+	return $time;
+}
+
 sub parseFile
 {
 	my ($self) = @_;
@@ -540,9 +559,11 @@ sub parseFile
 				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open Squid access.log file $lfile. $!\n");
 				my $line = <$logfile>;
 				chomp($line);
-				$line =~ /^([\d\.]+) /;
+
+				my $curtime = look_for_timestamp($line);
+
 				# if the first timestamp is higher that the history time, start from the beginning
-				if ($1 > $self->{history_time}) {
+				if ($curtime > $self->{history_time}) {
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
 					$self->{end_offset} = 0;
 				# If the size of the file is lower than the history offset, parse this file from the beginning
@@ -552,10 +573,10 @@ sub parseFile
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						if ($line =~ /^(\d{10}\.\d{3})/) {
-							if ($self->{history_time} > $1) {
-								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
-								print STDERR "DEBUG: and $1 is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
+						$curtime = look_for_timestamp($line);
+						if ($curtime) {
+							if ($self->{history_time} > $curtime) {
+								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected and $curtime is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
@@ -570,9 +591,10 @@ sub parseFile
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						if ($line =~ /^(\d{10}\.\d{3})/) {
-							if ($1 < $self->{history_time}) {
-								my $tmp_time = CORE::localtime($1);
+						$curtime = look_for_timestamp($line);
+						if ($curtime) {
+							if ($curtime < $self->{history_time}) {
+								my $tmp_time = CORE::localtime($curtime);
 								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
@@ -650,7 +672,6 @@ sub parseFile
 				}
 				last;
 			}
-			#unlink("$self->{pid_dir}/last_parsed.tmp");
 		} else {
 			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
