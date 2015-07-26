@@ -404,6 +404,8 @@ my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+
 #logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
 #logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 my $common_format_regex1 = qr/([^\s]+)\s([^\s]+)\s([^\s]+)\s\[(\d+\/...\/\d+:\d+:\d+:\d+\s[\d\+\-]+)\]\s"([^\s]+)\s([^\s]+)\s([^\s]+)"\s(\d+)\s+(\d+)(.*)\s([^\s:]+:[^\s]+)\s*([^\/]+\/[^\s]+|-)?$/;
+# Lof format for SquidGuard logs
+my $sg_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* Request\(([^\/]+\/[^\/]+)\/[^\)]*\) ([^\s]+) ([^\s\\]+)\/[^\s]+ ([^\s]+) ([^\s]+) ([^\s]+)/;
 
 sub new
 {
@@ -514,6 +516,10 @@ sub look_for_timestamp
 		$time = $4;
 		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 		$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+	# SquidGuard log format
+	} elsif ( $line =~ $sg_format_regex1 ) {
+		# Log must always be parsed from the beginning of the file
+		return 0;
 	}
 
 	return $time;
@@ -970,6 +976,8 @@ sub _parse_file_part
 	my $status = '';
 	my $mime_type = '';
 
+	my $acl = '';
+
 	my $line_count = 0;
 	my $line_processed_count = 0;
 	my $line_stored_count = 0;
@@ -1028,6 +1036,19 @@ sub _parse_file_part
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+                } elsif ($line =~ $sg_format_regex1) {
+                        $format = 'squidguard';
+			$acl = $7;
+                        $client_ip = $9;
+                        $elapsed = 0;
+                        $login = lc($10);
+                        $method = $11;
+                        $url = lc($8);
+                        $status = 301;
+                        $bytes = 0;
+                        $code = $12 . ':';
+                        $mime_type = '';
+                        $time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 		} else {
 			next;
 		}
@@ -1086,7 +1107,7 @@ sub _parse_file_part
 				if ($login ne '-') {
 					$id = $login;
 				}
-				next if (!$id || !$bytes);
+				next if (!$id || (!$bytes && ($code ne 'DENIED')));
 
 				#####
 				# If there's some mandatory inclusion, check the entry against the definitions
@@ -1109,7 +1130,7 @@ sub _parse_file_part
 				}
 
 				# Now parse data and generate statistics
-				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type);
+				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl);
 				$line_stored_count++;
 
 			}
@@ -1455,7 +1476,7 @@ sub _gethostbyaddr
 
 sub _parseData
 {
-	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type) = @_;
+	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type, $acl) = @_;
 
 	# Save original IP address for dns resolving
 	my $client_ip_addr = $client;
@@ -1560,9 +1581,11 @@ sub _parseData
 			$self->{stat_denied_url_hour}{$id}{$dest}{hits}++;
 			$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_hour}{$id}{$dest}{firsthit}));
 			$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_hour}{$id}{$dest}{lasthit}));
+			$self->{stat_denied_url_hour}{$id}{$dest}{blacklist}{$acl}++ if ($acl);
 			$self->{stat_denied_url_day}{$id}{$dest}{hits}++;
 			$self->{stat_denied_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_day}{$id}{$dest}{firsthit}));
 			$self->{stat_denied_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_day}{$id}{$dest}{lasthit}));
+			$self->{stat_denied_url_day}{$id}{$dest}{blacklist}{$acl}++ if ($acl);
 		}
 		return;
 	}
@@ -1889,11 +1912,20 @@ sub _write_stat_data
 				next if (!$dest);
 				my $u = $id;
 				$u = '-' if (!$self->{UserReport});
+				my $bl = '';
+				if (exists $self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}) {
+					foreach my $b (keys %{$self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}}) {
+						$bl .= $b . ',' . $self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}{$b} . ',';
+					}
+					$bl =~ s/,$//;
+				}
 				$fh->print(
 					"$id hits=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{hits} . ";" .
 					"first=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{firsthit} . ";" .
 					"last=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{lasthit} . ";" .
-					"url=$dest" . "\n");
+					"url=$dest" . ";" .
+					"blacklist=" . $bl .
+					"\n");
 			}
 		}
 		$self->{"stat_denied_url_$type"} = ();
@@ -2217,7 +2249,20 @@ sub _read_stat
 						$id = $self->{AnonymizedId}{$id};
 					}
 
-					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
+					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $5));
+						}
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{hits} += $2;
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} = $3 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} || ($3 < $self->{"stat_denied_url_$sum_type"}{$id}{"$7"}{firsthit}));
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} = $4 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} || ($4 > $self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit}));
+						if ($6) {
+							my %tmp = split(/,/, $6);
+							foreach my $k (keys %tmp) {
+								$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{blacklist}{$k} += $tmp{$k};
+							}
+						}
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
 						if ($self->{rebuild}) {
 							next if ($self->check_exclusions('', '', $5));
 						}
@@ -4311,7 +4356,7 @@ sub _print_top_denied_stat
 			$user = '-';
 		}
 
-		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)/) {
 			if ($self->{rebuild}) {
 				next if ($self->check_exclusions('','',$4));
 			}
@@ -4320,6 +4365,13 @@ sub _print_top_denied_stat
 			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
 			$total_hits += $1;
 			$denied_stat{$4}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+			if ($5) {
+				my %tmp = split(/,/, $5);
+				foreach my $k (keys %tmp) {
+					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
+					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+				}
+			}
 		}
 	}
 	$infile->close();
@@ -4356,6 +4408,7 @@ sub _print_top_denied_stat
 <th>$Translate{'First_visit'}</th>
 <th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
+	print $out qq{<th>SquidGuard ACLs</th>};
 	print $out qq{
 </tr>
 </thead>
@@ -4410,7 +4463,15 @@ sub _print_top_denied_stat
 <td>$firsthit</td>
 <td>$lasthit</td>
 } if ($type eq 'hour');
+		my $bl = '-';
+		if (exists $denied_stat{$u}{blacklist}) {
+			$bl = '';
+			foreach my $k (sort keys %{$denied_stat{$u}{blacklist}}) {
+				$bl .=  $k . '=' . $denied_stat{$u}{blacklist}{$k} . ' ';
+			}
+		}
 		print $out qq{
+	<td>$bl</td>
 </tr>};
 		$i++;
 		last if ($i > $self->{TopNumber});
@@ -4812,8 +4873,8 @@ sub _gen_summary
 	<th scope="col">$Translate{'Denied'}</th>
 	<th scope="col">$Translate{'Hit'}</th>
 	<th scope="col">$Translate{'Miss'}</th>
-	<th scope="col">$Translate{'Requests'}</th>
 	<th scope="col">$Translate{'Denied'}</th>
+	<th scope="col">$Translate{'Requests'}</th>
 	<th scope="col">$Translate{$self->{TransfertUnit}}</th>
 };
 	print $out qq{
