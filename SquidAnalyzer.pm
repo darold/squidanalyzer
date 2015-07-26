@@ -1055,9 +1055,11 @@ sub _parse_file_part
 		
 		if ($time) {
 			# Do not parse some unwanted method
-			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
+			my $qm_method = quotemeta($method) || '';
+			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$qm_method$/, @{$self->{ExcludedMethods}}));
 
 			# Do not parse some unwanted code; e.g. TCP_DENIED/403
+			my $qm_code = quotemeta($code) || '';
 			next if (($#{$self->{ExcludedCodes}} >= 0) && grep(m#^$code$#, @{$self->{ExcludedCodes}}));
 
 			# Go to last parsed date (incremental mode)
