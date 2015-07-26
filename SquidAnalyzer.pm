@@ -152,6 +152,7 @@ my %Translate = (
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 	'Week' => 'Week',
 	'Top_denied_link' => 'Top Denied',
+	'SquidGuard_acl_title' => 'SquidGuard ACL use',
 );
 
 my @TLD1 = (
@@ -3190,6 +3191,7 @@ sub _print_mime_stat
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
+
 	# Print title and calendar view
 	print $out $self->_print_title($Translate{'Mime_title'}, $stat_date, $week);
 
@@ -4337,6 +4339,7 @@ sub _print_top_denied_stat
 	$infile->open("$outdir/stat_denied_url.dat") || return;
 	my %denied_stat = ();
 	my $total_hits = 0;
+	my $total_acl = 0;
 	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
@@ -4372,6 +4375,7 @@ sub _print_top_denied_stat
 				foreach my $k (keys %tmp) {
 					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
 					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+					$total_acl += $tmp{$k};
 				}
 			}
 		}
@@ -4396,6 +4400,27 @@ sub _print_top_denied_stat
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, 100);
 	print $out "<h3>$Translate{'Url_number'}: $ndenied</h3>\n";
+
+	my %data_acl = ();
+	$total_acl ||= 1;
+	foreach my $u (sort { $denied_stat{$b}{hits} <=> $denied_stat{$a}{hits} } keys %denied_stat) {
+		next if (!exists $denied_stat{$u}{blacklist});
+		foreach my $k (sort keys %{$denied_stat{$u}{blacklist}}) {
+			$data_acl{$k} += $denied_stat{$u}{blacklist}{$k};
+		}
+	}
+	foreach my $k (keys %data_acl) {
+		if (($data_acl{$k}/$total_acl)*100 < $self->{MinPie}) {
+			$data_acl{'others'} += $data_acl{$k};
+			delete $data_acl{$k};
+		}
+	} 
+	if (scalar keys %data_acl) {
+		print $out $self->_print_title($Translate{"SquidGuard_acl_title"}, $stat_date, $week);
+		my $squidguard_acl = $self->flotr2_piegraph(1, 'squidguard_acl', $Translate{"SquidGuard_acl_title"}, $Translate{'SquidGuard_acl_graph'}, '', %data_acl);
+		print $out qq{<table class="graphs"><tr><td>$squidguard_acl</td></tr></table>};
+	}
+
 	my $t1 = $Translate{"Url_Hits_title"};
 	$t1 =~ s/\%d/$self->{TopNumber}/;
 	print $out $self->_print_title($t1, $stat_date, $week);

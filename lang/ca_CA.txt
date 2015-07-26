@@ -111,3 +111,4 @@ Count				Contador
 WeekDay				Dg Dl Dt Dc Dj Dv Ds
 Week				Setmana
 Top_denied_link			Top denegat
+SquidGuard_acl_title		SquidGuard ACL use

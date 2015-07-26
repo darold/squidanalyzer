@@ -112,3 +112,4 @@ WeekDay				Do Lu Ma Me Gi Ve Sa
 Week				Settimana
 Weekly				Settimanali
 Top_denied_link			Top Denied
+SquidGuard_acl_title		SquidGuard ACL use

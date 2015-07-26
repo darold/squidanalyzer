@@ -114,3 +114,4 @@ Count				Считать
 WeekDay				Вс Пн Вт Ср Чт Пт Сб
 Week				Неделя
 Top_denied_link			Рейтинг отказов в доступе
+SquidGuard_acl_title		SquidGuard ACL use

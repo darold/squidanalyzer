@@ -111,3 +111,4 @@ Count				Počet
 WeekDay				Ne Po Út St Čt Pá So
 Week				Týden
 Top_denied_link			Top Denied
+SquidGuard_acl_title		SquidGuard ACL use

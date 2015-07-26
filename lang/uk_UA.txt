@@ -112,3 +112,4 @@ Count				Кількість
 WeekDay				Нд Пн Вт Ср Чт Пт Сб
 Week				Тиждень
 Top_denied_link			Top Denied
+SquidGuard_acl_title		SquidGuard ACL use
