@@ -1286,7 +1286,7 @@ sub _init
 		while (my $l = <IN>) {
 			chomp($l);
 			$l =~ s/\r//gs;
-			next if ($l =~ /^[\s\t]*#/);
+			next if ($l =~ /^\s*#/);
 			next if (!$l);
 			my ($key, $str) = split(/\t+/, $l);
 			$Translate{$key} = $str;
@@ -4939,8 +4939,8 @@ sub parse_config
 	while (my $l = <CONF>) {
 		chomp($l);
 		$l =~ s/\r//;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
-		my ($key, $val) = split(/[\s\t]+/, $l, 2);
+		next if (!$l || ($l =~ /^\s*#/));
+		my ($key, $val) = split(/\s+/, $l, 2);
 		if ($key ne 'LogFile') {
 			$opt{$key} = $val;
 		} else {
@@ -4992,11 +4992,11 @@ sub parse_network_aliases
 	while (my $l = <ALIAS>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
-		$l =~ s/[\s\t]*#.*//;
+		next if (!$l || ($l =~ /^\s*#/));
+		$l =~ s/\s*#.*//;
 		my @data = split(/\t+/, $l, 2);
 		if ($#data == 1) {
-			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			my @rg = split(/(?<!\{\d)[\s,;](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
 				# If this is not a cidr notation
@@ -5026,11 +5026,11 @@ sub parse_user_aliases
 	while (my $l = <ALIAS>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		my @data = split(/\t+/, $l, 2);
 		$data[0] =~ s/\s+/_SPC_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
-			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			my @rg = split(/(?<!\{\d)[\s,;](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
 				$r =~ s/([^\\])\$$/$1/;
@@ -5058,12 +5058,12 @@ sub parse_exclusion
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		# remove comments at end of line
-		$l =~ s/[\s\t]*#.*//;
-		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)[\s\t]+(.*)#) {
+		$l =~ s/\s*#.*//;
+		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)\s+(.*)#) {
 			my $lbl = lc($1) . 's';
-			my @rg =  split(m#[\s\t]+#, $2);
+			my @rg =  split(m#\s+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
 				$self->check_regex($r, "$file at line $i");
@@ -5071,7 +5071,7 @@ sub parse_exclusion
 			push(@{$exclusion{$lbl}}, @rg);
 		} else {
 			# backward compatibility is not more supported
-			$self->localdie("ERROR: wrong line format in file $file at line $i\n");
+			$self->localdie("ERROR: wrong line format in file $file at line $i => $l\n");
 		}
 	}
 	close(EXCLUDED);
@@ -5091,12 +5091,12 @@ sub parse_inclusion
 	while (my $l = <INCLUDED>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		# remove comments at end of line
-		$l =~ s/[\s\t]*#.*//;
-		if ($l =~ m#^(USER|CLIENT|NETWORK)[\s\t]+(.*)#) {
+		$l =~ s/\s*#.*//;
+		if ($l =~ m#^(USER|CLIENT|NETWORK)\s+(.*)#) {
 			my $lbl = lc($1) . 's';
-			my @rg =  split(m#[\s\t]+#, $2);
+			my @rg =  split(m#\s+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
 				$self->check_regex($r, "$file at line $i");
