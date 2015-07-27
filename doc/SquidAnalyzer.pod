@@ -8,7 +8,8 @@ SquidAnalyzer - Squid access log report generation tool
 SquidAnalyzer parse native access log format of the Squid proxy and
 generate general statistics about hits, bytes, users, networks, top
 url, top second level domain and denied URLs. Common and combined
-log format are also supported.
+log format are also supported. SquidGuard logs can also be parsed
+and ACL's redirection reported into denied URLs report.
 
 Statistic reports are oriented to user and bandwidth control, this
 is not a pure cache statistics generator. SquidAnalyzer use flat
@@ -193,6 +194,14 @@ removed from the filesystem. Useful to preserve space, for example:
 
 will only preserve six month of statistics from the last run of squidanalyzer.
 
+If you have a SquidGuard log you can add it to the list of file to be parsed,
+either in the LogFile configuration directive log list, either at command line:
+
+	squid-analyzer /var/log/squid3/access.log /var/log/squid/SquidGuard.log
+
+SquidAnalyzer will automatically detect the log format and report SquidGuard
+ACL's redirection to the Denied Urls report.
+
 =head1 MULTIPROCESS
 
 If you have huges squid access.log you will be interested by using multiprocess
@@ -266,7 +275,8 @@ For example:
 
 Set the path to the Squid log file. This can be a comma separated list of files
 to process several files at the same time. If the files comes from differents
-Squid servers, they will be merges in a single reports.
+Squid servers, they will be merges in a single reports. You can also add to the
+list a SquidGuard log file, SquidAnalyzer will atomatically detect the format.
 
 =item UseClientDNSName        0
 
