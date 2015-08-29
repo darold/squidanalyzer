@@ -1037,6 +1037,8 @@ sub _parse_file_part
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+			# Some site has corrupted mime_type, try to remove nasty characters
+			$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
                 } elsif ($line =~ $sg_format_regex1) {
                         $format = 'squidguard';
 			$acl = $7;
@@ -1092,10 +1094,12 @@ sub _parse_file_part
 				$login = lc($2);
 				$status = lc($3);
 				$mime_type = lc($4);
+				# Some site has corrupted mime_type, try to remove nasty characters
+				$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
 			}
 
 			if ($url) {
-				if (!$mime_type || ($mime_type eq '-') || ($mime_type !~ /^[a-z]+\/[a-z]+/)) {
+				if (!$mime_type || ($mime_type eq '-')) {
 					$mime_type = 'none';
 				}
 
@@ -1238,6 +1242,7 @@ sub _init
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
 	$self->{UrlHitsOnly} = $options{UrlHitsOnly} || 0;
+	$self->{MaxFormatError} = $options{MaxFormatError} || 0;
 	if (defined $options{UserReport}) {
 		$self->{UserReport} = $options{UserReport};
 	} else {
@@ -2056,6 +2061,7 @@ sub _read_stat
 		my $dat_file_code = new IO::File;
 		if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_code>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
@@ -2077,8 +2083,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2094,6 +2103,7 @@ sub _read_stat
 		my $dat_file_user = new IO::File;
 		if ($dat_file_user->open("$self->{Output}/$path/stat_user.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_user>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
@@ -2139,8 +2149,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2155,6 +2168,7 @@ sub _read_stat
 			my $dat_file_user_url = new IO::File;
 			if ($dat_file_user_url->open("$self->{Output}/$path/stat_user_url.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_user_url>) {
 					chomp($l);
 					my $id = '';
@@ -2218,8 +2232,11 @@ sub _read_stat
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2231,6 +2248,7 @@ sub _read_stat
 			my $dat_file_denied_url = new IO::File;
 			if ($dat_file_denied_url->open("$self->{Output}/$path/stat_denied_url.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_denied_url>) {
 					chomp($l);
 					my $id = '';
@@ -2277,8 +2295,11 @@ sub _read_stat
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_denied_url.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2293,6 +2314,7 @@ sub _read_stat
 		my $dat_file_network = new IO::File;
 		if ($dat_file_network->open("$self->{Output}/$path/stat_network.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_network>) {
 				chomp($l);
 				my ($net, $data) = split(/\t/, $l);
@@ -2338,8 +2360,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2353,6 +2378,7 @@ sub _read_stat
 			my $dat_file_netuser = new IO::File;
 			if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_netuser>) {
 					chomp($l);
 					my ($net, $id, $data) = split(/\t/, $l);
@@ -2388,8 +2414,11 @@ sub _read_stat
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2403,6 +2432,7 @@ sub _read_stat
 		my $dat_file_mime_type = new IO::File;
 		if ($dat_file_mime_type->open("$self->{Output}/$path/stat_mime_type.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_mime_type>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
@@ -2412,8 +2442,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}

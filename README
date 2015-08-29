@@ -467,6 +467,13 @@ CONFIGURATION
 
         with a Locale set to fr_FR.
 
+    MaxFormatError
+        When SquidAnalyzer find a corrupted line in his data file, it exit
+        immedialtly. You can force him to wait for a certain amount of
+        errors before exiting. Of course you might want to remove the
+        corrupted line before the next run. This can be useful if you have
+        special characters in some fields like mime type.
+
 SUPPORT
   Release annoucement
     Please follow us on twitter to receive release annoucement and latest
