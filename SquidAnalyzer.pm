@@ -431,6 +431,11 @@ sub localdie
 	print STDERR "$msg";
 	unlink("$self->{pidfile}");
 
+	# Cleanup old temporary files
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
+		unlink("$self->{pid_dir}/$tmp_file");
+	}
+
 	exit 1;
 }
 
@@ -501,30 +506,66 @@ sub save_current_line
 		print $current "$self->{end_time}\t$self->{end_offset}";
 		$current->close;
 	}
+	if ($self->{sg_end_time}) {
+		my $current = new IO::File;
+		$current->open(">$self->{Output}/SquidGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidGuard.current, $!\n");
+		print $current "$self->{sg_end_time}\t$self->{sg_end_offset}";
+		$current->close;
+	}
 }
 
 # Extract number of seconds since epoch from timestamp in log line
 sub look_for_timestamp
 {
-	my $line = shift;
+	my ($self, $line) = @_;
 
 	my $time = 0;
 	# Squid native format
 	if ( $line =~ $native_format_regex1 ) {
 		$time = $1;
+		$self->{is_squidguard_log} = 0;
 	# Squid common HTTP format
 	} elsif ( $line =~ $common_format_regex1 ) {
 		$time = $4;
 		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 		$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+		$self->{is_squidguard_log} = 0;
 	# SquidGuard log format
 	} elsif ( $line =~ $sg_format_regex1 ) {
-		# Log must always be parsed from the beginning of the file
-		return 0;
+		$self->{is_squidguard_log} = 1;
+		$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 	}
 
 	return $time;
 }
+
+# Detect if log file is a squidGuard log or not
+sub get_log_format
+{
+	my ($self, $file) = @_;
+
+	my $logfile = new IO::File;
+	$logfile->open($file) || $self->localdie("ERROR: Unable to open log file $file. $!\n");
+	my $line = <$logfile>;
+	chomp($line);
+	$logfile->close();
+
+	# SquidGuard log format
+	if ( $line =~ $sg_format_regex1 ) {
+		$self->{is_squidguard_log} = 1;
+	# Squid native format
+	} elsif ( $line =~ $native_format_regex1 ) {
+		$self->{is_squidguard_log} = 0;
+	# Squid common HTTP format
+	} elsif ( $line =~ $common_format_regex1 ) {
+		$self->{is_squidguard_log} = 0;
+	} else {
+		return -1;
+	}
+
+	return $self->{is_squidguard_log};
+}
+
 
 sub parseFile
 {
@@ -536,7 +577,16 @@ sub parseFile
 	my $saved_queue_size = $self->{queue_size};
 	my $history_offset = $self->{end_offset};
 
+
 	foreach my $lfile (@{$self->{LogFile}}) {
+
+		# Detect if log file is from squid or squidguard
+		$self->get_log_format($lfile);
+		if (!$self->{is_squidguard_log}) {
+			$history_offset = $self->{end_offset};
+		} else {
+			$history_offset = $self->{sg_end_offset};
+		}
 
 		print STDERR "Starting to parse logfile $lfile.\n" if (!$self->{QuietMode});
 		if ((!-f $lfile) || (-z $lfile)) {
@@ -555,24 +605,40 @@ sub parseFile
 		if ($history_offset) {
 
 			# Initialize start offset for each file
-			$self->{end_offset} = $history_offset;
+			if (!$self->{is_squidguard_log}) {
+				$self->{end_offset} = $history_offset;
+			} else {
+				$self->{sg_end_offset} = $history_offset;
+			}
 
 			# Compressed file are always read from the begining
 			if ($lfile =~ /\.(gz|bz2)$/i) {
-				$self->{end_offset} = 0;
+				if (!$self->{is_squidguard_log}) {
+					$self->{end_offset} = 0;
+				} else {
+					$self->{sg_end_offset} = 0;
+				}
 			} else {
 				# Look at first line to see if the file should be parse from the begining.
 				my $logfile = new IO::File;
-				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open Squid access.log file $lfile. $!\n");
+				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open log file $lfile. $!\n");
 				my $line = <$logfile>;
 				chomp($line);
 
-				my $curtime = look_for_timestamp($line);
+				my $curtime = $self->look_for_timestamp($line);
 
+				my $hist_time = $self->{history_time};
+				if ($self->{is_squidguard_log}) {
+					$hist_time = $self->{sg_history_time};
+				}
 				# if the first timestamp is higher that the history time, start from the beginning
-				if ($curtime > $self->{history_time}) {
+				if ($curtime > $hist_time) {
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
-					$self->{end_offset} = 0;
+					if (!$self->{is_squidguard_log}) {
+						$self->{end_offset} = 0;
+					} else {
+						$self->{sg_end_offset} = 0;
+					}
 				# If the size of the file is lower than the history offset, parse this file from the beginning
 				} elsif ((lstat($lfile))[7] <= $history_offset) {
 					# move at begining of the file to see if this is a new one
@@ -580,9 +646,9 @@ sub parseFile
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						$curtime = look_for_timestamp($line);
+						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
-							if ($self->{history_time} > $curtime) {
+							if ($hist_time > $curtime) {
 								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected and $curtime is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
@@ -598,9 +664,9 @@ sub parseFile
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						$curtime = look_for_timestamp($line);
+						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
-							if ($curtime < $self->{history_time}) {
+							if ($curtime < $hist_time) {
 								my $tmp_time = CORE::localtime($curtime);
 								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
@@ -618,11 +684,19 @@ sub parseFile
 		} else {
 			print STDERR "DEBUG: this file will be parsed, no history found.\n" if (!$self->{QuietMode});
 			# Initialise start offset for each file
-			$self->{end_offset} = 0;
+			if (!$self->{is_squidguard_log}) {
+				$self->{end_offset} = 0;
+			} else {
+				$self->{sg_end_offset} = 0;
+			}
 		}
 
 		if ($self->{queue_size} <= 1) {
-			$self->_parse_file_part($lfile, $self->{end_offset});
+			if (!$self->{is_squidguard_log}) {
+				$self->_parse_file_part($lfile, $self->{end_offset});
+			} else {
+				$self->_parse_file_part($lfile, $self->{sg_end_offset});
+			}
 		} else {
 			# Create multiple processes to parse one log file by chunks of data
 			my @chunks = $self->split_logfile($lfile);
@@ -644,43 +718,51 @@ sub parseFile
 	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	# Get the last information parsed in this file part
-	if (-e "$self->{pid_dir}/last_parsed.tmp") {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
 
-		if (open(IN, "$self->{pid_dir}/last_parsed.tmp")) {
-			my %history_tmp = ();
-			while (my $l = <IN>) {
-				chomp($l);
-				my @data = split(/\s/, $l);
-				$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
-				$line_stored_count += $data[5];
-				$line_processed_count += $data[6];
-				$line_count += $data[7];
-				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}{$data[8]}}") ) {
-					$self->{first_year} = $data[8];
-					$self->{first_month}{$data[8]} = $data[9];
-				}
-				my @tmp = split(/,/, $data[10]);
-				foreach my $w (@tmp) {
-					if (!grep(/^$w$/, @{$self->{week_parsed}})) {
-						push(@{$self->{week_parsed}}, $w);
+		if (-e "$self->{pid_dir}/$tmp_file") {
+
+			if (open(IN, "$self->{pid_dir}/$tmp_file")) {
+				my %history_tmp = ();
+				while (my $l = <IN>) {
+					chomp($l);
+					my @data = split(/\s/, $l);
+					$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
+					$line_stored_count += $data[5];
+					$line_processed_count += $data[6];
+					$line_count += $data[7];
+					if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}{$data[8]}}") ) {
+						$self->{first_year} = $data[8];
+						$self->{first_month}{$data[8]} = $data[9];
+					}
+					my @tmp = split(/,/, $data[10]);
+					foreach my $w (@tmp) {
+						if (!grep(/^$w$/, @{$self->{week_parsed}})) {
+							push(@{$self->{week_parsed}}, $w);
+						}
 					}
 				}
-			}
-			close(IN);
-			foreach my $date (sort {$b <=> $a} keys %history_tmp) {
-				foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
-					my @data = split(/\s/, $history_tmp{$date}{$offset});
-					$self->{last_year} = $data[0];
-					$self->{last_month}{$data[0]} = $data[1];
-					$self->{last_day}{$data[0]} = $data[2];
-					$self->{end_time} = $data[3];
-					$self->{end_offset} = $data[4];
+				close(IN);
+				foreach my $date (sort {$b <=> $a} keys %history_tmp) {
+					foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
+						my @data = split(/\s/, $history_tmp{$date}{$offset});
+						$self->{last_year} = $data[0];
+						$self->{last_month}{$data[0]} = $data[1];
+						$self->{last_day}{$data[0]} = $data[2];
+						if (!$self->{is_squidguard_log}) {
+							$self->{end_time} = $data[3];
+							$self->{end_offset} = $data[4];
+						} else {
+							$self->{sg_end_time} = $data[3];
+							$self->{sg_end_offset} = $data[4];
+						}
+						last;
+					}
 					last;
 				}
-				last;
+			} else {
+				print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/$tmp_file, $!\n";
 			}
-		} else {
-			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
 	}
 
@@ -691,7 +773,8 @@ sub parseFile
 	} else {
 
 		if (!$self->{QuietMode}) {
-			print STDERR "END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
+			print STDERR "SQUID LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
+			print STDERR "SQUIGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_end_time})), "\n" if ($self->{sg_end_time});
 			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
 
@@ -832,16 +915,21 @@ sub split_logfile
 	# get file size
 	my $totalsize = (stat("$logf"))[7] || 0;
 
+	my $offsplit = $self->{end_offset};
+	if ($self->{is_squidguard_log}) {
+		$offsplit = $self->{sg_end_offset};
+	}
+
 	# If the file is very small, many jobs actually make the parsing take longer
-	if ( ($totalsize <= 16777216) || ($totalsize <= $self->{end_offset})) { #16MB
+	if ( ($totalsize <= 16777216) || ($totalsize <= $offsplit)) { #16MB
 		push(@chunks, $totalsize);
 		return @chunks;
 	}
 
 	# Split and search the right position in file corresponding to the number of jobs
 	my $i = 1;
-	if ($self->{end_offset} && ($self->{end_offset} < $totalsize)) {
-		$chunks[0] = $self->{end_offset};
+	if ($offsplit && ($offsplit < $totalsize)) {
+		$chunks[0] = $offsplit;
 	}
 	my $lfile = undef;
 	open($lfile, $logf) || die "FATAL: cannot read log file $logf. $!\n";
@@ -986,7 +1074,11 @@ sub _parse_file_part
 	# Move directly to the start position
 	if ($start_offset) {
 		$logfile->seek($start_offset, 0);
-		$self->{end_offset} = $start_offset;
+		if (!$self->{is_squidguard_log}) {
+			$self->{end_offset} = $start_offset;
+		} else {
+			$self->{sg_end_offset} = $start_offset;
+		}
 	}
 
 	# The log file format must be :
@@ -997,9 +1089,15 @@ sub _parse_file_part
 	while ($line = <$logfile>) {
 
 		# quit this log if we reach the ending offset
-		last if ($stop_offset && ($self->{end_offset}>= $stop_offset));
-		# Store the current position in logfile
-		$self->{end_offset} += length($line);
+		if (!$self->{is_squidguard_log}) {
+			last if ($stop_offset && ($self->{end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{end_offset} += length($line);
+		} else {
+			last if ($stop_offset && ($self->{sg_end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{sg_end_offset} += length($line);
+		}
 
 		chomp($line);
 		next if (!$line);
@@ -1041,6 +1139,7 @@ sub _parse_file_part
 			$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
                 } elsif ($line =~ $sg_format_regex1) {
                         $format = 'squidguard';
+			$self->{is_squidguard_log} = 1;
 			$acl = $7;
                         $client_ip = $9;
                         $elapsed = 0;
@@ -1051,7 +1150,7 @@ sub _parse_file_part
                         $bytes = 0;
                         $code = $12 . ':';
                         $mime_type = '';
-                        $time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 		} else {
 			next;
 		}
@@ -1066,16 +1165,31 @@ sub _parse_file_part
 			next if (($#{$self->{ExcludedCodes}} >= 0) && grep(m#^$code$#, @{$self->{ExcludedCodes}}));
 
 			# Go to last parsed date (incremental mode)
-			next if ($self->{history_time} && ($time <= $self->{history_time}));
+			if (!$self->{is_squidguard_log}) {
+				next if ($self->{history_time} && ($time <= $self->{history_time}));
+			} else {
+				next if ($self->{sg_history_time} && ($time <= $self->{sg_history_time}));
+			}
 
 			# Register the last parsing time and last offset position in logfile
-			$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
+			if (!$self->{is_squidguard_log}) {
+				$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
 
-			# Register the first parsing time
-			if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
-				$self->{begin_time} = $time;
-				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				# Register the first parsing time
+				if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
+					$self->{begin_time} = $time;
+					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
+			} else {
+				$self->{sg_end_time} = $time if (!$time || ($self->{sg_end_time} < $time));
+
+				# Register the first parsing time
+				if (!$self->{sg_begin_time} || ($self->{sg_begin_time} > $time)) {
+					$self->{sg_begin_time} = $time;
+					print STDERR "SQUIDGUARD LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
 			}
+
 			# Only store (HIT|UNMODIFIED)/(MISS|MODIFIED|TUNNEL)/(DENIED|REDIRECT) status
 			# and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
@@ -1159,12 +1273,20 @@ sub _parse_file_part
 		}
 
 		# Save the last information parsed in this file part
-		if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
-			flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
-			print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+		my $tmp_file = 'last_parsed.tmp';
+		if ($self->{is_squidguard_log}) {
+			$tmp_file = 'sg_last_parsed.tmp';
+		}
+		if (open(OUT, ">>$self->{pid_dir}/$tmp_file")) {
+			flock(OUT, 2) || die "FATAL: can't acquire lock on file $tmp_file, $!\n";
+			if (!$self->{is_squidguard_log}) {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			} else {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{sg_end_time} $self->{sg_end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			}
 			close(OUT);
 		} else {
-			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
+			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/$tmp_file, $!\n";
 		}
 	}
 
@@ -1272,6 +1394,12 @@ sub _init
 	$self->{pid_dir} = $pid_dir || '/tmp';
 	$self->{child_count} = 0;
 	$self->{rebuild} = $rebuild || 0;
+	$self->{is_squidguard_log} = 0;
+
+	# Cleanup old temporary files
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
+		unlink("$self->{pid_dir}/$tmp_file");
+	}
 
 	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
 	$self->{ExcludedMethods} = ();
@@ -1370,6 +1498,8 @@ sub _init
 	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
 	$self->{preserve} = 0;
+	$self->{sg_end_time} = 0;
+	$self->{sg_end_offset} = 0;
 
 	# Override verbose mode
 	$self->{QuietMode} = 0 if ($debug);
@@ -1382,7 +1512,7 @@ sub _init
 		chomp($self->{start_date});
 	}
 
-	# Get the last parsing date for incremental parsing
+	# Get the last parsing date for Squid log incremental parsing
 	if (!$rebuild && -e "$self->{Output}/SquidAnalyzer.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/SquidAnalyzer.current")) {
@@ -1395,10 +1525,29 @@ sub _init
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
 			if ($self->{history_time}) {
-				print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+				print STDERR "SQUID LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 			}
 		}
 	}
+
+	# Get the last parsing date for SquidGuard log incremental parsing
+	if (!$rebuild && -e "$self->{Output}/SquidGuard.current") {
+		my $current = new IO::File;
+		unless($current->open("$self->{Output}/SquidGuard.current")) {
+			print STDERR "ERROR: Can't read file $self->{Output}/SquidGuard.current, $!\n" if (!$self->{QuietMode});
+			print STDERR "Starting at the first line of SquidGuard log file.\n" if (!$self->{QuietMode});
+		} else {
+			my $tmp = <$current>;
+			chomp($tmp);
+			($self->{sg_history_time}, $self->{sg_end_offset}) = split(/[\t]/, $tmp);
+			$self->{sg_begin_time} = $self->{sg_history_time};
+			$current->close();
+			if ($self->{sg_history_time}) {
+				print STDERR "SQUIDGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_history_time})), " - HISTORY OFFSET: $self->{sg_end_offset}\n" if (!$self->{QuietMode});
+			}
+		}
+	}
+
 
 	$self->{menu} = qq{
 <div id="menu">
@@ -2607,8 +2756,11 @@ sub buildHTML
 	my $old_day = 0;
 	my $p_month = 0;
 	my $p_year = 0;
-	if ($self->{history_time}) {
+	if ($self->{history_time} || $self->{sg_history_time}) {
 		my @ltime = CORE::localtime($self->{history_time});
+		if ($self->{is_squidguard_log}) {
+			@ltime = CORE::localtime($self->{sg_history_time});
+		}
 		$old_year = $ltime[5]+1900;
 		$old_month = $ltime[4]+1;
 		$old_month = "0$old_month" if ($old_month < 10);
@@ -2616,7 +2768,11 @@ sub buildHTML
 		$old_day = "0$old_day" if ($old_day < 10);
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
-			@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+			if ($self->{is_squidguard_log}) {
+				@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+			} else {
+				@ltime = CORE::localtime($self->{sg_history_time}-($self->{preserve}*2592000));
+			}
 			$p_year = $ltime[5]+1900;
 			$p_month = $ltime[4]+1;
 			$p_month = sprintf("%02d", $p_month);
