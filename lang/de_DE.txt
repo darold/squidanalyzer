@@ -108,7 +108,7 @@ Mime_graph_hits_title		Mime Typen Treffer Statistik
 Mime_graph_bytes_title		Mime Typen MBytes Statistik
 User				Benutzer
 Count				Anzahl
-WeekDay				Mo Di Mi Do Fr Sa So
+WeekDay				So Mo Di Mi Do Fr Sa
 Week				Woche
 Top_denied_link			Top Denied
 SquidGuard_acl_title		SquidGuard ACL use
