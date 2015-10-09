@@ -1,19 +1,19 @@
 #------------------------------------------------------------------------------
-# Fichier de traduction des chaines de caractères du programme SquidAnalyzer.
-# La premiere colonne correspond aux clés d'accès par le programme aux
-# traductions données dans la deuxieme colonne. Les clés ne doivent pas être
-# modifiés et la casse doit etre repectée. Le séparateur de colonne est la
+# Fichier de traduction des chaines de caractÃ¨res du programme SquidAnalyzer.
+# La premiere colonne correspond aux clÃ©s d'accÃ¨s par le programme aux
+# traductions donnÃ©es dans la deuxieme colonne. Les clÃ©s ne doivent pas Ãªtre
+# modifiÃ©s et la casse doit etre repectÃ©e. Le sÃ©parateur de colonne est la
 # tabulation.
 #
 # Les tags %s et %d dans les chaines de traduction correspondent aux valeurs
-# dynamiques subtituées par le programme. Suivant la langue utilisée leur
-# emplacement peut être modifié.
+# dynamiques subtituÃ©es par le programme. Suivant la langue utilisÃ©e leur
+# emplacement peut Ãªtre modifiÃ©.
 #
 # Auteur: Gilles Darold
 #------------------------------------------------------------------------------
-CharSet				iso-8859-15
+CharSet				utf-8
 01				Jan
-02				Fév
+02				FÃ©v
 03				Mar
 04				Avr
 05				Mai
@@ -23,51 +23,51 @@ CharSet				iso-8859-15
 09				Sep
 10				Oct
 11				Nov
-12				Déc
+12				DÃ©c
 KB				Kilo octets
-MB				Méga octets
+MB				MÃ©ga octets
 GB				Giga octets
-Requests			Requêtes
+Requests			RequÃªtes
 Bytes				Octets
-Megabytes			Méga octets
+Megabytes			MÃ©ga octets
 Total				Total
-Years				Années
+Years				AnnÃ©es
 Months				Mois
 Days				Jours
-Hit				Trouvés
+Hit				TrouvÃ©s
 Miss				Manquants
-Denied				Rejetés
-Cost				Coût
+Denied				RejetÃ©s
+Cost				CoÃ»t
 Users				Utilisateurs
 Sites				Sites
 Domains				Domaines
-Requests_graph			Requêtes
-Megabytes_graph			Méga octets
+Requests_graph			RequÃªtes
+Megabytes_graph			MÃ©ga octets
 Months_graph			Mois
 Days_graph			Jours
-Hit_graph			Trouvés
+Hit_graph			TrouvÃ©s
 Miss_graph			Manquants
-Denied_graph			Rejetés
+Denied_graph			RejetÃ©s
 Total_graph			Total
 Domains_graph			Domaines
-Users_help			Nombre total d'utilisateurs différents pendant cette période
-Sites_help			Nombre total de sites différents visités pendant cette période
-Domains_help			Nombre total de domaines différents visités pendant cette période
-Hit_help			Objets trouvés dans le cache
-Miss_help			Objets non trouvés dans le cache
-Denied_help			Objets dont l'accès a été refusé
-Cost_help			1 Méga octet =
-Generation			Rapport généré
+Users_help			Nombre total d'utilisateurs diffÃ©rents pendant cette pÃ©riode
+Sites_help			Nombre total de sites diffÃ©rents visitÃ©s pendant cette pÃ©riode
+Domains_help			Nombre total de domaines diffÃ©rents visitÃ©s pendant cette pÃ©riode
+Hit_help			Objets trouvÃ©s dans le cache
+Miss_help			Objets non trouvÃ©s dans le cache
+Denied_help			Objets dont l'accÃ¨s a Ã©tÃ© refusÃ©
+Cost_help			1 MÃ©ga octet =
+Generation			Rapport gÃ©nÃ©rÃ©
 Main_cache_title		Statistiques du cache
 Cache_title			Statistiques du cache pour
 Stat_label			Stats
 Mime_link			Types MIME
-Network_link			Réseaux
+Network_link			RÃ©seaux
 User_link			Utilisateurs
 Top_url_link			Top Urls
 Top_domain_link			Top Domaines
 Back_link			Retour
-Graph_cache_hit_title		Statistiques %s des requêtes pour
+Graph_cache_hit_title		Statistiques %s des requÃªtes pour
 Graph_cache_byte_title		Statistiques %s des transferts pour
 Hourly				par heure
 Hours				Heures
@@ -77,34 +77,34 @@ Monthly				Mensuelles
 Months				Mois
 Mime_title			Statistiques des types MIME pour
 Mime_number			Nombre de types MIME
-Network_title			Statistiques réseaux pour
-Network_number			Nombre de réseaux
-Duration			Durée
+Network_title			Statistiques rÃ©seaux pour
+Network_number			Nombre de rÃ©seaux
+Duration			DurÃ©e
 Time				Temps
 Largest				Plus gros transfert
 Url				Url
 User_title			Statistiques utilisateurs pour
 User_number			Nombre d'utilisateurs
-Url_Hits_title			Top %d des Urls par requêtes pour
+Url_Hits_title			Top %d des Urls par requÃªtes pour
 Url_Bytes_title			Top %d des Urls par transferts pour
-Url_Duration_title		Top %d des Urls par durée pour
+Url_Duration_title		Top %d des Urls par durÃ©e pour
 Url_number			Nombre d'Url
-Domain_Hits_title		Top %d des domaines par requêtes pour
+Domain_Hits_title		Top %d des domaines par requÃªtes pour
 Domain_Bytes_title		Top %d des domaines par transferts pour
-Domain_Duration_title		Top %d des domaines par durée pour
+Domain_Duration_title		Top %d des domaines par durÃ©e pour
 Domain_number			Nombre de domaines
-Domain_graph_hits_title		Statistiques des requêtes par domaines pour
+Domain_graph_hits_title		Statistiques des requÃªtes par domaines pour
 Domain_graph_bytes_title	Statistiques des transferts par domaines pour
-Second_domain_graph_hits_title	Statistiques des requêtes par sous-domaines pour
+Second_domain_graph_hits_title	Statistiques des requÃªtes par sous-domaines pour
 Second_domain_graph_bytes_title	Statistiques des transferts par sous-domaines pour
-First_visit			Première visite
-Last_visit			Dernière visite
+First_visit			PremiÃ¨re visite
+Last_visit			DerniÃ¨re visite
 Globals_Statistics		Statistiques Globales
-Legend				Légende
-File_Generated			Généré par
+Legend				LÃ©gende
+File_Generated			GÃ©nÃ©rÃ© par
 Up_link				Haut de Page
-Click_year_stat			Cliquez sur le lien des statistiques annuelles pour plus de détail
-Mime_graph_hits_title		Statistiques des requêtes par type MIME pour
+Click_year_stat			Cliquez sur le lien des statistiques annuelles pour plus de dÃ©tail
+Mime_graph_hits_title		Statistiques des requÃªtes par type MIME pour
 Mime_graph_bytes_title		Statistiques Mega Octets par type MIME pour
 User				Utilisateur
 Count				Compte
