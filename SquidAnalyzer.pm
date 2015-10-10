@@ -2658,7 +2658,7 @@ sub _print_header
 	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", CORE::localtime);
 	$sortpos ||= 2;
 	my $sorttable = '';
-	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);" if ($sortpos != 100);
+	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);";
 	print $$fileout qq{
 <html>
 <head>
@@ -4390,7 +4390,7 @@ sub _print_top_url_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
@@ -4587,7 +4587,7 @@ sub _print_top_denied_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Url_number'}: $ndenied</h3>\n";
 
 	my %data_acl = ();
@@ -4859,7 +4859,7 @@ sub _print_top_domain_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Domain_number'}: $ndom</h3>\n";
 
 	$total_hits ||= 1;
