@@ -1102,6 +1102,9 @@ sub _parse_file_part
 		chomp($line);
 		next if (!$line);
 
+		# skip immediately lines that squid is not able to tag.
+		next if ($line =~ / TAG_NONE(_ABORTED)?\//);
+
 		# Number of log lines parsed
 		$line_count++;
 
