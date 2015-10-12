@@ -1,12 +1,12 @@
 Revision history for SquidAnalyzer
 
-6.3 - Sat Oct 10 11:00:50 2015
+6.3 - Mon Oct 12 07:56:29 CEST 2015
 
 This release adds a new report to show statistics about Denied URLs. It also
 allow to add a SquidGuard log to the list of log files and to report blocked
 URLs into the Denied reports. It ialso adds a pie chart on SquidGuard ACLs use.
 
-There's also tree new configuration directives:
+There's also four new configuration directives:
 
   - UserReport to be able to remove any user related reports but statistics
     about URL and domains will remain.
@@ -14,6 +14,8 @@ There's also tree new configuration directives:
     code returned.
   - UrlHitsOnly to be able to enable the generation of additional HTML tables
     with top Url per byte and per duration in Top Urls and Domains report.
+  - MaxFormatError to not exit immediatly when a bad format error is encountered. SquidAnalyzer will
+    wait MaxFormatError before exiting.
 
 Note that this last directive is disable by default, so if you still want the
 three tables in the reports, you must set UrlHitsOnly to 1.
@@ -22,6 +24,8 @@ A Catalan translation file has been added to the lang directory.
 
 It also included several bug fixes since last release.
 
+  - Skip immediately lines that squid is not able to tag: TAG_NONE. Thanks to
+    David Touzeau for the report.
   - Fix display order when OrderUrl was set in Top Url and Top Domain views.
     Thanks to Wesley Bresson for the report.
   - Convert fr_FR.txt translation file from ISO_8859-1 to UTF8 and change
