@@ -658,6 +658,13 @@ sub parseFile
 					$logfile->close;
 					# This file should be ommitted jump to the next file
 					next if ($line eq 'NOK');
+					
+					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
+					if (!$self->{is_squidguard_log}) {
+						$self->{end_offset} = 0;
+					} else {
+						$self->{sg_end_offset} = 0;
+					}
 				} else {
 					# move at offset and see if next line is older than history time
 					$logfile->seek($history_offset, 0);
