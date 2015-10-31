@@ -15,7 +15,7 @@ use strict qw/vars/;
 
 BEGIN {
 	use Exporter();
-	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
+	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $XZCAT_PROG $RM_PROG);
 	use POSIX qw/ strftime sys_wait_h /;
 	use IO::File;
 	use Socket;
@@ -40,9 +40,10 @@ BEGIN {
 
 }
 
-$ZCAT_PROG = "/bin/zcat";
+$ZCAT_PROG  = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
-$RM_PROG  = "/bin/rm";
+$RM_PROG    = "/bin/rm";
+$XZCAT_PROG = "/bin/xzcat";
 
 # DNS Cache
 my %CACHE = ();
@@ -1051,8 +1052,11 @@ sub _parse_file_part
 		# Open a pipe to zcat program for compressed log
 		$logfile->open("$ZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $file. $!\n");
 	} elsif ($file =~ /\.bz2/) {
-		# Open a pipe to zcat program for compressed log
+		# Open a pipe to bzcat program for compressed log
 		$logfile->open("$BZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $file. $!\n");
+	} elsif ($file =~ /\.xz/) {
+		# Open a pipe to xzcat program for compressed log
+		$logfile->open("$XZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $XZCAT_PROG $file. $!\n");
 	} else {
 		$logfile->open($file) || $self->localdie("ERROR: Unable to open Squid access.log file $file. $!\n");
 	}
