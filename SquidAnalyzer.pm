@@ -978,7 +978,7 @@ sub check_exclusions
 
 	# check for Network exclusion
 	if (exists $self->{Exclude}{networks} && $client_ip) {
-		foreach my $e (@{$self->{Exclude}{networks}}) {
+		foreach my $e (@{$self->{Include}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
 				return 1;
 			}
@@ -1011,6 +1011,11 @@ sub check_inclusions
 				return 1;
 			}
 		}
+	}
+
+	# If login is a client ip, checked login against clients and networks filters
+	if (!$client_ip && ($login =~ /^\d+\.\d+\.\d+\.\d+$/)) {
+		$client_ip = $login;
 	}
 
 	# check for client inclusion
@@ -1878,7 +1883,6 @@ sub _append_stat
 	$path =~ s/[\/]+$//;
 
 	print STDERR "Appending data into $self->{Output}/$path\n" if (!$self->{QuietMode});
-	
 
 	#### Save cache statistics
 	my $dat_file_code = new IO::File;
@@ -2266,7 +2270,10 @@ sub _read_stat
 					my $lsize = $5 || 0;
 					my $lurl = $6 || 0;
 
-					next if (!$self->check_inclusions($id));
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id));
+					}
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
