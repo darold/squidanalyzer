@@ -155,6 +155,8 @@ my %Translate = (
 	'Top_denied_link' => 'Top Denied',
 	'SquidGuard_acl_title' => 'SquidGuard ACL use',
 	'Throughput' => 'Throughput',
+	'Graph_throughput_title' => '%s throughput on',
+	'Throughput_graph' => 'Bytes/sec',
 );
 
 my @TLD1 = (
@@ -3149,25 +3151,28 @@ sub _print_cache_stat
 			$hits =~ s/,$//;
 			$bytes =~ s/,$//;
 			my %hits_tmp = split(/[:,]/, $hits);
-			foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+			foreach my $tmp (keys %hits_tmp) {
 				$detail_code_stat{$code}{$tmp}{request} = $hits_tmp{$tmp};
 				$code_stat{$code}{request} += $hits_tmp{$tmp};
 			}
 			my %bytes_tmp = split(/[:,]/, $bytes);
-			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+			foreach my $tmp (keys %bytes_tmp) {
 				$detail_code_stat{$code}{$tmp}{bytes} = $bytes_tmp{$tmp};
 				$code_stat{$code}{bytes} += $bytes_tmp{$tmp};
 			}
-			if ($data =~ s/thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)//) {
+			if ($data =~ /thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)/) {
 				$bytes = $1 || '';
 				my $elapsed = $2 || '';
+				$bytes =~ s/,$//;
 				$elapsed =~ s/,$//;
 				my %bytes_tmp = split(/[:,]/, $bytes);
-				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+				foreach my $tmp (keys %bytes_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{bytes} = $bytes_tmp{"$tmp"};
 					$throughput_stat{$code}{bytes} += $bytes_tmp{$tmp};
 				}
 				my %elapsed_tmp = split(/[:,]/, $elapsed);
-				foreach my $tmp (sort {$a <=> $b} keys %elapsed_tmp) {
+				foreach my $tmp (keys %elapsed_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{elapsed} = $elapsed_tmp{"$tmp"};
 					$throughput_stat{$code}{elapsed} += $elapsed_tmp{$tmp};
 				}
 			}
@@ -3242,6 +3247,7 @@ sub _print_cache_stat
 	my @hit = ();
 	my @miss = ();
 	my @denied = ();
+	my @throughput = ();
 	my @total = ();
 	for (my $i = 0; $i <= $#xaxis; $i++) {
 		my $ddate = $xaxis[$i];
@@ -3264,10 +3270,16 @@ sub _print_cache_stat
 		} else {
 			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
+		if (exists $detail_code_stat{throughput}{$ddate}{bytes}) {
+			push(@throughput, "[ $xaxis[$i], " . int($detail_code_stat{throughput}{$ddate}{bytes}/($detail_code_stat{throughput}{$ddate}{elapsed}/1000)) . " ]");
+		} else {
+			push(@throughput, "[ $xaxis[$i], 0 ]");
+		}
 		push(@total, "[ $xaxis[$i], $tot ]");
 		delete $detail_code_stat{HIT}{$ddate}{request};
 		delete $detail_code_stat{MISS}{$ddate}{request};
 		delete $detail_code_stat{DENIED}{$ddate}{request};
+		delete $detail_code_stat{throughput}{$ddate};
 	}
 
 	my $t1 = $Translate{'Graph_cache_hit_title'};
@@ -3323,6 +3335,14 @@ sub _print_cache_stat
 	@denied = ();
 	@total = ();
 
+	$t1 = $Translate{'Graph_throughput_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$ylabel = $Translate{'Bytes_graph'} || $Translate{'Bytes'};
+	my $throughput_bytes = $self->flotr2_bargraph(3, 'throughput_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @throughput), $Translate{'Throughput_graph'});
+	@throughput = ();
+
 	print $out qq{
 <table class="stata">
 <tr>
@@ -3376,7 +3396,10 @@ sub _print_cache_stat
 </tr>
 </table>
 
-<table class="graphs"><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
+<table class="graphs">
+<tr><td>$code_requests</td><td>$code_bytes</td></tr>
+<tr><td colspan="2" align="center">$throughput_bytes</td></tr>
+</table>
 
 	<h4>$Translate{'Legend'}</h4>
 	<div class="line-separator"></div>
