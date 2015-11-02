@@ -15,7 +15,7 @@ use strict qw/vars/;
 
 BEGIN {
 	use Exporter();
-	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
+	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $XZCAT_PROG $RM_PROG);
 	use POSIX qw/ strftime sys_wait_h /;
 	use IO::File;
 	use Socket;
@@ -40,9 +40,10 @@ BEGIN {
 
 }
 
-$ZCAT_PROG = "/bin/zcat";
+$ZCAT_PROG  = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
-$RM_PROG  = "/bin/rm";
+$RM_PROG    = "/bin/rm";
+$XZCAT_PROG = "/bin/xzcat";
 
 # DNS Cache
 my %CACHE = ();
@@ -153,6 +154,9 @@ my %Translate = (
 	'Week' => 'Week',
 	'Top_denied_link' => 'Top Denied',
 	'SquidGuard_acl_title' => 'SquidGuard ACL use',
+	'Throughput' => 'Throughput',
+	'Graph_throughput_title' => '%s throughput on',
+	'Throughput_graph' => 'Bytes/sec',
 );
 
 my @TLD1 = (
@@ -985,7 +989,7 @@ sub check_exclusions
 
 	# check for Network exclusion
 	if (exists $self->{Exclude}{networks} && $client_ip) {
-		foreach my $e (@{$self->{Exclude}{networks}}) {
+		foreach my $e (@{$self->{Include}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
 				return 1;
 			}
@@ -1018,6 +1022,11 @@ sub check_inclusions
 				return 1;
 			}
 		}
+	}
+
+	# If login is a client ip, checked login against clients and networks filters
+	if (!$client_ip && ($login =~ /^\d+\.\d+\.\d+\.\d+$/)) {
+		$client_ip = $login;
 	}
 
 	# check for client inclusion
@@ -1053,8 +1062,11 @@ sub _parse_file_part
 		# Open a pipe to zcat program for compressed log
 		$logfile->open("$ZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $file. $!\n");
 	} elsif ($file =~ /\.bz2/) {
-		# Open a pipe to zcat program for compressed log
+		# Open a pipe to bzcat program for compressed log
 		$logfile->open("$BZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $file. $!\n");
+	} elsif ($file =~ /\.xz/) {
+		# Open a pipe to xzcat program for compressed log
+		$logfile->open("$XZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $XZCAT_PROG $file. $!\n");
 	} else {
 		$logfile->open($file) || $self->localdie("ERROR: Unable to open Squid access.log file $file. $!\n");
 	}
@@ -1334,6 +1346,11 @@ sub _clear_stats
 	$self->{stat_code_hour} = ();
 	$self->{stat_code_day} = ();
 	$self->{stat_code_month} = ();
+
+	# Hashes to store throughput statsœ
+	$self->{stat_throughput_hour} = ();
+	$self->{stat_throughput_day} = ();
+	$self->{stat_throughput_month} = ();
 
 	# Hashes to store mime type
 	$self->{stat_mime_type_hour} = ();
@@ -1742,7 +1759,12 @@ sub _parseData
 		$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
-		
+
+		$self->{stat_throughput_hour}{$code}{$hour}{bytes} += $bytes;
+		$self->{stat_throughput_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+		$self->{stat_throughput_hour}{$code}{$hour}{elapsed} += $elapsed;
+		$self->{stat_throughput_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
+
 		#### Store url statistics
 		if ($self->{UrlReport}) {
 			$self->{stat_denied_url_hour}{$id}{$dest}{hits}++;
@@ -1794,8 +1816,15 @@ sub _parseData
 	#### Store HIT/MISS/DENIED statistics
 	$self->{stat_code_hour}{$code}{$hour}{hits}++;
 	$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
+	$self->{stat_code_hour}{$code}{$hour}{elapsed} += $elapsed;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+	$self->{stat_code_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
+
+	$self->{stat_throughput_hour}{$code}{$hour}{bytes} += $bytes;
+	$self->{stat_throughput_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+	$self->{stat_throughput_hour}{$code}{$hour}{elapsed} += $elapsed;
+	$self->{stat_throughput_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
 
 	#### Store url statistics
 	if ($self->{UrlReport}) {
@@ -1885,7 +1914,6 @@ sub _append_stat
 	$path =~ s/[\/]+$//;
 
 	print STDERR "Appending data into $self->{Output}/$path\n" if (!$self->{QuietMode});
-	
 
 	#### Save cache statistics
 	my $dat_file_code = new IO::File;
@@ -2058,14 +2086,21 @@ sub _write_stat_data
 	#### Save cache statistics
 	if ($kind eq 'stat_code') {
 		foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
-			$fh->print("$code " .
-				"hits_$type=");
+			$fh->print("$code " .  "hits_$type=");
 			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
 				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
 			}
 			$fh->print(";bytes_$type=");
 			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
 				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";thp_bytes_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_throughput_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_throughput_$type"}{$code}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";thp_duration_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_throughput_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_throughput_$type"}{$code}{$tmp}{elapsed} . ",");
 			}
 			$fh->print("\n");
 		}
@@ -2223,7 +2258,7 @@ sub _read_stat
 			my $error = 0;
 			while (my $l = <$dat_file_code>) {
 				chomp($l);
-				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
+				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)//) {
 					my $code = $1;
 					my $hits = $2 || '';
 					my $bytes = $3 || '';
@@ -2238,6 +2273,21 @@ sub _read_stat
 					foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
 						if ($key ne '') { $k = $key; } else { $k = $tmp; }
 						$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
+					}
+					if ($l =~ s/thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)//) {
+						$bytes = $1 || '';
+						my $elapsed = $2 || '';
+						$elapsed =~ s/,$//;
+						my %bytes_tmp = split(/[:,]/, $bytes);
+						foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+							if ($key ne '') { $k = $key; } else { $k = $tmp; }
+							$self->{"stat_throughput_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
+						}
+						my %elapsed_tmp = split(/[:,]/, $elapsed);
+						foreach my $tmp (sort {$a <=> $b} keys %elapsed_tmp) {
+							if ($key ne '') { $k = $key; } else { $k = $tmp; }
+							$self->{"stat_throughput_$sum_type"}{$code}{$k}{elapsed} += $elapsed_tmp{$tmp};
+						}
 					}
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
@@ -2273,7 +2323,10 @@ sub _read_stat
 					my $lsize = $5 || 0;
 					my $lurl = $6 || 0;
 
-					next if (!$self->check_inclusions($id));
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id));
+					}
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -3092,6 +3145,7 @@ sub _print_cache_stat
 
 	# Load code statistics
 	my %code_stat = ();
+	my %throughput_stat = ();
 	my %detail_code_stat = ();
 	my $infile = new IO::File;
 	if ($infile->open("$outdir/stat_code.dat")) {
@@ -3104,22 +3158,40 @@ sub _print_cache_stat
 			$hits =~ s/,$//;
 			$bytes =~ s/,$//;
 			my %hits_tmp = split(/[:,]/, $hits);
-			foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+			foreach my $tmp (keys %hits_tmp) {
 				$detail_code_stat{$code}{$tmp}{request} = $hits_tmp{$tmp};
 				$code_stat{$code}{request} += $hits_tmp{$tmp};
 			}
 			my %bytes_tmp = split(/[:,]/, $bytes);
-			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+			foreach my $tmp (keys %bytes_tmp) {
 				$detail_code_stat{$code}{$tmp}{bytes} = $bytes_tmp{$tmp};
 				$code_stat{$code}{bytes} += $bytes_tmp{$tmp};
+			}
+			if ($data =~ /thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)/) {
+				$bytes = $1 || '';
+				my $elapsed = $2 || '';
+				$bytes =~ s/,$//;
+				$elapsed =~ s/,$//;
+				my %bytes_tmp = split(/[:,]/, $bytes);
+				foreach my $tmp (keys %bytes_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{bytes} = $bytes_tmp{"$tmp"};
+					$throughput_stat{$code}{bytes} += $bytes_tmp{$tmp};
+				}
+				my %elapsed_tmp = split(/[:,]/, $elapsed);
+				foreach my $tmp (keys %elapsed_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{elapsed} = $elapsed_tmp{"$tmp"};
+					$throughput_stat{$code}{elapsed} += $elapsed_tmp{$tmp};
+				}
 			}
 		}
 		$infile->close();
 	}
-	my $total_request =  ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
-	my $total_bytes =  ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
-	my $total_all_request =  ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
-	my $total_all_bytes =  ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
+	my $total_request = ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_bytes = ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
+	my $total_elapsed = ($throughput_stat{HIT}{elapsed} + $throughput_stat{MISS}{elapsed}) || 1;
+	my $total_throughput = int(($throughput_stat{HIT}{bytes} + $throughput_stat{MISS}{bytes}) / ($total_elapsed/1000));
+	my $total_all_request = ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_all_bytes = ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
 
 	if ($week && !-d "$outdir") {
 		return;
@@ -3140,11 +3212,12 @@ sub _print_cache_stat
 
 	my $total_cost = sprintf("%2.2f", int(($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes})/1000000) * $self->{CostPrice});
 	my $comma_bytes = $self->format_bytes($total_bytes);
+	my $comma_throughput = $self->format_bytes($total_throughput);
 	my $hit_bytes = $self->format_bytes($code_stat{HIT}{bytes});
 	my $miss_bytes = $self->format_bytes($code_stat{MISS}{bytes});
 	my $denied_bytes = $self->format_bytes($code_stat{DENIED}{bytes});
-	my $colspn = 5;
-	$colspn = 6 if ($self->{CostPrice});
+	my $colspn = 6;
+	$colspn = 7 if ($self->{CostPrice});
 
 	my $title = $Translate{'Hourly'} || 'Hourly';
 	my $unit = $Translate{'Hours'} || 'Hours';
@@ -3181,6 +3254,7 @@ sub _print_cache_stat
 	my @hit = ();
 	my @miss = ();
 	my @denied = ();
+	my @throughput = ();
 	my @total = ();
 	for (my $i = 0; $i <= $#xaxis; $i++) {
 		my $ddate = $xaxis[$i];
@@ -3203,10 +3277,16 @@ sub _print_cache_stat
 		} else {
 			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
+		if (exists $detail_code_stat{throughput}{$ddate}{bytes}) {
+			push(@throughput, "[ $xaxis[$i], " . int($detail_code_stat{throughput}{$ddate}{bytes}/($detail_code_stat{throughput}{$ddate}{elapsed}/1000)) . " ]");
+		} else {
+			push(@throughput, "[ $xaxis[$i], 0 ]");
+		}
 		push(@total, "[ $xaxis[$i], $tot ]");
 		delete $detail_code_stat{HIT}{$ddate}{request};
 		delete $detail_code_stat{MISS}{$ddate}{request};
 		delete $detail_code_stat{DENIED}{$ddate}{request};
+		delete $detail_code_stat{throughput}{$ddate};
 	}
 
 	my $t1 = $Translate{'Graph_cache_hit_title'};
@@ -3262,6 +3342,14 @@ sub _print_cache_stat
 	@denied = ();
 	@total = ();
 
+	$t1 = $Translate{'Graph_throughput_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$ylabel = $Translate{'Bytes_graph'} || $Translate{'Bytes'};
+	my $throughput_bytes = $self->flotr2_bargraph(3, 'throughput_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @throughput), $Translate{'Throughput_graph'});
+	@throughput = ();
+
 	print $out qq{
 <table class="stata">
 <tr>
@@ -3278,6 +3366,7 @@ sub _print_cache_stat
 <th>$Translate{'Denied'}</th>
 <th>$Translate{'Requests'}</th>
 <th>$Translate{$self->{TransfertUnit}}</th>
+<th>$Translate{'Throughput'}</th>
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Sites'}</th>
 <th>$Translate{'Domains'}</th>
@@ -3302,6 +3391,7 @@ sub _print_cache_stat
 <td title="$percent_bdenied %">$denied_bytes</td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
+<td>$comma_throughput B/s</td>
 <td>SA_NUSERS_SA</td>
 <td>SA_NURLS_SA</td>
 <td>SA_NDOMAINS_SA</td>
@@ -3313,7 +3403,10 @@ sub _print_cache_stat
 </tr>
 </table>
 
-<table class="graphs"><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
+<table class="graphs">
+<tr><td>$code_requests</td><td>$code_bytes</td></tr>
+<tr><td colspan="2" align="center">$throughput_bytes</td></tr>
+</table>
 
 	<h4>$Translate{'Legend'}</h4>
 	<div class="line-separator"></div>
@@ -5047,8 +5140,11 @@ sub _gen_summary
         closedir DIR;
 
 	my %code_stat = ();
+	my %throughput_stat = ();
 	my %total_request =  ();
 	my %total_bytes = ();
+	my %total_elapsed = ();
+	my %total_throughput = ();
 	foreach my $d (@dirs) {
 		# Load code statistics
 		my $infile = new IO::File;
@@ -5056,7 +5152,7 @@ sub _gen_summary
 		while (my $l = <$infile>) {
 			chomp($l);
 			my ($code, $data) = split(/\s/, $l);
-			$data =~ /hits_month=([^;]+);bytes_month=(.*)/;
+			$data =~ /hits_month=([^;]+);bytes_month=([^;]+)/;
 			my $hits = $1 || '';
 			my $bytes = $2 || '';
 			$hits =~ s/,$//;
@@ -5069,18 +5165,34 @@ sub _gen_summary
 			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
 				$code_stat{$d}{$code}{bytes} += $bytes_tmp{$tmp};
 			}
+			if ($data =~ /thp_bytes_month=([^;]+);thp_duration_month=([^;]+)/) {
+				$bytes = $1 || '';
+				my $elapsed = $2 || '';
+				$elapsed =~ s/,$//;
+				my %bytes_tmp = split(/[:,]/, $bytes);
+				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+					$throughput_stat{$d}{$code}{bytes} += $bytes_tmp{$tmp};
+				}
+				my %elapsed_tmp = split(/[:,]/, $elapsed);
+				foreach my $tmp (sort {$a <=> $b} keys %elapsed_tmp) {
+					$throughput_stat{$d}{$code}{elapsed} += $elapsed_tmp{$tmp};
+				}
+			}
 		}
 		$infile->close();
 		$total_request{$d} =  $code_stat{$d}{HIT}{request} + $code_stat{$d}{MISS}{request};
 		$total_bytes{$d} = $code_stat{$d}{HIT}{bytes} + $code_stat{$d}{MISS}{bytes};
+		$total_bytes{$d} = $code_stat{$d}{HIT}{bytes} + $code_stat{$d}{MISS}{bytes};
+		$total_throughput{$d} = $throughput_stat{$d}{HIT}{bytes} + $throughput_stat{$d}{MISS}{bytes};
+		$total_elapsed{$d} = $code_stat{$d}{HIT}{elapsed} + $code_stat{$d}{MISS}{elapsed};
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	$self->_print_header(\$out);
-	my $colspn = 2;
-	$colspn = 3 if ($self->{CostPrice});
+	my $colspn = 3;
+	$colspn = 4 if ($self->{CostPrice});
 	print $out qq{
     <h4>$Translate{'Globals_Statistics'}</h4>
     <div class="line-separator"></div>
@@ -5102,6 +5214,7 @@ sub _gen_summary
 	<th scope="col">$Translate{'Denied'}</th>
 	<th scope="col">$Translate{'Requests'}</th>
 	<th scope="col">$Translate{$self->{TransfertUnit}}</th>
+	<th scope="col">$Translate{'Throughput'}</th>
 };
 	print $out qq{
 	<th scope="col">$Translate{'Cost'} $self->{Currency}</th>
@@ -5117,6 +5230,8 @@ sub _gen_summary
 		my $miss_bytes = $self->format_bytes($code_stat{$year}{MISS}{bytes});
 		my $denied_bytes = $self->format_bytes($code_stat{$year}{DENIED}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
+		my $total_throughputs = int($total_throughput{$year}/(($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed})/1000));
+		my $comma_throughput = $self->format_bytes($total_throughputs);
 		print $out qq{
 	<tr>
 	<td><a href="$year/index.html">$Translate{'Stat_label'} $year *</a></td>
@@ -5128,6 +5243,7 @@ sub _gen_summary
 	<td>$denied_bytes</td>
 	<td>$total_request{$year}</td>
 	<td>$comma_bytes</td>
+	<td>$comma_throughput B/s</td>
 };
 		print $out qq{<td>$total_cost</td>} if ($self->{CostPrice});
 		print $out qq{</tr>};
