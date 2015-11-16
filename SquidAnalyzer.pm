@@ -662,6 +662,13 @@ sub parseFile
 					$logfile->close;
 					# This file should be ommitted jump to the next file
 					next if ($line eq 'NOK');
+					
+					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
+					if (!$self->{is_squidguard_log}) {
+						$self->{end_offset} = 0;
+					} else {
+						$self->{sg_end_offset} = 0;
+					}
 				} else {
 					# move at offset and see if next line is older than history time
 					$logfile->seek($history_offset, 0);
@@ -3373,6 +3380,8 @@ sub _print_cache_stat
 	my $percent_bhit = sprintf("%.2f", ($code_stat{HIT}{bytes}/$total_all_bytes)*100);
 	my $percent_bmiss = sprintf("%.2f", ($code_stat{MISS}{bytes}/$total_all_bytes)*100);
 	my $percent_bdenied = sprintf("%.2f", ($code_stat{DENIED}{bytes}/$total_all_bytes)*100);
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
 	print $out qq{
 </tr>
 <tr>
@@ -3384,7 +3393,7 @@ sub _print_cache_stat
 <td title="$percent_bdenied %">$denied_bytes</td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
-<td>$comma_throughput B/s</td>
+<td>$comma_throughput $trfunit/s</td>
 <td>SA_NUSERS_SA</td>
 <td>SA_NURLS_SA</td>
 <td>SA_NDOMAINS_SA</td>
@@ -5225,6 +5234,8 @@ sub _gen_summary
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
 		my $total_throughputs = int($total_throughput{$year}/(($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed})/1000));
 		my $comma_throughput = $self->format_bytes($total_throughputs);
+		my $trfunit = $self->{TransfertUnit} || 'B';
+		$trfunit = 'B' if ($trfunit eq 'BYTE');
 		print $out qq{
 	<tr>
 	<td><a href="$year/index.html">$Translate{'Stat_label'} $year *</a></td>
@@ -5236,7 +5247,7 @@ sub _gen_summary
 	<td>$denied_bytes</td>
 	<td>$total_request{$year}</td>
 	<td>$comma_bytes</td>
-	<td>$comma_throughput B/s</td>
+	<td>$comma_throughput $trfunit/s</td>
 };
 		print $out qq{<td>$total_cost</td>} if ($self->{CostPrice});
 		print $out qq{</tr>};
