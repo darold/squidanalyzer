@@ -3702,6 +3702,7 @@ sub _print_network_stat
 	if (!-d "$outdir/networks") {
 		mkdir("$outdir/networks", 0755) || return;
 	}
+	$total_duration = abs($total_duration);
 	foreach my $net (sort { $network_stat{$b}{"$self->{OrderNetwork}"} <=> $network_stat{$a}{"$self->{OrderNetwork}"} } keys %network_stat) {
 
 		my $h_percent = '0.0';
@@ -3965,6 +3966,7 @@ sub _print_user_stat
 		mkdir("$outdir/users", 0755) || return;
 	}
 
+	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $user_stat{$b}{"$self->{OrderUser}"} <=> $user_stat{$a}{"$self->{OrderUser}"} } keys %user_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($user_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
@@ -4156,6 +4158,7 @@ sub _print_netuser_stat
 </thead>
 <tbody>
 };
+	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $netuser_stat{$b}{"$self->{OrderUser}"} <=> $netuser_stat{$a}{"$self->{OrderUser}"} } keys %netuser_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($netuser_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
@@ -4312,6 +4315,7 @@ sub _print_user_detail
 <tbody>
 };
 
+	$total_duration = abs($total_duration);
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($url_stat{$url}{hits}/$total_hit) * 100) if ($total_hit);
@@ -4526,6 +4530,7 @@ sub _print_top_url_stat
 </thead>
 <tbody>
 };
+		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $url_stat{$b}{"\L$tpe\E"} <=> $url_stat{$a}{"\L$tpe\E"} } keys %url_stat) {
 			my $h_percent = '0.0';
@@ -5048,6 +5053,7 @@ sub _print_top_domain_stat
 </thead>
 <tbody>
 };
+		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
 			my $h_percent = '0.0';
