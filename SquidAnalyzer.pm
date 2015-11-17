@@ -3278,6 +3278,7 @@ sub _print_cache_stat
 			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
 		if (exists $detail_code_stat{throughput}{$ddate}{bytes}) {
+			$detail_code_stat{throughput}{$ddate}{elapsed} ||= 1;
 			push(@throughput, "[ $xaxis[$i], " . int($detail_code_stat{throughput}{$ddate}{bytes}/($detail_code_stat{throughput}{$ddate}{elapsed}/1000)) . " ]");
 		} else {
 			push(@throughput, "[ $xaxis[$i], 0 ]");
