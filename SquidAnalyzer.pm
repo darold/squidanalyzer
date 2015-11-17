@@ -5239,7 +5239,8 @@ sub _gen_summary
 		my $miss_bytes = $self->format_bytes($code_stat{$year}{MISS}{bytes});
 		my $denied_bytes = $self->format_bytes($code_stat{$year}{DENIED}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
-		my $total_throughputs = int($total_throughput{$year}/(($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed})/1000));
+		my $subtotal = ($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed}) || 1;
+		my $total_throughputs = int($total_throughput{$year}/($subtotal/1000));
 		my $comma_throughput = $self->format_bytes($total_throughputs);
 		my $trfunit = $self->{TransfertUnit} || 'B';
 		$trfunit = 'B' if ($trfunit eq 'BYTE');
