@@ -153,10 +153,11 @@ my %Translate = (
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 	'Week' => 'Week',
 	'Top_denied_link' => 'Top Denied',
-	'SquidGuard_acl_title' => 'SquidGuard ACL use',
+	'SquidGuard_acl_title' => 'Blocklist ACL use',
 	'Throughput' => 'Throughput',
 	'Graph_throughput_title' => '%s throughput on',
 	'Throughput_graph' => 'Bytes/sec',
+	'ufdbGuard_acl_title' => 'ufdbGuard ACL use',
 );
 
 my @TLD1 = (
@@ -409,8 +410,10 @@ my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+
 #logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
 #logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 my $common_format_regex1 = qr/([^\s]+)\s([^\s]+)\s([^\s]+)\s\[(\d+\/...\/\d+:\d+:\d+:\d+\s[\d\+\-]+)\]\s"([^\s]+)\s([^\s]+)\s([^\s]+)"\s(\d+)\s+(\d+)(.*)\s([^\s:]+:[^\s]+)\s*([^\/]+\/[^\s]+|-)?$/;
-# Lof format for SquidGuard logs
+# Log format for SquidGuard logs
 my $sg_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* Request\(([^\/]+\/[^\/]+)\/[^\)]*\) ([^\s]+) ([^\s\\]+)\/[^\s]+ ([^\s]+) ([^\s]+) ([^\s]+)/;
+# Log format for ufdbGuard logs: BLOCK user clienthost aclname category url method
+my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (BLOCK|REDIR) ([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)$/;
 
 sub new
 {
@@ -516,6 +519,12 @@ sub save_current_line
 		print $current "$self->{sg_end_time}\t$self->{sg_end_offset}";
 		$current->close;
 	}
+	if ($self->{ug_end_time}) {
+		my $current = new IO::File;
+		$current->open(">$self->{Output}/ufdbGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/ufdbGuard.current, $!\n");
+		print $current "$self->{ug_end_time}\t$self->{ug_end_offset}";
+		$current->close;
+	}
 }
 
 # Extract number of seconds since epoch from timestamp in log line
@@ -528,15 +537,23 @@ sub look_for_timestamp
 	if ( $line =~ $native_format_regex1 ) {
 		$time = $1;
 		$self->{is_squidguard_log} = 0;
+		$self->{is_ufdbguard_log} = 0;
 	# Squid common HTTP format
 	} elsif ( $line =~ $common_format_regex1 ) {
 		$time = $4;
 		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 		$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
 		$self->{is_squidguard_log} = 0;
+		$self->{is_ufdbguard_log} = 0;
 	# SquidGuard log format
 	} elsif ( $line =~ $sg_format_regex1 ) {
 		$self->{is_squidguard_log} = 1;
+		$self->{is_ufdbguard_log} = 0;
+		$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+	# ufdbGuard log format
+	} elsif ( $line =~ $ug_format_regex1 ) {
+		$self->{is_ufdbguard_log} = 1;
+		$self->{is_squidguard_log} = 0;
 		$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 	}
 
@@ -550,24 +567,37 @@ sub get_log_format
 
 	my $logfile = new IO::File;
 	$logfile->open($file) || $self->localdie("ERROR: Unable to open log file $file. $!\n");
-	my $line = <$logfile>;
-	chomp($line);
-	$logfile->close();
+	my $max_line = 10000;
+	my $i = 0;
+	while (my $line = <$logfile>) {
+		chomp($line);
 
-	# SquidGuard log format
-	if ( $line =~ $sg_format_regex1 ) {
-		$self->{is_squidguard_log} = 1;
-	# Squid native format
-	} elsif ( $line =~ $native_format_regex1 ) {
-		$self->{is_squidguard_log} = 0;
-	# Squid common HTTP format
-	} elsif ( $line =~ $common_format_regex1 ) {
-		$self->{is_squidguard_log} = 0;
-	} else {
-		return -1;
+		# SquidGuard log format
+		if ( $line =~ $sg_format_regex1 ) {
+			$self->{is_squidguard_log} = 1;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		# ufdbGuard log format
+		} elsif ( $line =~ $ug_format_regex1 ) {
+			$self->{is_ufdbguard_log} = 1;
+			$self->{is_squidguard_log} = 0;
+			last;
+		# Squid native format
+		} elsif ( $line =~ $native_format_regex1 ) {
+			$self->{is_squidguard_log} = 0;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		# Squid common HTTP format
+		} elsif ( $line =~ $common_format_regex1 ) {
+			$self->{is_squidguard_log} = 0;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		} else {
+			last if ($i > $max_line);
+		}
+		$i++;
 	}
-
-	return $self->{is_squidguard_log};
+	$logfile->close();
 }
 
 
@@ -581,13 +611,14 @@ sub parseFile
 	my $saved_queue_size = $self->{queue_size};
 	my $history_offset = $self->{end_offset};
 
-
 	foreach my $lfile (@{$self->{LogFile}}) {
 
 		# Detect if log file is from squid or squidguard
 		$self->get_log_format($lfile);
-		if (!$self->{is_squidguard_log}) {
+		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 			$history_offset = $self->{end_offset};
+		} elsif (!$self->{is_squidguard_log}) {
+			$history_offset = $self->{ug_end_offset};
 		} else {
 			$history_offset = $self->{sg_end_offset};
 		}
@@ -609,16 +640,20 @@ sub parseFile
 		if ($history_offset) {
 
 			# Initialize start offset for each file
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				$self->{end_offset} = $history_offset;
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_offset} = $history_offset;
 			} else {
 				$self->{sg_end_offset} = $history_offset;
 			}
 
 			# Compressed file are always read from the begining
 			if ($lfile =~ /\.(gz|bz2)$/i) {
-				if (!$self->{is_squidguard_log}) {
+				if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 					$self->{end_offset} = 0;
+				} elsif (!$self->{is_squidguard_log}) {
+					$self->{ug_end_offset} = 0;
 				} else {
 					$self->{sg_end_offset} = 0;
 				}
@@ -634,12 +669,16 @@ sub parseFile
 				my $hist_time = $self->{history_time};
 				if ($self->{is_squidguard_log}) {
 					$hist_time = $self->{sg_history_time};
+				} elsif ($self->{is_ufdbguard_log}) {
+					$hist_time = $self->{ug_history_time};
 				}
 				# if the first timestamp is higher that the history time, start from the beginning
 				if ($curtime > $hist_time) {
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
-					if (!$self->{is_squidguard_log}) {
+					if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 						$self->{end_offset} = 0;
+					} elsif (!$self->{is_squidguard_log}) {
+						$self->{ug_end_offset} = 0;
 					} else {
 						$self->{sg_end_offset} = 0;
 					}
@@ -647,7 +686,7 @@ sub parseFile
 				} elsif ((lstat($lfile))[7] <= $history_offset) {
 					# move at begining of the file to see if this is a new one
 					$logfile->seek(0, 0);
-					for (my $i = 1; $i <= 10; $i++) {
+					for (my $i = 1; $i <= 10000; $i++) {
 						$line = <$logfile>;
 						chomp($line);
 						$curtime = $self->look_for_timestamp($line);
@@ -664,8 +703,10 @@ sub parseFile
 					next if ($line eq 'NOK');
 					
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
-					if (!$self->{is_squidguard_log}) {
+					if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 						$self->{end_offset} = 0;
+					} elsif (!$self->{is_squidguard_log}) {
+						$self->{ug_end_offset} = 0;
 					} else {
 						$self->{sg_end_offset} = 0;
 					}
@@ -679,7 +720,7 @@ sub parseFile
 						if ($curtime) {
 							if ($curtime < $hist_time) {
 								my $tmp_time = CORE::localtime($curtime);
-								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $curtime < $hist_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
@@ -695,16 +736,20 @@ sub parseFile
 		} else {
 			print STDERR "DEBUG: this file will be parsed, no history found.\n" if (!$self->{QuietMode});
 			# Initialise start offset for each file
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				$self->{end_offset} = 0;
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_offset} = 0;
 			} else {
 				$self->{sg_end_offset} = 0;
 			}
 		}
 
 		if ($self->{queue_size} <= 1) {
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				$self->_parse_file_part($lfile, $self->{end_offset});
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->_parse_file_part($lfile, $self->{ug_end_offset});
 			} else {
 				$self->_parse_file_part($lfile, $self->{sg_end_offset});
 			}
@@ -760,9 +805,12 @@ sub parseFile
 						$self->{last_year} = $data[0];
 						$self->{last_month}{$data[0]} = $data[1];
 						$self->{last_day}{$data[0]} = $data[2];
-						if (!$self->{is_squidguard_log}) {
+						if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 							$self->{end_time} = $data[3];
 							$self->{end_offset} = $data[4];
+						} elsif (!$self->{is_squidguard_log}) {
+							$self->{ug_end_time} = $data[3];
+							$self->{ug_end_offset} = $data[4];
 						} else {
 							$self->{sg_end_time} = $data[3];
 							$self->{sg_end_offset} = $data[4];
@@ -786,6 +834,7 @@ sub parseFile
 		if (!$self->{QuietMode}) {
 			print STDERR "SQUID LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
 			print STDERR "SQUIGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_end_time})), "\n" if ($self->{sg_end_time});
+			print STDERR "UFDBGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_end_time})), "\n" if ($self->{ug_end_time});
 			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
 
@@ -929,6 +978,8 @@ sub split_logfile
 	my $offsplit = $self->{end_offset};
 	if ($self->{is_squidguard_log}) {
 		$offsplit = $self->{sg_end_offset};
+	} elsif ($self->{is_ufdbguard_log}) {
+		$offsplit = $self->{ug_end_offset};
 	}
 
 	# If the file is very small, many jobs actually make the parsing take longer
@@ -1093,8 +1144,10 @@ sub _parse_file_part
 	# Move directly to the start position
 	if ($start_offset) {
 		$logfile->seek($start_offset, 0);
-		if (!$self->{is_squidguard_log}) {
+		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 			$self->{end_offset} = $start_offset;
+		} elsif (!$self->{is_squidguard_log}) {
+			$self->{ug_end_offset} = $start_offset;
 		} else {
 			$self->{sg_end_offset} = $start_offset;
 		}
@@ -1108,10 +1161,14 @@ sub _parse_file_part
 	while ($line = <$logfile>) {
 
 		# quit this log if we reach the ending offset
-		if (!$self->{is_squidguard_log}) {
+		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 			last if ($stop_offset && ($self->{end_offset}>= $stop_offset));
 			# Store the current position in logfile
 			$self->{end_offset} += length($line);
+		} elsif (!$self->{is_squidguard_log}) {
+			last if ($stop_offset && ($self->{ug_end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{ug_end_offset} += length($line);
 		} else {
 			last if ($stop_offset && ($self->{sg_end_offset}>= $stop_offset));
 			# Store the current position in logfile
@@ -1173,6 +1230,21 @@ sub _parse_file_part
                         $code = $12 . ':';
                         $mime_type = '';
 			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		# Log format for ufdbGuard logs: timestamp [pid] BLOCK user clienthost aclname category url method
+		} elsif ($line =~ $ug_format_regex1) {
+                        $format = 'ufdbguard';
+			$self->{is_ufdbguard_log} = 1;
+			$acl = "$10/$11";
+                        $client_ip = $9;
+                        $elapsed = 0;
+                        $login = lc($8);
+                        $method = $13;
+                        $url = lc($12);
+                        $status = 301;
+                        $bytes = 0;
+                        $code = 'REDIRECT:';
+                        $mime_type = '';
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 		} else {
 			next;
 		}
@@ -1187,24 +1259,31 @@ sub _parse_file_part
 			next if (($#{$self->{ExcludedCodes}} >= 0) && grep(m#^$code$#, @{$self->{ExcludedCodes}}));
 
 			# Go to last parsed date (incremental mode)
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				next if ($self->{history_time} && ($time <= $self->{history_time}));
+			} elsif (!$self->{is_squidguard_log}) {
+				next if ($self->{ug_history_time} && ($time <= $self->{ug_history_time}));
 			} else {
 				next if ($self->{sg_history_time} && ($time <= $self->{sg_history_time}));
 			}
 
 			# Register the last parsing time and last offset position in logfile
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
-
 				# Register the first parsing time
 				if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
 					$self->{begin_time} = $time;
 					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 				}
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_time} = $time if (!$time || ($self->{ug_end_time} < $time));
+				# Register the first parsing time
+				if (!$self->{ug_begin_time} || ($self->{ug_begin_time} > $time)) {
+					$self->{ug_begin_time} = $time;
+					print STDERR "UFDBGUARD LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
 			} else {
 				$self->{sg_end_time} = $time if (!$time || ($self->{sg_end_time} < $time));
-
 				# Register the first parsing time
 				if (!$self->{sg_begin_time} || ($self->{sg_begin_time} > $time)) {
 					$self->{sg_begin_time} = $time;
@@ -1245,7 +1324,6 @@ sub _parse_file_part
 				# Remove extra space character in username
 				$login =~ s/\%20//g;
 
-				# Set default user login to client ip address
 				my $id = $client_ip || '';
 				if ($login ne '-') {
 					$id = $login;
@@ -1264,6 +1342,7 @@ sub _parse_file_part
 				#####
 				next if ($self->check_exclusions($login, $client_ip, $url));
 
+				# Set default user login to client ip address
 				# Anonymize all users
 				if ($self->{AnonymizeLogin} && ($client_ip ne $id)) {
 					if (!exists $self->{AnonymizedId}{$id}) {
@@ -1298,11 +1377,15 @@ sub _parse_file_part
 		my $tmp_file = 'last_parsed.tmp';
 		if ($self->{is_squidguard_log}) {
 			$tmp_file = 'sg_last_parsed.tmp';
+		} elsif ($self->{is_ufdbguard_log}) {
+			$tmp_file = 'ug_last_parsed.tmp';
 		}
 		if (open(OUT, ">>$self->{pid_dir}/$tmp_file")) {
 			flock(OUT, 2) || die "FATAL: can't acquire lock on file $tmp_file, $!\n";
-			if (!$self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			} elsif (!$self->{is_squidguard_log}) {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{ug_end_time} $self->{ug_end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
 			} else {
 				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{sg_end_time} $self->{sg_end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
 			}
@@ -1527,6 +1610,8 @@ sub _init
 	$self->{preserve} = 0;
 	$self->{sg_end_time} = 0;
 	$self->{sg_end_offset} = 0;
+	$self->{ug_end_time} = 0;
+	$self->{ug_end_offset} = 0;
 
 	# Override verbose mode
 	$self->{QuietMode} = 0 if ($debug);
@@ -1575,6 +1660,23 @@ sub _init
 		}
 	}
 
+	# Get the last parsing date for ufdbGuard log incremental parsing
+	if (!$rebuild && -e "$self->{Output}/ufdbGuard.current") {
+		my $current = new IO::File;
+		unless($current->open("$self->{Output}/ufdbGuard.current")) {
+			print STDERR "ERROR: Can't read file $self->{Output}/ufdbGuard.current, $!\n" if (!$self->{QuietMode});
+			print STDERR "Starting at the first line of ufdbGuard log file.\n" if (!$self->{QuietMode});
+		} else {
+			my $tmp = <$current>;
+			chomp($tmp);
+			($self->{ug_history_time}, $self->{ug_end_offset}) = split(/[\t]/, $tmp);
+			$self->{ug_begin_time} = $self->{ug_history_time};
+			$current->close();
+			if ($self->{ug_history_time}) {
+				print STDERR "UFDBGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_history_time})), " - HISTORY OFFSET: $self->{ug_end_offset}\n" if (!$self->{QuietMode});
+			}
+		}
+	}
 
 	$self->{menu} = qq{
 <div id="menu">
@@ -2823,6 +2925,8 @@ sub buildHTML
 		my @ltime = CORE::localtime($self->{history_time});
 		if ($self->{is_squidguard_log}) {
 			@ltime = CORE::localtime($self->{sg_history_time});
+		} elsif ($self->{is_ufdbguard_log}) {
+			@ltime = CORE::localtime($self->{ug_history_time});
 		}
 		$old_year = $ltime[5]+1900;
 		$old_month = $ltime[4]+1;
@@ -2831,8 +2935,10 @@ sub buildHTML
 		$old_day = "0$old_day" if ($old_day < 10);
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
-			if ($self->{is_squidguard_log}) {
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
 				@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+			} elsif (!$self->{is_squidguard_log}) {
+				@ltime = CORE::localtime($self->{ug_history_time}-($self->{preserve}*2592000));
 			} else {
 				@ltime = CORE::localtime($self->{sg_history_time}-($self->{preserve}*2592000));
 			}
@@ -5884,6 +5990,15 @@ sub check_regex
 sub check_ip
 {
 	my ($ip, $block) = @_;
+
+	# When $client_ip is not an ip address proceed to regex search
+	if ($ip !~ /^\d+\.\d+\.\d+\.\d+$/) {
+		if ( $ip =~ /$block/) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
 
 	my @ip = split(/\./, $ip);
 	my $ip1 = $ip[0] * 2**24 + $ip[1] * 2**16 + $ip[2] * 2**8 + $ip[3];
