@@ -20,7 +20,7 @@ BEGIN {
 	use IO::File;
 	use Socket;
 	use Time::HiRes qw/ualarm/;
-	use Time::Local 'timelocal_nocheck';
+	use Time::Local qw/timelocal_nocheck timegm_nocheck/;
 	use Fcntl qw(:flock);
 	use IO::Handle;
 	use FileHandle;
@@ -417,14 +417,14 @@ my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (B
 
 sub new
 {
-	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile) = @_;
+	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile);
+	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone);
 
 	# Return the instance
 	return($self);
@@ -533,6 +533,7 @@ sub look_for_timestamp
 	my ($self, $line) = @_;
 
 	my $time = 0;
+	my $tz = ((0-$self->{TimeZone})*3600);
 	# Squid native format
 	if ( $line =~ $native_format_regex1 ) {
 		$time = $1;
@@ -542,19 +543,31 @@ sub look_for_timestamp
 	} elsif ( $line =~ $common_format_regex1 ) {
 		$time = $4;
 		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
-		$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
+		}
 		$self->{is_squidguard_log} = 0;
 		$self->{is_ufdbguard_log} = 0;
 	# SquidGuard log format
 	} elsif ( $line =~ $sg_format_regex1 ) {
 		$self->{is_squidguard_log} = 1;
 		$self->{is_ufdbguard_log} = 0;
-		$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+		}
 	# ufdbGuard log format
 	} elsif ( $line =~ $ug_format_regex1 ) {
 		$self->{is_ufdbguard_log} = 1;
 		$self->{is_squidguard_log} = 0;
-		$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+		}
 	}
 
 	return $time;
@@ -1153,6 +1166,9 @@ sub _parse_file_part
 		}
 	}
 
+	# Set timezone in seconds
+	my $tz = ((0-$self->{TimeZone})*3600);
+
 	# The log file format must be :
 	# 	time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost type
 	# This is the default format of squid access log file.
@@ -1193,6 +1209,7 @@ sub _parse_file_part
 		my $format = 'native';
 		if ( $line =~ $native_format_regex1 ) {
 			$time = $1;
+			$time += $tz;
 			$elapsed = abs($2);
 			$client_ip = $3;
 			$code = $4;
@@ -1213,7 +1230,11 @@ sub _parse_file_part
 			$code = $11;
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
-			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
+			}
 			# Some site has corrupted mime_type, try to remove nasty characters
 			$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
                 } elsif ($line =~ $sg_format_regex1) {
@@ -1229,7 +1250,11 @@ sub _parse_file_part
                         $bytes = 0;
                         $code = $12 . ':';
                         $mime_type = '';
-			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+			}
 		# Log format for ufdbGuard logs: timestamp [pid] BLOCK user clienthost aclname category url method
 		} elsif ($line =~ $ug_format_regex1) {
                         $format = 'ufdbguard';
@@ -1244,7 +1269,11 @@ sub _parse_file_part
                         $bytes = 0;
                         $code = 'REDIRECT:';
                         $mime_type = '';
-			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+			}
 		} else {
 			next;
 		}
@@ -1444,7 +1473,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
 
 	# Set path to pid file
 	$pidfile = $pid_dir . '/' . $pidfile;
@@ -1505,6 +1534,7 @@ sub _init
 	$self->{child_count} = 0;
 	$self->{rebuild} = $rebuild || 0;
 	$self->{is_squidguard_log} = 0;
+	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
@@ -5433,6 +5463,10 @@ sub parse_config
 	}
 	if ($opt{ImgFormat} && !grep(/^$opt{ImgFormat}$/, 'png','jpg')) {
 		$self->localdie("ERROR: unknown image format. See option: ImgFormat\n");
+	}
+
+	if ($opt{TimeZone} && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
+		$self->localdie("ERROR: timezone format: +/-HH, ex: +01. See option: TimeZone\n");
 	}
 
 	return %opt;

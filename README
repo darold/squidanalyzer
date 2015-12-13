@@ -167,6 +167,10 @@ USAGE
                                      Default /tmp/
         -r | --rebuild             : use this option to rebuild all html and graphs
                                      output from all data files.
+        -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+                                     Use this to adjust date/time of SquidAnalyzer
+                                     output when it is run on a different timezone
+                                     than the squid server.
         -v | version               : show version and exit.
         --no-year-stat             : disable years statistics, reports will start
                                      from month level only.
@@ -473,6 +477,17 @@ CONFIGURATION
         errors before exiting. Of course you might want to remove the
         corrupted line before the next run. This can be useful if you have
         special characters in some fields like mime type.
+
+    TimeZone
+        Set timezone to use when SquidAnalyzer is used in a different server
+        than the one running squid and there is a different timezone between
+        these two machines. The value must follow format: +/-HH. Default is
+        to use local time. For example:
+
+                TimeZone        +01
+
+        for a log file generated on zone Europe/Paris with UTC+0100 and
+        parsed on a computer with different timezone.
 
 SUPPORT
   Release annoucement

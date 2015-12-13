@@ -171,6 +171,10 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
+    -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+                                 Use this to adjust date/time of SquidAnalyzer
+                                 output when it is run on a different timezone
+                                 than the squid server.
     -v | version               : show version and exit.
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
@@ -179,7 +183,6 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will
 use file: /var/log/squid/access.log
-
 
 There is special options like --rebuild that force SquidAnalyzer to rebuild all
 HTML reports, useful after an new feature or a bug fix. If you want to limit the
@@ -505,6 +508,18 @@ When SquidAnalyzer find a corrupted line in his data file, it exit immedialtly.
 You can force him to wait for a certain amount of errors before exiting. Of
 course you might want to remove the corrupted line before the next run. This
 can be useful if you have special characters in some fields like mime type.
+
+=item TimeZone
+
+Set timezone to use when SquidAnalyzer is used in a different server than
+the one running squid and there is a different timezone between these two
+machines. The value must follow format: +/-HH. Default is to use local time.
+For example:
+
+	TimeZone	+01
+
+for a log file generated on zone Europe/Paris with UTC+0100 and parsed on a
+computer with different timezone.
 
 =back
 

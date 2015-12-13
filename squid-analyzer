@@ -4,7 +4,7 @@
 #
 use strict;
 use SquidAnalyzer;
-use Getopt::Long qw(:config no_ignore_case bundling);;
+use Getopt::Long qw(:config no_ignore_case bundling);
 use Benchmark;
 use POSIX ":sys_wait_h";
 
@@ -21,11 +21,12 @@ my $preserve   = '';
 my $debug      = 0;
 my $version    = 0;
 my $build_date = '';
+my $pid_dir    = '/tmp';
+my $pidfile    = 'squid-analyzer.pid';
+my $queue_size = 0;
+my $timezone   = '';
 my $no_year_stat = 0;
 my $no_week_stat = 0;
-my $pid_dir = '/tmp';
-my $pidfile = 'squid-analyzer.pid';
-my $queue_size = 0;
 my $t0 = Benchmark->new;
 
 # get the command line parameters
@@ -36,9 +37,10 @@ my $result = GetOptions (
 	"h|help"               => \$help,
 	"j|jobs=i"             => \$queue_size,
 	"l|logfile"            => \$obsolete,
-	"r|rebuild!"           => \$rebuild,
 	"p|preserve=i"         => \$preserve,
 	"P|pid_dir=s"          => \$pid_dir,
+	"r|rebuild!"           => \$rebuild,
+	"t|timezone=s"         => \$timezone,
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
 	"no-week-stat!"        => \$no_week_stat,
@@ -90,7 +92,7 @@ close(OUT);
 unlink("$pid_dir/last_parsed.tmp");
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile);
+my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone);
 $sa->{no_year_stat} = $no_year_stat;
 $sa->{no_week_stat} = $no_week_stat;
 $sa->{queue_size} = $queue_size;
@@ -193,6 +195,10 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
+    -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+                                 Use this to adjust date/time of SquidAnalyzer
+                                 output when it is run on a different timezone
+                                 than the squid server.
     -v | version               : show version and exit.
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
