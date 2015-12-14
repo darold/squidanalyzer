@@ -1851,6 +1851,7 @@ sub _parseData
 			last;
 		}
 	}
+
 	# Set default to a class A network
 	if (!$network) {
 		$client =~ /^(.*)([:\.]+)\d+$/;
@@ -2669,7 +2670,7 @@ sub _read_stat
 					$data = $l;
 				}
 
-				if ($self->{rebuild}) {
+				if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$net}) {
 					next if (!$self->check_inclusions('', $net));
 					next if ($self->check_exclusions('', $net));
 				}
@@ -3748,8 +3749,10 @@ sub _print_network_stat
 			$data = $l;
 		}
 		$data =~ /^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
-
-		next if (!$self->check_inclusions('',$network));
+		if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$network}) {
+			next if (!$self->check_inclusions('', $network));
+			next if ($self->check_exclusions('', $network));
+		}
 
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
@@ -3854,6 +3857,7 @@ sub _print_network_stat
 		if ($net =~ /^(\d+\.\d+\.\d+)/) {
 			$show = "$1.0";
 			foreach my $r (keys %{$self->{NetworkAlias}}) {
+
 				if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
 					if (&check_ip($net, $r)) {
 						$show = $self->{NetworkAlias}->{$r};
