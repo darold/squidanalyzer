@@ -1,5 +1,47 @@
 Revision history for SquidAnalyzer
 
+6.4 - Wed Dec 16 22:12:45 CET 2015
+
+This release adds throughput statistics to all reports. It also allow to add
+a ufdbGuard log to the list of log files and to report blocked URLs into the
+Denied reports. It also adds support to xz compressed files.
+
+There's also a new configuration directive and command line option:
+
+  * Add -t | --timezone and TimeZone directive to change the timezone. When set,
+    SquidAnalyzer will read time from log file as UTC time and will add the
+    hours specified in the timezone option. This is useful if the log file is
+    not parsed on a computer with the same timezone than the squid server.
+
+It also included several bug fixes since last release.
+
+  - Fix graphic overlaps that with one of the graphics. Thanks to Daniel Bareiro
+    for the report.
+  - Add throughput calculation (ratio between bytes and duration) to all reports.
+  - Fix missing largest URL in networks detailed report. Thanks to Juan Martin
+    for the report.
+  - Fix use of network-aliases together with a network include entry that make
+    networks disappears from the report. Thanks to Juan Martin for the report.
+  - Add -t | --timezone and TimeZone directive to change the timezone. When set,
+    SquidAnalyzer will read time from log file as UTC time and will add the
+    hours specified in the timezone option. Thanks to Anderson - BR Suporte for
+    the feature request.
+  - Add support to ufdbGuard log file. squidGuard and ufdbGuard files can be
+    given together with squid log file as a list into LogFile configuration
+    file or as arguments of command line. Thanks to Martin Hoffmann for the
+    feature request.
+  - Fix some division by zero. Thanks to cueda for the report.
+  - Fix some potential illegal division by zero.
+  - Fix negative duration with http like log file when duration is not set (-).
+    Thanks to cedua for the report.
+  - Add new throughput (Bytes/sec) column in all reports and a throughput graph.
+    Thanks to Mike Lerley for the feature request.
+  - Allow parsing of xz compressed files. Thanks to Markus Maikis for the patch.
+  - Fix bug with include/exclude networks or clients preventing users reports to
+    be built. Thanks to Juan Martin for the report.
+  - Fix SquidAnalyzer fails to update statistics after cleanup of access.log.
+    Thanks to mkhallaf for the report.
+
 6.3 - Mon Oct 12 07:56:29 CEST 2015
 
 This release adds a new report to show statistics about Denied URLs. It also
