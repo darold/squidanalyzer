@@ -3326,7 +3326,7 @@ sub _print_cache_stat
 	my $total_request = ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
 	my $total_bytes = ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
 	my $total_elapsed = ($throughput_stat{HIT}{elapsed} + $throughput_stat{MISS}{elapsed}) || 1;
-	my $total_throughput = int(($throughput_stat{HIT}{bytes} + $throughput_stat{MISS}{bytes}) / ($total_elapsed/1000));
+	my $total_throughput = int(($throughput_stat{HIT}{bytes} + $throughput_stat{MISS}{bytes}) / (($total_elapsed/1000) || 1));
 	my $total_all_request = ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
 	my $total_all_bytes = ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
 
@@ -3825,6 +3825,7 @@ sub _print_network_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -3851,8 +3852,10 @@ sub _print_network_stat
 		$b_percent = sprintf("%2.2f", ($network_stat{$net}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($network_stat{$net}{duration}/$total_duration) * 100) if ($total_duration);
-		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($network_stat{$net}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($network_stat{$net}{bytes} / (($network_stat{$net}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
 		my $show = $net;
 		if ($net =~ /^(\d+\.\d+\.\d+)/) {
 			$show = "$1.0";
@@ -3876,6 +3879,7 @@ sub _print_network_stat
 <td>$network_stat{$net}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$network_stat{$net}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -4092,6 +4096,7 @@ sub _print_user_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4115,8 +4120,10 @@ sub _print_user_stat
 		$b_percent = sprintf("%2.2f", ($user_stat{$usr}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($user_stat{$usr}{duration}/$total_duration) * 100) if ($total_duration);
-		$user_stat{$usr}{duration} = &parse_duration(int($user_stat{$usr}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($user_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($user_stat{$usr}{bytes} / (($user_stat{$usr}{duration}/1000) || 1));
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$user_stat{$usr}{duration} = &parse_duration(int($user_stat{$usr}{duration}/1000));
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
 			if ( $usr =~ /^$u$/i ) {
@@ -4142,6 +4149,7 @@ sub _print_user_stat
 <td>$user_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$user_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -4289,6 +4297,7 @@ sub _print_netuser_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4308,8 +4317,10 @@ sub _print_netuser_stat
 		$b_percent = sprintf("%2.2f", ($netuser_stat{$usr}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($netuser_stat{$usr}{duration}/$total_duration) * 100) if ($total_duration);
-		$netuser_stat{$usr}{duration} = &parse_duration(int($netuser_stat{$usr}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($netuser_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($netuser_stat{$usr}{bytes} / (($netuser_stat{$usr}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$netuser_stat{$usr}{duration} = &parse_duration(int($netuser_stat{$usr}{duration}/1000));
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
 			if ( $usr =~ /^$u$/i ) {
@@ -4335,6 +4346,7 @@ sub _print_netuser_stat
 <td>$netuser_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$netuser_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 		print $$out qq{
 <td>$total_cost</td>
@@ -4443,6 +4455,7 @@ sub _print_user_detail
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $$out qq{
 <th>$Translate{'First_visit'}</th>
@@ -4465,9 +4478,11 @@ sub _print_user_detail
 		$b_percent = sprintf("%2.2f", ($url_stat{$url}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($url_stat{$url}{duration}/$total_duration) * 100) if ($total_duration);
-		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($url_stat{$url}{bytes}/1000000) * $self->{CostPrice});
 		my $comma_bytes = $self->format_bytes($url_stat{$url}{bytes});
+		my $total_throughput = int($url_stat{$url}{bytes} / (($url_stat{$url}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $firsthit = '-';
 		if ($url_stat{$url}{firsthit}) {
 			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$url}{firsthit})));
@@ -4494,6 +4509,7 @@ sub _print_user_detail
 <td>$url_stat{$url}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 		print $$out qq{
 <td>$firsthit</td>
@@ -4659,6 +4675,7 @@ sub _print_top_url_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
@@ -4684,6 +4701,8 @@ sub _print_top_url_stat
 			my $total_cost = sprintf("%2.2f", int($url_stat{$u}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($url_stat{$u}{duration}/1000));
 			my $comma_bytes = $self->format_bytes($url_stat{$u}{bytes});
+			my $total_throughput = int($url_stat{$u}{bytes} / (($url_stat{$u}{duration}/1000) || 1));
+			my $comma_throughput = $self->format_bytes($total_throughput);
 			my $firsthit = '-';
 			if ($url_stat{$u}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$u}{firsthit})));
@@ -4725,6 +4744,7 @@ sub _print_top_url_stat
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</span></td>
 };
 	print $out qq{
 <td>$firsthit</td>
@@ -5075,7 +5095,7 @@ sub _print_top_domain_stat
 			$perdomain{'others'}{bytes} += $bytes;
 			$domain_stat{'unknown'}{hits} += $hits;
 			$domain_stat{'unknown'}{bytes} += $bytes;
-			$domain_stat{'unknown'}{duration} = $duration;
+			$domain_stat{'unknown'}{duration} += $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
 			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
@@ -5182,6 +5202,7 @@ sub _print_top_domain_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
@@ -5207,6 +5228,8 @@ sub _print_top_domain_stat
 			my $total_cost = sprintf("%2.2f", int($domain_stat{$u}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($domain_stat{$u}{duration}/1000));
 			my $comma_bytes = $self->format_bytes($domain_stat{$u}{bytes});
+			my $total_throughput = int($domain_stat{$u}{bytes} / (($domain_stat{$u}{duration}/1000) || 1));
+			my $comma_throughput = $self->format_bytes($total_throughput);
 			my $firsthit = '-';
 			if ($domain_stat{$u}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($domain_stat{$u}{firsthit})));
@@ -5251,6 +5274,7 @@ sub _print_top_domain_stat
 <td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 	print $out qq{
 <td>$firsthit</td>
@@ -5381,7 +5405,7 @@ sub _gen_summary
 		my $denied_bytes = $self->format_bytes($code_stat{$year}{DENIED}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
 		my $subtotal = ($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed}) || 1;
-		my $total_throughputs = int($total_throughput{$year}/($subtotal/1000));
+		my $total_throughputs = int($total_throughput{$year}/(($subtotal/1000) || 1));
 		my $comma_throughput = $self->format_bytes($total_throughputs);
 		my $trfunit = $self->{TransfertUnit} || 'B';
 		$trfunit = 'B' if ($trfunit eq 'BYTE');
