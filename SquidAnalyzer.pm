@@ -2752,7 +2752,7 @@ sub _read_stat
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += abs($3);
-						if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
+						if ($4 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
 							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
 							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
 						}
@@ -4269,6 +4269,7 @@ sub _print_netuser_stat
 		$netuser_stat{$user}{bytes} = $2;
 		$netuser_stat{$user}{duration} = abs($3);
 		$netuser_stat{$user}{largest_file} = $4;
+
 		$total_hit += $1;
 		$total_bytes += $2;
 		$total_duration += $3;
