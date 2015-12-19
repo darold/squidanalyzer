@@ -41,6 +41,10 @@ It also included several bug fixes since last release.
     be built. Thanks to Juan Martin for the report.
   - Fix SquidAnalyzer fails to update statistics after cleanup of access.log.
     Thanks to mkhallaf for the report.
+  - Limit parsing of ufdbGuard logs to BLOCK line.
+  - Replace SquidGuard label by Blocklist as we use more blocklist tools.
+  - Update Italian translation file. Thanks to Stefano Cailotto for the update.
+
 
 6.3 - Mon Oct 12 07:56:29 CEST 2015
 
