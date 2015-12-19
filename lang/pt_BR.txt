@@ -113,4 +113,4 @@ Count				N&uacute;mero
 WeekDay				Su Mo Tu We Th Fr Sa
 Week				Week
 Top_denied_link			Top Denied
-SquidGuard_acl_title		Blocklist ACL use
+Blocklist_acl_title		Blocklist ACL use

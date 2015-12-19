@@ -111,4 +111,4 @@ Count				Compte
 WeekDay				Di Lu Ma Me Je Ve Sa
 Week				Semaine
 Top_denied_link			Top Rejets
-SquidGuard_acl_title		Utilisation des ACL de Blocklist
+Blocklist_acl_title		Utilisation des ACL de Blocklist

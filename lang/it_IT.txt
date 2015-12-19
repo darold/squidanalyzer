@@ -111,5 +111,5 @@ User				Utente
 WeekDay				Do Lu Ma Me Gi Ve Sa
 Week				Settimana
 Weekly				Settimanali
-Top_denied_link			Top Denied
-SquidGuard_acl_title		Blocklist ACL use
+Top_denied_link			Classifica Link Vietati
+Blocklist_acl_title		Utilizzo ACL Blocklist

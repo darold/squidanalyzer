@@ -111,4 +111,4 @@ Count				Ilość
 WeekDay				Nd Pn Wt Śr Cz Pt So
 Week				Tydzień
 Top_denied_link			Top Denied
-SquidGuard_acl_title		Blocklist ACL use
+Blocklist_acl_title		Blocklist ACL use

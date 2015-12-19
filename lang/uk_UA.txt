@@ -112,4 +112,4 @@ Count				Кількість
 WeekDay				Нд Пн Вт Ср Чт Пт Сб
 Week				Тиждень
 Top_denied_link			Top Denied
-SquidGuard_acl_title		Blocklist ACL use
+Blocklist_acl_title		Blocklist ACL use

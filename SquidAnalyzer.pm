@@ -153,11 +153,10 @@ my %Translate = (
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 	'Week' => 'Week',
 	'Top_denied_link' => 'Top Denied',
-	'SquidGuard_acl_title' => 'Blocklist ACL use',
+	'Blocklist_acl_title' => 'Blocklist ACL use',
 	'Throughput' => 'Throughput',
 	'Graph_throughput_title' => '%s throughput on',
 	'Throughput_graph' => 'Bytes/sec',
-	'ufdbGuard_acl_title' => 'ufdbGuard ACL use',
 );
 
 my @TLD1 = (
@@ -4951,8 +4950,8 @@ sub _print_top_denied_stat
 		}
 	} 
 	if (scalar keys %data_acl) {
-		print $out $self->_print_title($Translate{"SquidGuard_acl_title"}, $stat_date, $week);
-		my $squidguard_acl = $self->flotr2_piegraph(1, 'squidguard_acl', $Translate{"SquidGuard_acl_title"}, $Translate{'SquidGuard_acl_graph'}, '', %data_acl);
+		print $out $self->_print_title($Translate{"Blocklist_acl_title"}, $stat_date, $week);
+		my $squidguard_acl = $self->flotr2_piegraph(1, 'squidguard_acl', $Translate{"Blocklist_acl_title"}, $Translate{'Blocklist_acl_graph'}, '', %data_acl);
 		print $out qq{<table class="graphs"><tr><td>$squidguard_acl</td></tr></table>};
 	}
 
@@ -4970,7 +4969,7 @@ sub _print_top_denied_stat
 <th>$Translate{'First_visit'}</th>
 <th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
-	print $out qq{<th>SquidGuard ACLs</th>};
+	print $out qq{<th>Blocklist ACLs</th>};
 	print $out qq{
 </tr>
 </thead>
