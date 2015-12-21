@@ -8,7 +8,7 @@
 # Specials tags %s and %d in the translated string are uses by the program to
 # replace dynamics values. Following the language their place in the string
 # may vary.
-# Version 1.2
+# Version 1.2.1
 # Author: Gilles Darold
 # Russian translation by oxygen121.
 # Additions and corrections by yvoinov.
@@ -114,4 +114,4 @@ Count				Считать
 WeekDay				Вс Пн Вт Ср Чт Пт Сб
 Week				Неделя
 Top_denied_link			Рейтинг отказов в доступе
-Blocklist_acl_title		Blocklist ACL use
+Blocklist_acl_title		Использованные блок-листы (ACL)
