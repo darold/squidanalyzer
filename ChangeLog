@@ -450,7 +450,8 @@ of users to show in reports.
   - Fix bug on ordering column with sorttable. Thanks to David Walser for
    the report.
   - Fix support to regex with coma in user and network alias file. Regex
-    like "1stFloor 192.168.1.1\d{0,2}" in user-aliases and network-aliases	  was not permitted. Thanks to Steffen Junick for the report.
+    like "1stFloor 192.168.1.1\d{0,2}" in user-aliases and network-aliases
+    was not permitted. Thanks to Steffen Junick for the report.
   - Fix issue with log file provided at command line (option -l) and non
     existant LogFile in squidanalyzer.conf. Thanks to Kalin Kozhuharov for
     the report.

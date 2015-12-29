@@ -3542,8 +3542,6 @@ sub _print_cache_stat
 </tr>
 </table>
 
-<table class="graphs">
-<tr><td>
 <style>
   #container {
     display: table;
@@ -3556,8 +3554,14 @@ sub _print_cache_stat
   }
   #code_requests { z-index: 999; }
 </style>
+
+<table class="graphs">
+<tr><td>
 <div id="container">
 $code_requests
+</div>
+</td><td>
+<div id="container">
 $code_bytes
 </div>
 </td></tr>
@@ -3654,7 +3658,7 @@ sub _print_mime_stat
 	}
 	my $title = "$Translate{'Mime_graph_hits_title'} $stat_date";
 	my $mime_hits = $self->flotr2_piegraph(1, 'mime_hits', $title, $Translate{'Mime_graph'}, '', %data);
-	print $out qq{<table class="graphs"><tr><td>
+	print $out qq{
 <style>
   #container {
     display: table;
@@ -3667,8 +3671,11 @@ sub _print_mime_stat
   }
   #mime_hits { z-index: 999; }
 </style>
+<table class="graphs"><tr><td>
 <div id="container">
 $mime_hits
+</div>
+</td><td>
 };
 	$mime_hits = '';
 	%data = ();
@@ -3684,6 +3691,7 @@ $mime_hits
 	$title = "$Translate{'Mime_graph_bytes_title'} $stat_date";
 	my $mime_bytes = $self->flotr2_piegraph(1, 'mime_bytes', $title, $Translate{'Mime_graph'}, '', %data);
 	print $out qq{
+<div id="container">
 $mime_bytes
 </div>
 </td></tr></table>
@@ -3954,7 +3962,7 @@ sub _print_network_stat
 		my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'} );
 		@hits = ();
-		print $outnet qq{<table class="graphs"><tr><td>
+		print $outnet qq{
 <style>
   #container {
     display: table;
@@ -3967,8 +3975,11 @@ sub _print_network_stat
   }
   #network_hits { z-index: 999; }
 </style>
+<table class="graphs"><tr><td>
 <div id="container">
 $network_hits
+</div>
+</td><td>
 };
 		$network_hits = '';
 
@@ -3982,6 +3993,7 @@ $network_hits
 		@bytes = ();
 
 		print $outnet qq{
+<div id="container">
 $network_bytes
 </div>
 </td></tr></table>
@@ -4248,7 +4260,7 @@ sub _print_user_stat
 		my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'});
 		@hits = ();
-		print $outusr qq{<table class="graphs"><tr><td>
+		print $outusr qq{
 <style>
   #container {
     display: table;
@@ -4261,8 +4273,11 @@ sub _print_user_stat
   }
   #user_hits { z-index: 999; }
 </style>
+<table class="graphs"><tr><td>
 <div id="container">
 $user_hits
+</div>
+</td><td>
 };
 		$user_hits = '';
 
@@ -4275,6 +4290,7 @@ $user_hits
 					join(',', @bytes), $Translate{'Bytes'});
 		@bytes = ();
 		print $outusr qq{
+<div id="container">
 $user_bytes
 </div>
 </td></tr></table>
@@ -5237,7 +5253,7 @@ sub _print_top_domain_stat
 			}
 			my $title2 = "$Translate{'Second_domain_graph_hits_title'} $stat_date";
 			my $domain2_hits = $self->flotr2_piegraph(1, 'second_domain_hits', $title2, $Translate{'Domains_graph'}, '', %data);
-			print $out qq{<table class="graphs"><tr><td>
+			print $out qq{
 <style>
   #container {
     display: table;
@@ -5250,8 +5266,12 @@ sub _print_top_domain_stat
   }
   #domain_hits { z-index: 999; }
 </style>
+<table class="graphs"><tr><td>
 <div id="container">
 $domain_hits
+</div>
+</td><td>
+<div id="container">
 $domain2_hits
 </div>
 </td></tr>
@@ -5293,6 +5313,9 @@ $domain2_hits
 </style>
 <div id="container">
 $domain_bytes
+</div>
+</td><td>
+<div id="container">
 $domain2_bytes
 </div>
 </td></tr></table>};
