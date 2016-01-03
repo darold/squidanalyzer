@@ -1,5 +1,15 @@
 Revision history for SquidAnalyzer
 
+6.5 - Sun Jan  3 16:12:12 CET 2016
+
+This is a mantenance release to fix an overlaping bug on bytes charts with
+last versions of browsers like firefox, iceweasel and chrome.
+
+  - Fix height of bytes graphs that was overlaping on third graph. Thanks
+    to Daniel Bareiro for the report.
+  - Update russian translation. Thanks to Yuri Voinov for the patch.
+  - Update copyright year.
+
 6.4 - Wed Dec 16 22:12:45 CET 2015
 
 This release adds throughput statistics to all reports. It also allow to add
