@@ -1779,7 +1779,9 @@ sub _gethostbyaddr
 		};
 		if ($@) {
 			$CACHE{$ip} = undef;
-			#printf "_gethostbyaddr timeout : %s\n", $ip;
+			if (!$self->{QuietMode}) {
+				warn "_gethostbyaddr timeout reach for ip: $ip, timeout can be adjusted with directive DNSLookupTimeout\n";
+			}
 		}
 		else {
 			$CACHE{$ip} = $host;
