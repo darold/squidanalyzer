@@ -139,6 +139,11 @@ my $bzcat = `which bzcat`;
 chomp($bzcat);
 `perl -p -i -e 's#^\\\$BZCAT_PROG.*#\\\$BZCAT_PROG = "$bzcat";#' SquidAnalyzer.pm`;
 
+my $xzcat = `which xzcat`;
+chomp($xzcat);
+`perl -p -i -e 's#^\\\$XZCAT_PROG.*#\\\$XZCAT_PROG = "$xzcat";#' SquidAnalyzer.pm`;
+
+
 WriteMakefile(
 	'DISTNAME'	=> 'SquidAnalyzer',
 	'NAME'		=> 'SquidAnalyzer',
