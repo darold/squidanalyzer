@@ -704,7 +704,7 @@ sub parseFile
 						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
 							if ($hist_time > $curtime) {
-								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected and $curtime is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: this file will not be parsed: $lfile, size lower than expected and $curtime is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
@@ -732,7 +732,7 @@ sub parseFile
 						if ($curtime) {
 							if ($curtime < $hist_time) {
 								my $tmp_time = CORE::localtime($curtime);
-								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $curtime < $hist_time.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: this file will not be parsed: $lfile, line after offset is older than expected: $curtime < $hist_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
