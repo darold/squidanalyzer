@@ -411,6 +411,7 @@ my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+
 my $common_format_regex1 = qr/([^\s]+)\s([^\s]+)\s([^\s]+)\s\[(\d+\/...\/\d+:\d+:\d+:\d+\s[\d\+\-]+)\]\s"([^\s]+)\s([^\s]+)\s([^\s]+)"\s(\d+)\s+(\d+)(.*)\s([^\s:]+:[^\s]+)\s*([^\/]+\/[^\s]+|-)?$/;
 # Log format for SquidGuard logs
 my $sg_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* Request\(([^\/]+\/[^\/]+)\/[^\)]*\) ([^\s]+) ([^\s\\]+)\/[^\s]+ ([^\s]+) ([^\s]+) ([^\s]+)/;
+my $sg_format_regex2 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (New setting|Added User|init domainlist|Going into emergency mode|ending emergency mode)/;
 # Log format for ufdbGuard logs: BLOCK user clienthost aclname category url method
 my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (BLOCK) ([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)$/;
 
@@ -550,7 +551,7 @@ sub look_for_timestamp
 		$self->{is_squidguard_log} = 0;
 		$self->{is_ufdbguard_log} = 0;
 	# SquidGuard log format
-	} elsif ( $line =~ $sg_format_regex1 ) {
+	} elsif (( $line =~ $sg_format_regex1 ) || ( $line =~ $sg_format_regex2 )) {
 		$self->{is_squidguard_log} = 1;
 		$self->{is_ufdbguard_log} = 0;
 		if (!$self->{TimeZone}) {
@@ -585,7 +586,7 @@ sub get_log_format
 		chomp($line);
 
 		# SquidGuard log format
-		if ( $line =~ $sg_format_regex1 ) {
+		if (( $line =~ $sg_format_regex1 ) || ( $line =~ $sg_format_regex2 )) {
 			$self->{is_squidguard_log} = 1;
 			$self->{is_ufdbguard_log} = 0;
 			last;
@@ -627,12 +628,12 @@ sub parseFile
 
 		# Detect if log file is from squid or squidguard
 		$self->get_log_format($lfile);
-		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
-			$history_offset = $self->{end_offset};
-		} elsif (!$self->{is_squidguard_log}) {
+		if ($self->{is_ufdbguard_log}) {
 			$history_offset = $self->{ug_end_offset};
-		} else {
+		} elsif ($self->{is_squidguard_log}) {
 			$history_offset = $self->{sg_end_offset};
+		} else {
+			$history_offset = $self->{end_offset};
 		}
 
 		print STDERR "Starting to parse logfile $lfile.\n" if (!$self->{QuietMode});
@@ -703,8 +704,11 @@ sub parseFile
 						chomp($line);
 						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
+							# If timestamp found at startup is lower than the history file,
+							# the file will not be parsed at all.
 							if ($hist_time > $curtime) {
-								print STDERR "DEBUG: this file will not be parsed: $lfile, size lower than expected and $curtime is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: this file will not be parsed: $lfile, size is lower than expected.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: exploring $lfile, timestamp found at startup, $curtime, is lower than history time $hist_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
