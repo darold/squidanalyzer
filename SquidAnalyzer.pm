@@ -40,10 +40,10 @@ BEGIN {
 
 }
 
-$ZCAT_PROG  = "/bin/zcat";
+$ZCAT_PROG = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
 $RM_PROG    = "/bin/rm";
-$XZCAT_PROG = "/bin/xzcat";
+$XZCAT_PROG = "/usr/bin/xzcat";
 
 # DNS Cache
 my %CACHE = ();
@@ -439,7 +439,7 @@ sub localdie
 	unlink("$self->{pidfile}");
 
 	# Cleanup old temporary files
-	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
 		unlink("$self->{pid_dir}/$tmp_file");
 	}
 
@@ -790,7 +790,7 @@ sub parseFile
 	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	# Get the last information parsed in this file part
-	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'sg_last_parsed.tmp') {
 
 		if (-e "$self->{pid_dir}/$tmp_file") {
 
@@ -821,13 +821,13 @@ sub parseFile
 						$self->{last_year} = $data[0];
 						$self->{last_month}{$data[0]} = $data[1];
 						$self->{last_day}{$data[0]} = $data[2];
-						if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+						if ($tmp_file eq 'last_parsed.tmp') {
 							$self->{end_time} = $data[3];
 							$self->{end_offset} = $data[4];
-						} elsif (!$self->{is_squidguard_log}) {
+						} elsif ($tmp_file eq 'ug_last_parsed.tmp') {
 							$self->{ug_end_time} = $data[3];
 							$self->{ug_end_offset} = $data[4];
-						} else {
+						} elsif ($tmp_file eq 'sg_last_parsed.tmp') {
 							$self->{sg_end_time} = $data[3];
 							$self->{sg_end_offset} = $data[4];
 						}
@@ -1540,7 +1540,7 @@ sub _init
 	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
 
 	# Cleanup old temporary files
-	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp') {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
 		unlink("$self->{pid_dir}/$tmp_file");
 	}
 
