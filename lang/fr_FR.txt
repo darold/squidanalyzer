@@ -112,3 +112,6 @@ WeekDay				Di Lu Ma Me Je Ve Sa
 Week				Semaine
 Top_denied_link			Top Rejets
 Blocklist_acl_title		Utilisation des ACL de Blocklist
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec

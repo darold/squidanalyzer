@@ -115,3 +115,6 @@ WeekDay				Вс Пн Вт Ср Чт Пт Сб
 Week				Неделя
 Top_denied_link			Рейтинг отказов в доступе
 Blocklist_acl_title		Использованные блок-листы (ACL)
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec
