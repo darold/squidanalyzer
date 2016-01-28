@@ -8,7 +8,7 @@
 # Specials tags %s and %d in the translated string are uses by the program to
 # replace dynamics values. Following the language their place in the string
 # may vary.
-# Version 1.2.1
+# Version 1.2.2
 # Author: Gilles Darold
 # Russian translation by oxygen121.
 # Additions and corrections by yvoinov.
@@ -110,11 +110,11 @@ Click_year_stat			Нажмите на готовую статистику для
 Mime_graph_hits_title		Типы MIME (запросы) за
 Mime_graph_bytes_title		Типы MIME (трафик) за
 User				Пользователь
-Count				Считать
+Count				Счетчик
 WeekDay				Вс Пн Вт Ср Чт Пт Сб
 Week				Неделя
 Top_denied_link			Рейтинг отказов в доступе
 Blocklist_acl_title		Использованные блок-листы (ACL)
-Throughput			Throughput
-Graph_throughput_title		%s throughput on
-Throughput_graph		Bytes/sec
+Throughput			Пропускная способность
+Graph_throughput_title		%s пропускная способность на
+Throughput_graph		Байт/сек
