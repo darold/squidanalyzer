@@ -1240,7 +1240,7 @@ sub _parse_file_part
 			}
 			# Some site has corrupted mime_type, try to remove nasty characters
 			if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
-				$mime_type = 'invalide/type';
+				$mime_type = 'invalid/type';
 			}
                 } elsif ($line =~ $sg_format_regex1) {
                         $format = 'squidguard';
@@ -1345,7 +1345,7 @@ sub _parse_file_part
 				$mime_type = lc($4);
 				# Some site has corrupted mime_type, try to remove nasty characters
 				if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
-					$mime_type = 'invalide/type';
+					$mime_type = 'invalid/type';
 				}
 			}
 
