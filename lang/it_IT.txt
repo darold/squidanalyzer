@@ -113,3 +113,6 @@ Week				Settimana
 Weekly				Settimanali
 Top_denied_link			Classifica Link Vietati
 Blocklist_acl_title		Utilizzo ACL Blocklist
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec

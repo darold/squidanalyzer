@@ -112,3 +112,6 @@ WeekDay				So Mo Di Mi Do Fr Sa
 Week				Woche
 Top_denied_link			Top Denied
 Blocklist_acl_title		Blocklist ACL use
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec

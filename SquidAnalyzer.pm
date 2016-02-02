@@ -1239,7 +1239,9 @@ sub _parse_file_part
 				$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
 			}
 			# Some site has corrupted mime_type, try to remove nasty characters
-			$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
+			if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
+				$mime_type = 'invalid/type';
+			}
                 } elsif ($line =~ $sg_format_regex1) {
                         $format = 'squidguard';
 			$self->{is_squidguard_log} = 1;
@@ -1342,7 +1344,9 @@ sub _parse_file_part
 				$status = lc($3);
 				$mime_type = lc($4);
 				# Some site has corrupted mime_type, try to remove nasty characters
-				$mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs;
+				if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
+					$mime_type = 'invalid/type';
+				}
 			}
 
 			if ($url) {
