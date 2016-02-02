@@ -18,7 +18,7 @@ BEGIN {
 	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $XZCAT_PROG $RM_PROG);
 	use POSIX qw/ strftime sys_wait_h /;
 	use IO::File;
-	use Socket;
+	use Socket ();
 	use Time::HiRes qw/ualarm/;
 	use Time::Local qw/timelocal_nocheck timegm_nocheck/;
 	use Fcntl qw(:flock);
@@ -1773,18 +1773,39 @@ sub _gethostbyaddr
 {
 	my ($self, $ip) = @_;
 
+
 	my $host = undef;
+	my $err = '';
 	unless(exists $CACHE{$ip}) {
 		eval {
 			local $SIG{ALRM} = sub { die "DNS lookup timeout.\n"; };
 			ualarm $self->{DNSLookupTimeout};
-			$host = gethostbyaddr(inet_aton($ip), AF_INET);
+			my @addrs = ();
+			if ($] < 5.014) {
+				$host = gethostbyaddr(inet_aton($ip), AF_INET);
+			} else {
+				# We also need to resolve IPV6 addresses
+				if ($ip =~ /^\d+\.\d+\.\d+\.\d+$/) {
+					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET } );
+				} else {
+					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET6 } );
+				}
+			}
+			for my $addr (@addrs) {
+				($err, $host) = Socket::getnameinfo( $addr->{addr});
+				last;
+			}
 			ualarm 0;
 		};
 		if ($@) {
-			$CACHE{$ip} = undef;
+			delete $CACHE{$ip};
 			if (!$self->{QuietMode}) {
 				warn "_gethostbyaddr timeout reach for ip: $ip, timeout can be adjusted with directive DNSLookupTimeout\n";
+			}
+		} elsif ($err) {
+			delete $CACHE{$ip};
+			if (!$self->{QuietMode}) {
+				warn "_gethostbyaddr error resolving ip: $ip, $err\n";
 			}
 		}
 		else {
