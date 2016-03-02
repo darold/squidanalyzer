@@ -125,7 +125,7 @@ USAGE
                                          By default: /etc/squidanalyzer.conf
             -b | --build_date date     : set the day to be rebuilt, format: yyyy-mm-dd,
                                          yyyy-mm or yyyy. Used with -r or --rebuild.
-            -d | --debug               : show debug informations.
+            -d | --debug               : show debug information.
             -h | --help                : show this message and exit.
             -l | --logfile filename    : path to the Squid logfile to parse.
                                          By default: /var/log/squid/access.log
