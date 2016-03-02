@@ -64,7 +64,7 @@ INSTALLATION
                     CONFDIR=/etc \
                     HTMLDIR=/var/www/squidreport \
                     BASEURL=/squidreport \
-                    MANDIR=/usr/man/man3 \
+                    MANDIR=/usr/share/man/man3 \
                     DOCDIR=/usr/share/doc/squidanalyzer
 
     If you want to build a distro package, there are two other options that
