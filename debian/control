@@ -1,0 +1,17 @@
+Source: squidanalyzer
+Section: web
+Priority: optional
+Maintainer: Mathieu Parent <sathieu@debian.org>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+Homepage: http://squidanalyzer.darold.net/
+Vcs-Git: https://github.com/darold/squidanalyzer
+Vcs-Browser: https://github.com/darold/squidanalyzer
+
+Package: squidanalyzer
+Architecture: all
+Depends: ${misc:Depends}
+Description: Parses Squid proxy access log and reports general statistics
+ Squid Analyzer parses Squid proxy access log and reports general statistics
+ about hits, bytes, users, networks, top URLs, and top second level domains.
+ Statistic reports are oriented toward user and bandwidth control.
