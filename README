@@ -157,7 +157,7 @@ USAGE
                                      By default: /etc/squidanalyzer/squidanalyzer.conf
         -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
                                      or yyyy-mm or yyyy. Used with -r or --rebuild.
-        -d | --debug               : show debug informations.
+        -d | --debug               : show debug information.
         -h | --help                : show this message and exit.
         -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                      run as single process.
@@ -270,7 +270,7 @@ CONFIGURATION
         list of files to process several files at the same time. If the
         files comes from differents Squid servers, they will be merges in a
         single reports. You can also add to the list a SquidGuard log file,
-        SquidAnalyzer will atomatically detect the format.
+        SquidAnalyzer will automatically detect the format.
 
     UseClientDNSName 0
         If you want to use DNS name instead of client Ip address as username
@@ -358,13 +358,13 @@ CONFIGURATION
         Default is 0, verbose mode.
 
     CostPrice price/Mb
-        Used to set a cost of the bandwith per Mb. If you want to generate
-        invoice per Mb for bandwith traffic this can help you. Value 0 mean
+        Used to set a cost of the bandwidth per Mb. If you want to generate
+        invoice per Mb for bandwidth traffic this can help you. Value 0 mean
         no cost, this is the default value, the "Cost" column is not
         displayed
 
     Currency currency_abreviation
-        Used to set the currency of the bandwith cost. Preferably the html
+        Used to set the currency of the bandwidth cost. Preferably the html
         special character. Default is &euro;
 
     TopNumber number
@@ -384,7 +384,7 @@ CONFIGURATION
         You can also use the NETWORK type to define network address with
         netmask using the CIDR notation: xxx.xxx.xxx.xxx/n
 
-        See example bellow:
+        See example below:
 
                 NETWORK        192.168.1.0/24 10.10.0.0/16
                 CLIENT         192\.168\.1\.2 
@@ -408,7 +408,7 @@ CONFIGURATION
         You can also use the NETWORK type to define network address with
         netmask using the CIDR notation: xxx.xxx.xxx.xxx/n
 
-        See example bellow:
+        See example below:
 
                 NETWORK        192.168.1.0/24 10.10.0.0/16
                 CLIENT         192\.168\.1\.2 
@@ -455,7 +455,7 @@ CONFIGURATION
         report peer cache hit onto your stats.
 
     TransfertUnit
-        Allow to change the default unit used to display transfert size.
+        Allow one to change the default unit used to display transfert size.
         Default is BYTES, other possible values are KB, MB and GB.
 
     MinPie
@@ -490,8 +490,8 @@ CONFIGURATION
         parsed on a computer with different timezone.
 
 SUPPORT
-  Release annoucement
-    Please follow us on twitter to receive release annoucement and latest
+  Release announcement
+    Please follow us on twitter to receive release announcement and latest
     news : https://twitter.com/SquidAnalyzer
 
   Bugs and Feature requests
@@ -503,7 +503,7 @@ SUPPORT
     send me your ideas, features request or patches using the tools on the
     git repository at https://github.com/darold/squidanalyzer
 
-    You can also support the developper by donate some contribution by
+    You can also support the developer by donate some contribution by
     clicking on the "Donate" button on the SquidAnalyzer web site at
     http://squidanalyzer.darold.net/
 

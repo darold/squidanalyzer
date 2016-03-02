@@ -185,7 +185,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 By default: $DEFAULT_CONFFILE
     -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
-    -d | --debug               : show debug informations.
+    -d | --debug               : show debug information.
     -h | --help                : show this message and exit.
     -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                  run as single process.

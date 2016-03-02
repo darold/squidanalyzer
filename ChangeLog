@@ -12,7 +12,7 @@ last versions of browsers like firefox, iceweasel and chrome.
 
 6.4 - Wed Dec 16 22:12:45 CET 2015
 
-This release adds throughput statistics to all reports. It also allow to add
+This release adds throughput statistics to all reports. It also allow one to add
 a ufdbGuard log to the list of log files and to report blocked URLs into the
 Denied reports. It also adds support to xz compressed files.
 
@@ -59,7 +59,7 @@ It also included several bug fixes since last release.
 6.3 - Mon Oct 12 07:56:29 CEST 2015
 
 This release adds a new report to show statistics about Denied URLs. It also
-allow to add a SquidGuard log to the list of log files and to report blocked
+allow one to add a SquidGuard log to the list of log files and to report blocked
 URLs into the Denied reports. It ialso adds a pie chart on SquidGuard ACLs use.
 
 There's also four new configuration directives:
@@ -260,7 +260,7 @@ Here the full list of changes:
   - Little fix in a translation. Thanks to atlhon for the patch.
   - Fix case where days in calendar does not appear when DateFormat was
     changed. Thanks to joseh-henrique for the report.
-  - Update Makefile with META_MERGE and MAN3PODS informations.
+  - Update Makefile with META_MERGE and MAN3PODS information.
   - Fix missing cleaning of pid file when early error occurs.
   - Automatically remove \r when reading configuration file.
   - Improve incremental mode by seeking directly to last position in
@@ -416,7 +416,7 @@ of users to show in reports.
     a custom one is specified with the -c option. Thanks to Thibaud Aubert
     for the report.
   - Add --no-year-stat to disable year statistics, reports will start from
-    month level only. This allow to save time during reports generation.
+    month level only. This allow one to save time during reports generation.
   - Allow composed top level domain statistics in Top Domain report, like
     co.uk. Thanks to Thibaut Aubert for the feature request.
   - Add support to CIDR notation in network-alias file. Thanks to Thibaud
@@ -645,7 +645,7 @@ dir if required.
     only log format supported.
 
 UPGRADE: If you use network and/or user aliases, even if I try to preserved backward
-compatibility, you may want to start with new data files as these informations are
+compatibility, you may want to start with new data files as these information are
 now replaced directly into the data file instead of the HTML files. Changes only
 concern file SquidAnalyzer.pm so you can just override it. There's also a new
 configuration directive 'AnonymizeLogin' so you may copy/paste his definition in
