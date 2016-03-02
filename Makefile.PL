@@ -155,7 +155,7 @@ WriteMakefile(
 	'AUTHOR'       => 'Gilles Darold (gilles@darold.net)',
 	'ABSTRACT'     => 'Squid log analyzer',
 	'EXE_FILES'    => [ qw(squid-analyzer) ],
-	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/SquidAnalyzer.3' },
+	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/SquidAnalyzer.3pm' },
 	'DESTDIR'      => $ENV{DESTDIR},
 	'INSTALLDIRS'  => $ENV{INSTALLDIRS},
 	'clean'	       => { FILES => "install_all.sh lib/blib/ squid-analyzer.3" },
