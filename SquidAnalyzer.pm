@@ -1056,7 +1056,7 @@ sub check_exclusions
 
 	# check for Network exclusion
 	if (exists $self->{Exclude}{networks} && $client_ip) {
-		foreach my $e (@{$self->{Include}{networks}}) {
+		foreach my $e (@{$self->{Exclude}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
 				return 1;
 			}
