@@ -1996,6 +1996,10 @@ sub _parseData
 		$self->{stat_user_url_hour}{$id}{$dest}{bytes} += $bytes;
 		$self->{stat_user_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_hour}{$id}{$dest}{firsthit}));
 		$self->{stat_user_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_user_url_hour}{$id}{$dest}{lasthit}));
+		if (!exists $self->{stat_user_url_hour}{$id}{$dest}{arr_last} || ($#{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}} < 9) || ($time > ($self->{stat_user_url_hour}{$id}{$dest}{arr_last}[-1]+300))) {
+			push(@{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}}, $time);
+			shift(@{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}}) if ($#{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}} > 9);
+		}
 		$self->{stat_user_url_day}{$id}{$dest}{duration} += $elapsed;
 		$self->{stat_user_url_day}{$id}{$dest}{hits}++;
 		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_day}{$id}{$dest}{firsthit}));
@@ -2004,6 +2008,10 @@ sub _parseData
 		if ($code eq 'HIT') {
 			$self->{stat_user_url_day}{$id}{$dest}{cache_hit}++;
 			$self->{stat_user_url_day}{$id}{$dest}{cache_bytes} += $bytes;
+		}
+		if (!exists $self->{stat_user_url_day}{$id}{$dest}{arr_last} || ($#{$self->{stat_user_url_day}{$id}{$dest}{arr_last}} < 9) || ($time > ($self->{stat_user_url_day}{$id}{$dest}{arr_last}[-1]+1800))) {
+			push(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}, $time);
+			shift(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}) if ($#{$self->{stat_user_url_day}{$id}{$dest}{arr_last}} > 9);
 		}
 	}
 
@@ -2310,7 +2318,8 @@ sub _write_stat_data
 					"last=" . $self->{"stat_user_url_$type"}{$id}{$dest}{lasthit} . ";" .
 					"url=$dest;" .
 					"cache_hit=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit}||0) . ";" .
-					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . "\n");
+					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . ";" .
+					"arr_last=" . join(',', @{$self->{"stat_user_url_$type"}{$id}{$dest}{arr_last}}) . "\n");
 			}
 		}
 		$self->{"stat_user_url_$type"} = ();
@@ -2578,6 +2587,17 @@ sub _read_stat
 							if ($self->check_exclusions('', '', $url)) {
 								delete $self->{"stat_user_url_$sum_type"}{$id}{"$url"};
 								next;
+							}
+						}
+						if ($l =~ s/^;arr_last=(.*)//) {
+							my $incr = 1800;
+							$incr = 300 if ($sum_type eq 'hour');
+							$incr = 86400 if ($sum_type eq 'month');
+							foreach my $tm (split(/,/, $1)) {
+								if (!exists $self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last} || ($#{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}} < 9) || ($tm > ${$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}[-1] + $incr)) { 
+									push(@{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}, $tm);
+									shift(@{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}) if ($#{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}} > 9);
+								}
 							}
 						}
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)$//) {
@@ -4530,6 +4550,10 @@ sub _print_user_detail
 			$total_duration += $url_stat{$url}{duration} || 0;
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
+			if ($data =~ /;arr_last=(.*)/) {
+				push(@{$url_stat{$url}{arr_last}}, split(/,/, $1));
+				map { $_ = ucfirst(strftime("%b %d %T", CORE::localtime($_))); } @{$url_stat{$url}{arr_last}};
+			}
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			my $url = $6;
 			$url_stat{$6}{hits} = $1;
@@ -4576,10 +4600,10 @@ sub _print_user_detail
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
 <th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $$out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4623,6 +4647,16 @@ sub _print_user_detail
 				$firsthit = '-';
 			}
 		}
+		if (exists $url_stat{$url}{arr_last}) {
+			$lasthit = qq{
+<div class="tooltipLink"><span class="information">$lasthit</span><div class="tooltip">
+<table><tr><th>$Translate{'Last_visit'}</th></tr>
+};
+			foreach my $tm (reverse @{$url_stat{$url}{arr_last}}) {
+				$lasthit .= "<tr><td>$tm</td></tr>\n";
+			}
+			$lasthit .= "</table>\n</div></div>\n";
+		}
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
@@ -4630,10 +4664,10 @@ sub _print_user_detail
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
 <td>$comma_throughput</td>
+<td>$lasthit</td>
 };
 		print $$out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
 		print $$out qq{
 <td>$total_cost</td>
@@ -4796,10 +4830,10 @@ sub _print_top_url_stat
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
 <th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4865,10 +4899,10 @@ sub _print_top_url_stat
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
 <td>$comma_throughput</span></td>
+<td>$lasthit</td>
 };
 	print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
 	print $out qq{
 <td>$total_cost</td>
@@ -5011,10 +5045,10 @@ sub _print_top_denied_stat
 <tr>
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'} (%)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $out qq{<th>Blocklist ACLs</th>};
 	print $out qq{
@@ -5066,10 +5100,10 @@ sub _print_top_denied_stat
 		print $out qq{
 </td>
 <td>$denied_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$lasthit</td>
 };
 		print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
 		my $bl = '-';
 		if (exists $denied_stat{$u}{blacklist}) {
@@ -5365,10 +5399,10 @@ $domain2_bytes
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
 <th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -5437,11 +5471,11 @@ $domain2_bytes
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
 <td>$comma_throughput</td>
+<td>$lasthit</td>
 };
 	print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
-}  if ($type eq 'hour');
+} if ($type eq 'hour');
 	print $out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});

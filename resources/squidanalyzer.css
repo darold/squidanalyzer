@@ -138,11 +138,11 @@ div.information {
 
 div.tooltipLink { position:relative; cursor:pointer; }
 div.tooltipLink span.information { border-bottom:1px dotted gray; z-index:10; }
-div.tooltipLink div.tooltip { display:none; background-color:#EBF0FC; border:1px solid #FFFFFF; -moz-border-radius:10px; padding:6px; width:250px; }
-div.tooltipLink div.tooltip table { background-color:white; width:250px; }
+div.tooltipLink div.tooltip { display:none; background-color:#EBF0FC; border:1px solid #FFFFFF; -moz-border-radius:10px; padding:6px; width:200px; }
+div.tooltipLink div.tooltip table { background-color:white; width:200px; }
 div.tooltipLink div.tooltip table tr.row0 td { background-color: #FFFFFF; border: 1px solid #EEEEEE; }
 div.tooltipLink div.tooltip table tr.row1 td { background-color: #EEEEEE; border: 1px solid #EEEEEE; }
-div.tooltipLink div.tooltip th { font-size:10px; }
-div.tooltipLink div.tooltip td { font-size:9px; font-weight:normal; padding:1px; }
+div.tooltipLink div.tooltip th { font-size:11px; }
+div.tooltipLink div.tooltip td { font-size:10px; font-weight:normal; padding:1px; }
 div.tooltipLink:hover div.tooltip { display:block; z-index:20; position:absolute; top:1.5em; left:2em; }
 
