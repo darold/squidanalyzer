@@ -4534,13 +4534,13 @@ sub _print_user_detail
 
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = abs($3);
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
-			$url_stat{$url}{cache_hit} = $7;
-			$url_stat{$url}{cache_bytes} = $8;
+			$url_stat{$url}{cache_hit} += $7;
+			$url_stat{$url}{cache_bytes} += $8;
 			if ($self->check_exclusions('','',$url)) {
 				delete $url_stat{$url};
 				next;
@@ -4556,9 +4556,9 @@ sub _print_user_detail
 			}
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			my $url = $6;
-			$url_stat{$6}{hits} = $1;
-			$url_stat{$6}{bytes} = $2;
-			$url_stat{$6}{duration} = abs($3);
+			$url_stat{$6}{hits} += $1;
+			$url_stat{$6}{bytes} += $2;
+			$url_stat{$6}{duration} += abs($3);
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
 			if ($self->{rebuild}) {
@@ -4573,8 +4573,8 @@ sub _print_user_detail
 
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
 			my $url = $4;
-			$url_stat{$4}{hits} = $1;
-			$url_stat{$4}{bytes} = $2;
+			$url_stat{$4}{hits} += $1;
+			$url_stat{$4}{bytes} += $2;
 			$url_stat{$4}{duration} = abs($3);
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
@@ -4737,13 +4737,13 @@ sub _print_top_url_stat
 
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = abs($3);
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
-			$url_stat{$url}{cache_hit} = $7;
-			$url_stat{$url}{cache_bytes} = $8;
+			$url_stat{$url}{cache_hit} += $7;
+			$url_stat{$url}{cache_bytes} += $8;
 	
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
@@ -4758,9 +4758,9 @@ sub _print_top_url_stat
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = abs($3);
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
 			$url_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
