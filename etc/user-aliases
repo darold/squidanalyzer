@@ -2,7 +2,7 @@
 # Squid Analyzer User Alias configuration file
 # FORMAT : FULL_USER_NAME	IP_ADDRESS|LOGIN_NAME,LOGIN_REGEX
 # Field separator must be one or more tabulation. Space in user name are not
-# allowed. See example bellow
+# allowed. See example below
 #-------------------------------------------------------------------------------
 #MyFirstName	mylogin,192.168.1.12
 #MyOtherNames	logon\d+

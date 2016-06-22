@@ -111,4 +111,8 @@ User				Utente
 WeekDay				Do Lu Ma Me Gi Ve Sa
 Week				Settimana
 Weekly				Settimanali
-Top_denied_link			Top Denied
+Top_denied_link			Classifica Link Vietati
+Blocklist_acl_title		Utilizzo ACL Blocklist
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec

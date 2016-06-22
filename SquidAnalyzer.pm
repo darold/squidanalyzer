@@ -4,31 +4,33 @@ package SquidAnalyzer;
 # Name     : SquidAnalyzer.pm
 # Language : Perl 5
 # OS       : All
-# Copyright: Copyright (c) 2001-2015 Gilles Darold - All rights reserved.
+# Copyright: Copyright (c) 2001-2016 Gilles Darold - All rights reserved.
 # Licence  : This program is free software; you can redistribute it
 #            and/or modify it under the same terms as Perl itself.
 # Author   : Gilles Darold, gilles _AT_ darold _DOT_ net
 # Function : Main perl module for Squid Log Analyzer
 # Usage    : See documentation.
 #------------------------------------------------------------------------------
-use strict;             # make things properly
+use strict qw/vars/;
 
 BEGIN {
 	use Exporter();
-	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $RM_PROG);
+	use vars qw($VERSION $COPYRIGHT $AUTHOR @ISA @EXPORT $ZCAT_PROG $BZCAT_PROG $XZCAT_PROG $RM_PROG);
 	use POSIX qw/ strftime sys_wait_h /;
 	use IO::File;
-	use Socket;
+	use Socket ();
 	use Time::HiRes qw/ualarm/;
-	use Time::Local 'timelocal_nocheck';
+	use Time::Local qw/timelocal_nocheck timegm_nocheck/;
 	use Fcntl qw(:flock);
 	use IO::Handle;
 	use FileHandle;
-
+	use POSIX qw(locale_h);
+	setlocale(LC_NUMERIC, '');
+	setlocale(LC_ALL,     'C');
 
 	# Set all internal variable
-	$VERSION = '6.2';
-	$COPYRIGHT = 'Copyright (c) 2001-2015 Gilles Darold - All rights reserved.';
+	$VERSION = '6.5';
+	$COPYRIGHT = 'Copyright (c) 2001-2016 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
 	@ISA = qw(Exporter);
@@ -40,7 +42,8 @@ BEGIN {
 
 $ZCAT_PROG = "/bin/zcat";
 $BZCAT_PROG = "/bin/bzcat";
-$RM_PROG  = "/bin/rm";
+$RM_PROG    = "/bin/rm";
+$XZCAT_PROG = "/usr/bin/xzcat";
 
 # DNS Cache
 my %CACHE = ();
@@ -133,9 +136,9 @@ my %Translate = (
 	'Domain_Duration_title' => 'Top %d Domain duration on',
 	'Domain_number' => 'Number of domain',
 	'Domain_graph_hits_title' => 'Domain Hits Statistics on',
-	'Domain_graph_bytes_title' => 'Domain Bytes Statistiques on',
+	'Domain_graph_bytes_title' => 'Domain Bytes Statistics on',
 	'Second_domain_graph_hits_title' => 'Second level Hits Statistics on',
-	'Second_domain_graph_bytes_title' => 'Second level Bytes Statistiques on',
+	'Second_domain_graph_bytes_title' => 'Second level Bytes Statistics on',
 	'First_visit' => 'First visit',
 	'Last_visit' => 'Last visit',
 	'Globals_Statistics' => 'Globals Statistics',
@@ -144,12 +147,16 @@ my %Translate = (
 	'Up_link' => 'Up',
 	'Click_year_stat' => 'Click on year\'s statistics link for details',
 	'Mime_graph_hits_title' => 'Mime Type Hits Statistics on',
-	'Mime_graph_bytes_title' => 'Mime Type MBytes Statistiques on',
+	'Mime_graph_bytes_title' => 'Mime Type MBytes Statistics on',
 	'User' => 'User',
 	'Count' => 'Count',
 	'WeekDay' => 'Su Mo Tu We Th Fr Sa',
 	'Week' => 'Week',
 	'Top_denied_link' => 'Top Denied',
+	'Blocklist_acl_title' => 'Blocklist ACL use',
+	'Throughput' => 'Throughput',
+	'Graph_throughput_title' => '%s throughput on',
+	'Throughput_graph' => 'Bytes/sec',
 );
 
 my @TLD1 = (
@@ -402,17 +409,22 @@ my $native_format_regex2 = qr/^([^\s]+?)\s+([^\s]+)\s+([^\s]+\/[^\s]+)\s+([^\s]+
 #logformat common     %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st %Ss:%Sh
 #logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 my $common_format_regex1 = qr/([^\s]+)\s([^\s]+)\s([^\s]+)\s\[(\d+\/...\/\d+:\d+:\d+:\d+\s[\d\+\-]+)\]\s"([^\s]+)\s([^\s]+)\s([^\s]+)"\s(\d+)\s+(\d+)(.*)\s([^\s:]+:[^\s]+)\s*([^\/]+\/[^\s]+|-)?$/;
+# Log format for SquidGuard logs
+my $sg_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* Request\(([^\/]+\/[^\/]+)\/[^\)]*\) ([^\s]+) ([^\s\\]+)\/[^\s]+ ([^\s]+) ([^\s]+) ([^\s]+)/;
+my $sg_format_regex2 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (New setting|Added User|init domainlist|Going into emergency mode|ending emergency mode)/;
+# Log format for ufdbGuard logs: BLOCK user clienthost aclname category url method
+my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (BLOCK) ([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)$/;
 
 sub new
 {
-	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile) = @_;
+	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile);
+	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone);
 
 	# Return the instance
 	return($self);
@@ -425,6 +437,11 @@ sub localdie
 
 	print STDERR "$msg";
 	unlink("$self->{pidfile}");
+
+	# Cleanup old temporary files
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
+		unlink("$self->{pid_dir}/$tmp_file");
+	}
 
 	exit 1;
 }
@@ -496,7 +513,106 @@ sub save_current_line
 		print $current "$self->{end_time}\t$self->{end_offset}";
 		$current->close;
 	}
+	if ($self->{sg_end_time}) {
+		my $current = new IO::File;
+		$current->open(">$self->{Output}/SquidGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidGuard.current, $!\n");
+		print $current "$self->{sg_end_time}\t$self->{sg_end_offset}";
+		$current->close;
+	}
+	if ($self->{ug_end_time}) {
+		my $current = new IO::File;
+		$current->open(">$self->{Output}/ufdbGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/ufdbGuard.current, $!\n");
+		print $current "$self->{ug_end_time}\t$self->{ug_end_offset}";
+		$current->close;
+	}
 }
+
+# Extract number of seconds since epoch from timestamp in log line
+sub look_for_timestamp
+{
+	my ($self, $line) = @_;
+
+	my $time = 0;
+	my $tz = ((0-$self->{TimeZone})*3600);
+	# Squid native format
+	if ( $line =~ $native_format_regex1 ) {
+		$time = $1;
+		$self->{is_squidguard_log} = 0;
+		$self->{is_ufdbguard_log} = 0;
+	# Squid common HTTP format
+	} elsif ( $line =~ $common_format_regex1 ) {
+		$time = $4;
+		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
+		}
+		$self->{is_squidguard_log} = 0;
+		$self->{is_ufdbguard_log} = 0;
+	# SquidGuard log format
+	} elsif (( $line =~ $sg_format_regex1 ) || ( $line =~ $sg_format_regex2 )) {
+		$self->{is_squidguard_log} = 1;
+		$self->{is_ufdbguard_log} = 0;
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+		}
+	# ufdbGuard log format
+	} elsif ( $line =~ $ug_format_regex1 ) {
+		$self->{is_ufdbguard_log} = 1;
+		$self->{is_squidguard_log} = 0;
+		if (!$self->{TimeZone}) {
+			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+		} else {
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+		}
+	}
+
+	return $time;
+}
+
+# Detect if log file is a squidGuard log or not
+sub get_log_format
+{
+	my ($self, $file) = @_;
+
+	my $logfile = new IO::File;
+	$logfile->open($file) || $self->localdie("ERROR: Unable to open log file $file. $!\n");
+	my $max_line = 10000;
+	my $i = 0;
+	while (my $line = <$logfile>) {
+		chomp($line);
+
+		# SquidGuard log format
+		if (( $line =~ $sg_format_regex1 ) || ( $line =~ $sg_format_regex2 )) {
+			$self->{is_squidguard_log} = 1;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		# ufdbGuard log format
+		} elsif ( $line =~ $ug_format_regex1 ) {
+			$self->{is_ufdbguard_log} = 1;
+			$self->{is_squidguard_log} = 0;
+			last;
+		# Squid native format
+		} elsif ( $line =~ $native_format_regex1 ) {
+			$self->{is_squidguard_log} = 0;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		# Squid common HTTP format
+		} elsif ( $line =~ $common_format_regex1 ) {
+			$self->{is_squidguard_log} = 0;
+			$self->{is_ufdbguard_log} = 0;
+			last;
+		} else {
+			last if ($i > $max_line);
+		}
+		$i++;
+	}
+	$logfile->close();
+}
+
 
 sub parseFile
 {
@@ -509,6 +625,16 @@ sub parseFile
 	my $history_offset = $self->{end_offset};
 
 	foreach my $lfile (@{$self->{LogFile}}) {
+
+		# Detect if log file is from squid or squidguard
+		$self->get_log_format($lfile);
+		if ($self->{is_ufdbguard_log}) {
+			$history_offset = $self->{ug_end_offset};
+		} elsif ($self->{is_squidguard_log}) {
+			$history_offset = $self->{sg_end_offset};
+		} else {
+			$history_offset = $self->{end_offset};
+		}
 
 		print STDERR "Starting to parse logfile $lfile.\n" if (!$self->{QuietMode});
 		if ((!-f $lfile) || (-z $lfile)) {
@@ -527,33 +653,62 @@ sub parseFile
 		if ($history_offset) {
 
 			# Initialize start offset for each file
-			$self->{end_offset} = $history_offset;
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				$self->{end_offset} = $history_offset;
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_offset} = $history_offset;
+			} else {
+				$self->{sg_end_offset} = $history_offset;
+			}
 
 			# Compressed file are always read from the begining
 			if ($lfile =~ /\.(gz|bz2)$/i) {
-				$self->{end_offset} = 0;
+				if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+					$self->{end_offset} = 0;
+				} elsif (!$self->{is_squidguard_log}) {
+					$self->{ug_end_offset} = 0;
+				} else {
+					$self->{sg_end_offset} = 0;
+				}
 			} else {
 				# Look at first line to see if the file should be parse from the begining.
 				my $logfile = new IO::File;
-				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open Squid access.log file $lfile. $!\n");
+				$logfile->open($lfile) || $self->localdie("ERROR: Unable to open log file $lfile. $!\n");
 				my $line = <$logfile>;
 				chomp($line);
-				$line =~ /^([\d\.]+) /;
+
+				my $curtime = $self->look_for_timestamp($line);
+
+				my $hist_time = $self->{history_time};
+				if ($self->{is_squidguard_log}) {
+					$hist_time = $self->{sg_history_time};
+				} elsif ($self->{is_ufdbguard_log}) {
+					$hist_time = $self->{ug_history_time};
+				}
 				# if the first timestamp is higher that the history time, start from the beginning
-				if ($1 > $self->{history_time}) {
+				if ($curtime > $hist_time) {
 					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
-					$self->{end_offset} = 0;
+					if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+						$self->{end_offset} = 0;
+					} elsif (!$self->{is_squidguard_log}) {
+						$self->{ug_end_offset} = 0;
+					} else {
+						$self->{sg_end_offset} = 0;
+					}
 				# If the size of the file is lower than the history offset, parse this file from the beginning
 				} elsif ((lstat($lfile))[7] <= $history_offset) {
 					# move at begining of the file to see if this is a new one
 					$logfile->seek(0, 0);
-					for (my $i = 1; $i <= 10; $i++) {
+					for (my $i = 1; $i <= 10000; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						if ($line =~ /^(\d{10}\.\d{3})/) {
-							if ($self->{history_time} > $1) {
-								print STDERR "DEBUG: this file will not been parsed: $lfile, size lower than expected.\n" if (!$self->{QuietMode});
-								print STDERR "DEBUG: and $1 is lower than history time $self->{history_time}.\n" if (!$self->{QuietMode});
+						$curtime = $self->look_for_timestamp($line);
+						if ($curtime) {
+							# If timestamp found at startup is lower than the history file,
+							# the file will not be parsed at all.
+							if ($hist_time > $curtime) {
+								print STDERR "DEBUG: this file will not be parsed: $lfile, size is lower than expected.\n" if (!$self->{QuietMode});
+								print STDERR "DEBUG: exploring $lfile, timestamp found at startup, $curtime, is lower than history time $hist_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
@@ -562,16 +717,26 @@ sub parseFile
 					$logfile->close;
 					# This file should be ommitted jump to the next file
 					next if ($line eq 'NOK');
+					
+					print STDERR "DEBUG: new file: $lfile, start from the beginning.\n" if (!$self->{QuietMode});
+					if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+						$self->{end_offset} = 0;
+					} elsif (!$self->{is_squidguard_log}) {
+						$self->{ug_end_offset} = 0;
+					} else {
+						$self->{sg_end_offset} = 0;
+					}
 				} else {
 					# move at offset and see if next line is older than history time
 					$logfile->seek($history_offset, 0);
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
-						if ($line =~ /^(\d{10}\.\d{3})/) {
-							if ($1 < $self->{history_time}) {
-								my $tmp_time = CORE::localtime($1);
-								print STDERR "DEBUG: this file will not been parsed: $lfile, line after offset is older than expected: $tmp_time.\n" if (!$self->{QuietMode});
+						$curtime = $self->look_for_timestamp($line);
+						if ($curtime) {
+							if ($curtime < $hist_time) {
+								my $tmp_time = CORE::localtime($curtime);
+								print STDERR "DEBUG: this file will not be parsed: $lfile, line after offset is older than expected: $curtime < $hist_time.\n" if (!$self->{QuietMode});
 								$line = 'NOK';
 								last;
 							}
@@ -587,11 +752,23 @@ sub parseFile
 		} else {
 			print STDERR "DEBUG: this file will be parsed, no history found.\n" if (!$self->{QuietMode});
 			# Initialise start offset for each file
-			$self->{end_offset} = 0;
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				$self->{end_offset} = 0;
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_offset} = 0;
+			} else {
+				$self->{sg_end_offset} = 0;
+			}
 		}
 
 		if ($self->{queue_size} <= 1) {
-			$self->_parse_file_part($lfile, $self->{end_offset});
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				$self->_parse_file_part($lfile, $self->{end_offset});
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->_parse_file_part($lfile, $self->{ug_end_offset});
+			} else {
+				$self->_parse_file_part($lfile, $self->{sg_end_offset});
+			}
 		} else {
 			# Create multiple processes to parse one log file by chunks of data
 			my @chunks = $self->split_logfile($lfile);
@@ -613,44 +790,54 @@ sub parseFile
 	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	# Get the last information parsed in this file part
-	if (-e "$self->{pid_dir}/last_parsed.tmp") {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'sg_last_parsed.tmp') {
 
-		if (open(IN, "$self->{pid_dir}/last_parsed.tmp")) {
-			my %history_tmp = ();
-			while (my $l = <IN>) {
-				chomp($l);
-				my @data = split(/\s/, $l);
-				$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
-				$line_stored_count += $data[5];
-				$line_processed_count += $data[6];
-				$line_count += $data[7];
-				if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}{$data[8]}}") ) {
-					$self->{first_year} = $data[8];
-					$self->{first_month}{$data[8]} = $data[9];
-				}
-				my @tmp = split(/,/, $data[10]);
-				foreach my $w (@tmp) {
-					if (!grep(/^$w$/, @{$self->{week_parsed}})) {
-						push(@{$self->{week_parsed}}, $w);
+		if (-e "$self->{pid_dir}/$tmp_file") {
+
+			if (open(IN, "$self->{pid_dir}/$tmp_file")) {
+				my %history_tmp = ();
+				while (my $l = <IN>) {
+					chomp($l);
+					my @data = split(/\s/, $l);
+					$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
+					$line_stored_count += $data[5];
+					$line_processed_count += $data[6];
+					$line_count += $data[7];
+					if (!$self->{first_year} || ("$data[8]$data[9]" lt "$self->{first_year}$self->{first_month}{$data[8]}}") ) {
+						$self->{first_year} = $data[8];
+						$self->{first_month}{$data[8]} = $data[9];
+					}
+					my @tmp = split(/,/, $data[10]);
+					foreach my $w (@tmp) {
+						if (!grep(/^$w$/, @{$self->{week_parsed}})) {
+							push(@{$self->{week_parsed}}, $w);
+						}
 					}
 				}
-			}
-			close(IN);
-			foreach my $date (sort {$b <=> $a} keys %history_tmp) {
-				foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
-					my @data = split(/\s/, $history_tmp{$date}{$offset});
-					$self->{last_year} = $data[0];
-					$self->{last_month}{$data[0]} = $data[1];
-					$self->{last_day}{$data[0]} = $data[2];
-					$self->{end_time} = $data[3];
-					$self->{end_offset} = $data[4];
+				close(IN);
+				foreach my $date (sort {$b <=> $a} keys %history_tmp) {
+					foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
+						my @data = split(/\s/, $history_tmp{$date}{$offset});
+						$self->{last_year} = $data[0];
+						$self->{last_month}{$data[0]} = $data[1];
+						$self->{last_day}{$data[0]} = $data[2];
+						if ($tmp_file eq 'last_parsed.tmp') {
+							$self->{end_time} = $data[3];
+							$self->{end_offset} = $data[4];
+						} elsif ($tmp_file eq 'ug_last_parsed.tmp') {
+							$self->{ug_end_time} = $data[3];
+							$self->{ug_end_offset} = $data[4];
+						} elsif ($tmp_file eq 'sg_last_parsed.tmp') {
+							$self->{sg_end_time} = $data[3];
+							$self->{sg_end_offset} = $data[4];
+						}
+						last;
+					}
 					last;
 				}
-				last;
+			} else {
+				print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/$tmp_file, $!\n";
 			}
-			#unlink("$self->{pid_dir}/last_parsed.tmp");
-		} else {
-			print STDERR "ERROR: can't read last parsed line from $self->{pid_dir}/last_parsed.tmp, $!\n";
 		}
 	}
 
@@ -661,7 +848,9 @@ sub parseFile
 	} else {
 
 		if (!$self->{QuietMode}) {
-			print STDERR "END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
+			print STDERR "SQUID LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
+			print STDERR "SQUIGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_end_time})), "\n" if ($self->{sg_end_time});
+			print STDERR "UFDBGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_end_time})), "\n" if ($self->{ug_end_time});
 			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
 
@@ -802,16 +991,23 @@ sub split_logfile
 	# get file size
 	my $totalsize = (stat("$logf"))[7] || 0;
 
+	my $offsplit = $self->{end_offset};
+	if ($self->{is_squidguard_log}) {
+		$offsplit = $self->{sg_end_offset};
+	} elsif ($self->{is_ufdbguard_log}) {
+		$offsplit = $self->{ug_end_offset};
+	}
+
 	# If the file is very small, many jobs actually make the parsing take longer
-	if ( ($totalsize <= 16777216) || ($totalsize <= $self->{end_offset})) { #16MB
+	if ( ($totalsize <= 16777216) || ($totalsize <= $offsplit)) { #16MB
 		push(@chunks, $totalsize);
 		return @chunks;
 	}
 
 	# Split and search the right position in file corresponding to the number of jobs
 	my $i = 1;
-	if ($self->{end_offset} && ($self->{end_offset} < $totalsize)) {
-		$chunks[0] = $self->{end_offset};
+	if ($offsplit && ($offsplit < $totalsize)) {
+		$chunks[0] = $offsplit;
 	}
 	my $lfile = undef;
 	open($lfile, $logf) || die "FATAL: cannot read log file $logf. $!\n";
@@ -872,7 +1068,6 @@ sub check_exclusions
 		foreach my $e (@{$self->{Exclude}{uris}}) {
 			if ($url =~ m#^$e$#i) {
 				return 1;
-				last;
 			}
 		}
 	}
@@ -894,6 +1089,11 @@ sub check_inclusions
 				return 1;
 			}
 		}
+	}
+
+	# If login is a client ip, checked login against clients and networks filters
+	if (!$client_ip && ($login =~ /^\d+\.\d+\.\d+\.\d+$/)) {
+		$client_ip = $login;
 	}
 
 	# check for client inclusion
@@ -929,8 +1129,11 @@ sub _parse_file_part
 		# Open a pipe to zcat program for compressed log
 		$logfile->open("$ZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $ZCAT_PROG $file. $!\n");
 	} elsif ($file =~ /\.bz2/) {
-		# Open a pipe to zcat program for compressed log
+		# Open a pipe to bzcat program for compressed log
 		$logfile->open("$BZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $BZCAT_PROG $file. $!\n");
+	} elsif ($file =~ /\.xz/) {
+		# Open a pipe to xzcat program for compressed log
+		$logfile->open("$XZCAT_PROG $file |") || $self->localdie("ERROR: cannot read from pipe to $XZCAT_PROG $file. $!\n");
 	} else {
 		$logfile->open($file) || $self->localdie("ERROR: Unable to open Squid access.log file $file. $!\n");
 	}
@@ -948,6 +1151,8 @@ sub _parse_file_part
 	my $status = '';
 	my $mime_type = '';
 
+	my $acl = '';
+
 	my $line_count = 0;
 	my $line_processed_count = 0;
 	my $line_stored_count = 0;
@@ -955,8 +1160,17 @@ sub _parse_file_part
 	# Move directly to the start position
 	if ($start_offset) {
 		$logfile->seek($start_offset, 0);
-		$self->{end_offset} = $start_offset;
+		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+			$self->{end_offset} = $start_offset;
+		} elsif (!$self->{is_squidguard_log}) {
+			$self->{ug_end_offset} = $start_offset;
+		} else {
+			$self->{sg_end_offset} = $start_offset;
+		}
 	}
+
+	# Set timezone in seconds
+	my $tz = ((0-$self->{TimeZone})*3600);
 
 	# The log file format must be :
 	# 	time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost type
@@ -966,12 +1180,25 @@ sub _parse_file_part
 	while ($line = <$logfile>) {
 
 		# quit this log if we reach the ending offset
-		last if ($stop_offset && ($self->{end_offset}>= $stop_offset));
-		# Store the current position in logfile
-		$self->{end_offset} += length($line);
+		if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+			last if ($stop_offset && ($self->{end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{end_offset} += length($line);
+		} elsif (!$self->{is_squidguard_log}) {
+			last if ($stop_offset && ($self->{ug_end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{ug_end_offset} += length($line);
+		} else {
+			last if ($stop_offset && ($self->{sg_end_offset}>= $stop_offset));
+			# Store the current position in logfile
+			$self->{sg_end_offset} += length($line);
+		}
 
 		chomp($line);
 		next if (!$line);
+
+		# skip immediately lines that squid is not able to tag.
+		next if ($line =~ / TAG_NONE(_ABORTED)?\//);
 
 		# Number of log lines parsed
 		$line_count++;
@@ -985,7 +1212,8 @@ sub _parse_file_part
 		my $format = 'native';
 		if ( $line =~ $native_format_regex1 ) {
 			$time = $1;
-			$elapsed = $2;
+			$time += $tz;
+			$elapsed = abs($2);
 			$client_ip = $3;
 			$code = $4;
 			$bytes = $5;
@@ -994,7 +1222,7 @@ sub _parse_file_part
 		} elsif ( $line =~ $common_format_regex1 ) {
 			$format = 'http';
 			$client_ip = $1;
-			$elapsed = $2;
+			$elapsed = abs($2);
 			$login = lc($3);
 			$time = $4;
 			$method = $5;
@@ -1005,29 +1233,98 @@ sub _parse_file_part
 			$code = $11;
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
-			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
+			}
+			# Some site has corrupted mime_type, try to remove nasty characters
+			if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
+				$mime_type = 'invalid/type';
+			}
+                } elsif ($line =~ $sg_format_regex1) {
+                        $format = 'squidguard';
+			$self->{is_squidguard_log} = 1;
+			$acl = $7;
+                        $client_ip = $9;
+                        $elapsed = 0;
+                        $login = lc($10);
+                        $method = $11;
+                        $url = lc($8);
+                        $status = 301;
+                        $bytes = 0;
+                        $code = $12 . ':';
+                        $mime_type = '';
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+			}
+		# Log format for ufdbGuard logs: timestamp [pid] BLOCK user clienthost aclname category url method
+		} elsif ($line =~ $ug_format_regex1) {
+                        $format = 'ufdbguard';
+			$self->{is_ufdbguard_log} = 1;
+			$acl = "$10/$11";
+                        $client_ip = $9;
+                        $elapsed = 0;
+                        $login = lc($8);
+                        $method = $13;
+                        $url = lc($12);
+                        $status = 301;
+                        $bytes = 0;
+                        $code = 'REDIRECT:';
+                        $mime_type = '';
+			if (!$self->{TimeZone}) {
+				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
+			} else {
+				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
+			}
 		} else {
 			next;
 		}
 		
 		if ($time) {
 			# Do not parse some unwanted method
-			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$method$/, @{$self->{ExcludedMethods}}));
+			my $qm_method = quotemeta($method) || '';
+			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$qm_method$/, @{$self->{ExcludedMethods}}));
 
 			# Do not parse some unwanted code; e.g. TCP_DENIED/403
+			my $qm_code = quotemeta($code) || '';
 			next if (($#{$self->{ExcludedCodes}} >= 0) && grep(m#^$code$#, @{$self->{ExcludedCodes}}));
 
 			# Go to last parsed date (incremental mode)
-			next if ($self->{history_time} && ($time <= $self->{history_time}));
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				next if ($self->{history_time} && ($time <= $self->{history_time}));
+			} elsif (!$self->{is_squidguard_log}) {
+				next if ($self->{ug_history_time} && ($time <= $self->{ug_history_time}));
+			} else {
+				next if ($self->{sg_history_time} && ($time <= $self->{sg_history_time}));
+			}
 
 			# Register the last parsing time and last offset position in logfile
-			$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
-
-			# Register the first parsing time
-			if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
-				$self->{begin_time} = $time;
-				print STDERR "SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
+				# Register the first parsing time
+				if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
+					$self->{begin_time} = $time;
+					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
+			} elsif (!$self->{is_squidguard_log}) {
+				$self->{ug_end_time} = $time if (!$time || ($self->{ug_end_time} < $time));
+				# Register the first parsing time
+				if (!$self->{ug_begin_time} || ($self->{ug_begin_time} > $time)) {
+					$self->{ug_begin_time} = $time;
+					print STDERR "UFDBGUARD LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
+			} else {
+				$self->{sg_end_time} = $time if (!$time || ($self->{sg_end_time} < $time));
+				# Register the first parsing time
+				if (!$self->{sg_begin_time} || ($self->{sg_begin_time} > $time)) {
+					$self->{sg_begin_time} = $time;
+					print STDERR "SQUIDGUARD LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+				}
 			}
+
 			# Only store (HIT|UNMODIFIED)/(MISS|MODIFIED|TUNNEL)/(DENIED|REDIRECT) status
 			# and peer CD_SIBLING_HIT/ aswell as peer SIBLING_HIT/...
 			if ( ($code =~ m#(HIT|UNMODIFIED)[:/]#) || ($self->{SiblingHit} && ($line =~ / (CD_)?SIBLING_HIT/)) ) {
@@ -1046,10 +1343,14 @@ sub _parse_file_part
 				$login = lc($2);
 				$status = lc($3);
 				$mime_type = lc($4);
+				# Some site has corrupted mime_type, try to remove nasty characters
+				if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
+					$mime_type = 'invalid/type';
+				}
 			}
 
 			if ($url) {
-				if (!$mime_type || ($mime_type eq '-') || ($mime_type !~ /^[a-z]+\/[a-z]+/)) {
+				if (!$mime_type || ($mime_type eq '-')) {
 					$mime_type = 'none';
 				}
 
@@ -1059,12 +1360,11 @@ sub _parse_file_part
 				# Remove extra space character in username
 				$login =~ s/\%20//g;
 
-				# Set default user login to client ip address
 				my $id = $client_ip || '';
 				if ($login ne '-') {
 					$id = $login;
 				}
-				next if (!$id || !$bytes);
+				next if (!$id || (!$bytes && ($code ne 'DENIED')));
 
 				#####
 				# If there's some mandatory inclusion, check the entry against the definitions
@@ -1078,6 +1378,7 @@ sub _parse_file_part
 				#####
 				next if ($self->check_exclusions($login, $client_ip, $url));
 
+				# Set default user login to client ip address
 				# Anonymize all users
 				if ($self->{AnonymizeLogin} && ($client_ip ne $id)) {
 					if (!exists $self->{AnonymizedId}{$id}) {
@@ -1087,7 +1388,7 @@ sub _parse_file_part
 				}
 
 				# Now parse data and generate statistics
-				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type);
+				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl);
 				$line_stored_count++;
 
 			}
@@ -1109,12 +1410,24 @@ sub _parse_file_part
 		}
 
 		# Save the last information parsed in this file part
-		if (open(OUT, ">>$self->{pid_dir}/last_parsed.tmp")) {
-			flock(OUT, 2) || die "FATAL: can't acquire lock on file, $!\n";
-			print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+		my $tmp_file = 'last_parsed.tmp';
+		if ($self->{is_squidguard_log}) {
+			$tmp_file = 'sg_last_parsed.tmp';
+		} elsif ($self->{is_ufdbguard_log}) {
+			$tmp_file = 'ug_last_parsed.tmp';
+		}
+		if (open(OUT, ">>$self->{pid_dir}/$tmp_file")) {
+			flock(OUT, 2) || die "FATAL: can't acquire lock on file $tmp_file, $!\n";
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{end_time} $self->{end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			} elsif (!$self->{is_squidguard_log}) {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{ug_end_time} $self->{ug_end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			} else {
+				print OUT "$self->{last_year} $self->{last_month}{$self->{last_year}} $self->{last_day}{$self->{last_year}} $self->{sg_end_time} $self->{sg_end_offset} $line_stored_count $line_processed_count $line_count $self->{first_year} $self->{first_month}{$self->{first_year}} ", join(',', @{$self->{week_parsed}}), "\n";
+			}
 			close(OUT);
 		} else {
-			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/last_parsed.tmp, $!\n";
+			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/$tmp_file, $!\n";
 		}
 	}
 
@@ -1153,6 +1466,11 @@ sub _clear_stats
 	$self->{stat_code_day} = ();
 	$self->{stat_code_month} = ();
 
+	# Hashes to store throughput statsœ
+	$self->{stat_throughput_hour} = ();
+	$self->{stat_throughput_day} = ();
+	$self->{stat_throughput_month} = ();
+
 	# Hashes to store mime type
 	$self->{stat_mime_type_hour} = ();
 	$self->{stat_mime_type_day} = ();
@@ -1162,7 +1480,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
 
 	# Set path to pid file
 	$pidfile = $pid_dir . '/' . $pidfile;
@@ -1192,6 +1510,7 @@ sub _init
 	$self->{QuietMode} = $options{QuietMode} || 0;
 	$self->{UrlReport} = $options{UrlReport} || 0;
 	$self->{UrlHitsOnly} = $options{UrlHitsOnly} || 0;
+	$self->{MaxFormatError} = $options{MaxFormatError} || 0;
 	if (defined $options{UserReport}) {
 		$self->{UserReport} = $options{UserReport};
 	} else {
@@ -1221,6 +1540,13 @@ sub _init
 	$self->{pid_dir} = $pid_dir || '/tmp';
 	$self->{child_count} = 0;
 	$self->{rebuild} = $rebuild || 0;
+	$self->{is_squidguard_log} = 0;
+	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
+
+	# Cleanup old temporary files
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
+		unlink("$self->{pid_dir}/$tmp_file");
+	}
 
 	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
 	$self->{ExcludedMethods} = ();
@@ -1241,7 +1567,7 @@ sub _init
 		while (my $l = <IN>) {
 			chomp($l);
 			$l =~ s/\r//gs;
-			next if ($l =~ /^[\s\t]*#/);
+			next if ($l =~ /^\s*#/);
 			next if (!$l);
 			my ($key, $str) = split(/\t+/, $l);
 			$Translate{$key} = $str;
@@ -1319,6 +1645,10 @@ sub _init
 	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
 	$self->{preserve} = 0;
+	$self->{sg_end_time} = 0;
+	$self->{sg_end_offset} = 0;
+	$self->{ug_end_time} = 0;
+	$self->{ug_end_offset} = 0;
 
 	# Override verbose mode
 	$self->{QuietMode} = 0 if ($debug);
@@ -1331,7 +1661,7 @@ sub _init
 		chomp($self->{start_date});
 	}
 
-	# Get the last parsing date for incremental parsing
+	# Get the last parsing date for Squid log incremental parsing
 	if (!$rebuild && -e "$self->{Output}/SquidAnalyzer.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/SquidAnalyzer.current")) {
@@ -1343,7 +1673,45 @@ sub _init
 			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
 			$self->{begin_time} = $self->{history_time};
 			$current->close();
-			print STDERR "HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+			if ($self->{history_time}) {
+				print STDERR "SQUID LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+			}
+		}
+	}
+
+	# Get the last parsing date for SquidGuard log incremental parsing
+	if (!$rebuild && -e "$self->{Output}/SquidGuard.current") {
+		my $current = new IO::File;
+		unless($current->open("$self->{Output}/SquidGuard.current")) {
+			print STDERR "ERROR: Can't read file $self->{Output}/SquidGuard.current, $!\n" if (!$self->{QuietMode});
+			print STDERR "Starting at the first line of SquidGuard log file.\n" if (!$self->{QuietMode});
+		} else {
+			my $tmp = <$current>;
+			chomp($tmp);
+			($self->{sg_history_time}, $self->{sg_end_offset}) = split(/[\t]/, $tmp);
+			$self->{sg_begin_time} = $self->{sg_history_time};
+			$current->close();
+			if ($self->{sg_history_time}) {
+				print STDERR "SQUIDGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_history_time})), " - HISTORY OFFSET: $self->{sg_end_offset}\n" if (!$self->{QuietMode});
+			}
+		}
+	}
+
+	# Get the last parsing date for ufdbGuard log incremental parsing
+	if (!$rebuild && -e "$self->{Output}/ufdbGuard.current") {
+		my $current = new IO::File;
+		unless($current->open("$self->{Output}/ufdbGuard.current")) {
+			print STDERR "ERROR: Can't read file $self->{Output}/ufdbGuard.current, $!\n" if (!$self->{QuietMode});
+			print STDERR "Starting at the first line of ufdbGuard log file.\n" if (!$self->{QuietMode});
+		} else {
+			my $tmp = <$current>;
+			chomp($tmp);
+			($self->{ug_history_time}, $self->{ug_end_offset}) = split(/[\t]/, $tmp);
+			$self->{ug_begin_time} = $self->{ug_history_time};
+			$current->close();
+			if ($self->{ug_history_time}) {
+				print STDERR "UFDBGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_history_time})), " - HISTORY OFFSET: $self->{ug_end_offset}\n" if (!$self->{QuietMode});
+			}
 		}
 	}
 
@@ -1409,17 +1777,40 @@ sub _gethostbyaddr
 {
 	my ($self, $ip) = @_;
 
+
 	my $host = undef;
+	my $err = '';
 	unless(exists $CACHE{$ip}) {
 		eval {
 			local $SIG{ALRM} = sub { die "DNS lookup timeout.\n"; };
 			ualarm $self->{DNSLookupTimeout};
-			$host = gethostbyaddr(inet_aton($ip), AF_INET);
+			my @addrs = ();
+			if ($] < 5.014) {
+				$host = gethostbyaddr(inet_aton($ip), AF_INET);
+			} else {
+				# We also need to resolve IPV6 addresses
+				if ($ip =~ /^\d+\.\d+\.\d+\.\d+$/) {
+					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET } );
+				} else {
+					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET6 } );
+				}
+			}
+			for my $addr (@addrs) {
+				($err, $host) = Socket::getnameinfo( $addr->{addr});
+				last;
+			}
 			ualarm 0;
 		};
 		if ($@) {
-			$CACHE{$ip} = undef;
-			#printf "_gethostbyaddr timeout : %s\n", $ip;
+			delete $CACHE{$ip};
+			if (!$self->{QuietMode}) {
+				warn "_gethostbyaddr timeout reach for ip: $ip, timeout can be adjusted with directive DNSLookupTimeout\n";
+			}
+		} elsif ($err) {
+			delete $CACHE{$ip};
+			if (!$self->{QuietMode}) {
+				warn "_gethostbyaddr error resolving ip: $ip, $err\n";
+			}
 		}
 		else {
 			$CACHE{$ip} = $host;
@@ -1431,7 +1822,7 @@ sub _gethostbyaddr
 
 sub _parseData
 {
-	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type) = @_;
+	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type, $acl) = @_;
 
 	# Save original IP address for dns resolving
 	my $client_ip_addr = $client;
@@ -1490,6 +1881,7 @@ sub _parseData
 			last;
 		}
 	}
+
 	# Set default to a class A network
 	if (!$network) {
 		$client =~ /^(.*)([:\.]+)\d+$/;
@@ -1530,15 +1922,22 @@ sub _parseData
 		$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
-		
+
+		$self->{stat_throughput_hour}{$code}{$hour}{bytes} += $bytes;
+		$self->{stat_throughput_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+		$self->{stat_throughput_hour}{$code}{$hour}{elapsed} += $elapsed;
+		$self->{stat_throughput_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
+
 		#### Store url statistics
 		if ($self->{UrlReport}) {
 			$self->{stat_denied_url_hour}{$id}{$dest}{hits}++;
 			$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_hour}{$id}{$dest}{firsthit}));
 			$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_hour}{$id}{$dest}{lasthit}));
+			$self->{stat_denied_url_hour}{$id}{$dest}{blacklist}{$acl}++ if ($acl);
 			$self->{stat_denied_url_day}{$id}{$dest}{hits}++;
 			$self->{stat_denied_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_day}{$id}{$dest}{firsthit}));
 			$self->{stat_denied_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_day}{$id}{$dest}{lasthit}));
+			$self->{stat_denied_url_day}{$id}{$dest}{blacklist}{$acl}++ if ($acl);
 		}
 		return;
 	}
@@ -1580,8 +1979,15 @@ sub _parseData
 	#### Store HIT/MISS/DENIED statistics
 	$self->{stat_code_hour}{$code}{$hour}{hits}++;
 	$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
+	$self->{stat_code_hour}{$code}{$hour}{elapsed} += $elapsed;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
 	$self->{stat_code_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+	$self->{stat_code_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
+
+	$self->{stat_throughput_hour}{$code}{$hour}{bytes} += $bytes;
+	$self->{stat_throughput_day}{$code}{$self->{last_day}}{bytes} += $bytes;
+	$self->{stat_throughput_hour}{$code}{$hour}{elapsed} += $elapsed;
+	$self->{stat_throughput_day}{$code}{$self->{last_day}}{elapsed} += $elapsed;
 
 	#### Store url statistics
 	if ($self->{UrlReport}) {
@@ -1590,6 +1996,10 @@ sub _parseData
 		$self->{stat_user_url_hour}{$id}{$dest}{bytes} += $bytes;
 		$self->{stat_user_url_hour}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_hour}{$id}{$dest}{firsthit}));
 		$self->{stat_user_url_hour}{$id}{$dest}{lasthit} = $time if (!$self->{stat_user_url_hour}{$id}{$dest}{lasthit} || ($time > $self->{stat_user_url_hour}{$id}{$dest}{lasthit}));
+		if (!exists $self->{stat_user_url_hour}{$id}{$dest}{arr_last} || ($#{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}} < 9) || ($time > ($self->{stat_user_url_hour}{$id}{$dest}{arr_last}[-1]+300))) {
+			push(@{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}}, $time);
+			shift(@{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}}) if ($#{$self->{stat_user_url_hour}{$id}{$dest}{arr_last}} > 9);
+		}
 		$self->{stat_user_url_day}{$id}{$dest}{duration} += $elapsed;
 		$self->{stat_user_url_day}{$id}{$dest}{hits}++;
 		$self->{stat_user_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_user_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_user_url_day}{$id}{$dest}{firsthit}));
@@ -1598,6 +2008,10 @@ sub _parseData
 		if ($code eq 'HIT') {
 			$self->{stat_user_url_day}{$id}{$dest}{cache_hit}++;
 			$self->{stat_user_url_day}{$id}{$dest}{cache_bytes} += $bytes;
+		}
+		if (!exists $self->{stat_user_url_day}{$id}{$dest}{arr_last} || ($#{$self->{stat_user_url_day}{$id}{$dest}{arr_last}} < 9) || ($time > ($self->{stat_user_url_day}{$id}{$dest}{arr_last}[-1]+1800))) {
+			push(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}, $time);
+			shift(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}) if ($#{$self->{stat_user_url_day}{$id}{$dest}{arr_last}} > 9);
 		}
 	}
 
@@ -1671,7 +2085,6 @@ sub _append_stat
 	$path =~ s/[\/]+$//;
 
 	print STDERR "Appending data into $self->{Output}/$path\n" if (!$self->{QuietMode});
-	
 
 	#### Save cache statistics
 	my $dat_file_code = new IO::File;
@@ -1844,14 +2257,21 @@ sub _write_stat_data
 	#### Save cache statistics
 	if ($kind eq 'stat_code') {
 		foreach my $code (sort {$a cmp $b} keys %{$self->{"stat_code_$type"}}) {
-			$fh->print("$code " .
-				"hits_$type=");
+			$fh->print("$code " .  "hits_$type=");
 			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
 				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{hits} . ",");
 			}
 			$fh->print(";bytes_$type=");
 			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_code_$type"}{$code}}) {
 				$fh->print("$tmp:" . $self->{"stat_code_$type"}{$code}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";thp_bytes_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_throughput_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_throughput_$type"}{$code}{$tmp}{bytes} . ",");
+			}
+			$fh->print(";thp_duration_$type=");
+			foreach my $tmp (sort {$a <=> $b} keys %{$self->{"stat_throughput_$type"}{$code}}) {
+				$fh->print("$tmp:" . $self->{"stat_throughput_$type"}{$code}{$tmp}{elapsed} . ",");
 			}
 			$fh->print("\n");
 		}
@@ -1865,11 +2285,20 @@ sub _write_stat_data
 				next if (!$dest);
 				my $u = $id;
 				$u = '-' if (!$self->{UserReport});
+				my $bl = '';
+				if (exists $self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}) {
+					foreach my $b (keys %{$self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}}) {
+						$bl .= $b . ',' . $self->{"stat_denied_url_$type"}{$id}{$dest}{blacklist}{$b} . ',';
+					}
+					$bl =~ s/,$//;
+				}
 				$fh->print(
 					"$id hits=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{hits} . ";" .
 					"first=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{firsthit} . ";" .
 					"last=" . $self->{"stat_denied_url_$type"}{$id}{$dest}{lasthit} . ";" .
-					"url=$dest" . "\n");
+					"url=$dest" . ";" .
+					"blacklist=" . $bl .
+					"\n");
 			}
 		}
 		$self->{"stat_denied_url_$type"} = ();
@@ -1889,7 +2318,8 @@ sub _write_stat_data
 					"last=" . $self->{"stat_user_url_$type"}{$id}{$dest}{lasthit} . ";" .
 					"url=$dest;" .
 					"cache_hit=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit}||0) . ";" .
-					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . "\n");
+					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . ";" .
+					"arr_last=" . join(',', @{$self->{"stat_user_url_$type"}{$id}{$dest}{arr_last}}) . "\n");
 			}
 		}
 		$self->{"stat_user_url_$type"} = ();
@@ -1997,9 +2427,10 @@ sub _read_stat
 		my $dat_file_code = new IO::File;
 		if ($dat_file_code->open("$self->{Output}/$path/stat_code.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_code>) {
 				chomp($l);
-				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)$//) {
+				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+)//) {
 					my $code = $1;
 					my $hits = $2 || '';
 					my $bytes = $3 || '';
@@ -2015,11 +2446,29 @@ sub _read_stat
 						if ($key ne '') { $k = $key; } else { $k = $tmp; }
 						$self->{"stat_code_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
 					}
+					if ($l =~ s/thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)//) {
+						$bytes = $1 || '';
+						my $elapsed = $2 || '';
+						$elapsed =~ s/,$//;
+						my %bytes_tmp = split(/[:,]/, $bytes);
+						foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+							if ($key ne '') { $k = $key; } else { $k = $tmp; }
+							$self->{"stat_throughput_$sum_type"}{$code}{$k}{bytes} += $bytes_tmp{$tmp};
+						}
+						my %elapsed_tmp = split(/[:,]/, $elapsed);
+						foreach my $tmp (sort {$a <=> $b} keys %elapsed_tmp) {
+							if ($key ne '') { $k = $key; } else { $k = $tmp; }
+							$self->{"stat_throughput_$sum_type"}{$code}{$k}{elapsed} += $elapsed_tmp{$tmp};
+						}
+					}
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_code.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2035,6 +2484,7 @@ sub _read_stat
 		my $dat_file_user = new IO::File;
 		if ($dat_file_user->open("$self->{Output}/$path/stat_user.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_user>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
@@ -2045,7 +2495,10 @@ sub _read_stat
 					my $lsize = $5 || 0;
 					my $lurl = $6 || 0;
 
-					next if (!$self->check_inclusions($id));
+					if ($self->{rebuild}) {
+						next if (!$self->check_inclusions($id));
+						next if ($self->check_exclusions($id));
+					}
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -2080,8 +2533,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2096,6 +2552,7 @@ sub _read_stat
 			my $dat_file_user_url = new IO::File;
 			if ($dat_file_user_url->open("$self->{Output}/$path/stat_user_url.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_user_url>) {
 					chomp($l);
 					my $id = '';
@@ -2117,11 +2574,11 @@ sub _read_stat
 						$id = $self->{AnonymizedId}{$id};
 					}
 
-					if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
+					if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)//) {
 						my $url = $7;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += abs($4);
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit}));
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit}));
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{cache_hit} += $8;
@@ -2132,11 +2589,22 @@ sub _read_stat
 								next;
 							}
 						}
-					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)$//) {
+						if ($l =~ s/^;arr_last=(.*)//) {
+							my $incr = 1800;
+							$incr = 300 if ($sum_type eq 'hour');
+							$incr = 86400 if ($sum_type eq 'month');
+							foreach my $tm (split(/,/, $1)) {
+								if (!exists $self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last} || ($#{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}} < 9) || ($tm > ${$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}[-1] + $incr)) { 
+									push(@{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}, $tm);
+									shift(@{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}}) if ($#{$self->{"stat_user_url_$sum_type"}{$id}{$url}{arr_last}} > 9);
+								}
+							}
+						}
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)$//) {
 						my $url = $7;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += abs($4);
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit} = $5 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit} || ($5 < $self->{"stat_user_url_$sum_type"}{$id}{"$url"}{firsthit}));
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit} = $6 if (!$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit} || ($6 > $self->{"stat_user_url_$sum_type"}{$id}{"$url"}{lasthit}));
 						if ($self->{rebuild}) {
@@ -2145,11 +2613,11 @@ sub _read_stat
 								next;
 							}
 						}
-					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)$//) {
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)$//) {
 						my $url = $5;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{hits} += $2;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{bytes} += $3;
-						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += $4;
+						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{duration} += abs($4);
 						if ($self->{rebuild}) {
 							if ($self->check_exclusions('', '', $url)) {
 								delete $self->{"stat_user_url_$sum_type"}{$id}{"$url"};
@@ -2159,8 +2627,11 @@ sub _read_stat
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user_url.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2172,6 +2643,7 @@ sub _read_stat
 			my $dat_file_denied_url = new IO::File;
 			if ($dat_file_denied_url->open("$self->{Output}/$path/stat_denied_url.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_denied_url>) {
 					chomp($l);
 					my $id = '';
@@ -2193,7 +2665,20 @@ sub _read_stat
 						$id = $self->{AnonymizedId}{$id};
 					}
 
-					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
+					if ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)//) {
+						if ($self->{rebuild}) {
+							next if ($self->check_exclusions('', '', $5));
+						}
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{hits} += $2;
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} = $3 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{firsthit} || ($3 < $self->{"stat_denied_url_$sum_type"}{$id}{"$7"}{firsthit}));
+						$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} = $4 if (!$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit} || ($4 > $self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{lasthit}));
+						if ($6) {
+							my %tmp = split(/,/, $6);
+							foreach my $k (keys %tmp) {
+								$self->{"stat_denied_url_$sum_type"}{$id}{"$5"}{blacklist}{$k} += $tmp{$k};
+							}
+						}
+					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)//) {
 						if ($self->{rebuild}) {
 							next if ($self->check_exclusions('', '', $5));
 						}
@@ -2205,8 +2690,11 @@ sub _read_stat
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_denied_url.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2221,6 +2709,7 @@ sub _read_stat
 		my $dat_file_network = new IO::File;
 		if ($dat_file_network->open("$self->{Output}/$path/stat_network.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_network>) {
 				chomp($l);
 				my ($net, $data) = split(/\t/, $l);
@@ -2231,7 +2720,7 @@ sub _read_stat
 					$data = $l;
 				}
 
-				if ($self->{rebuild}) {
+				if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$net}) {
 					next if (!$self->check_inclusions('', $net));
 					next if ($self->check_exclusions('', $net));
 				}
@@ -2266,8 +2755,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_network.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2281,6 +2773,7 @@ sub _read_stat
 			my $dat_file_netuser = new IO::File;
 			if ($dat_file_netuser->open("$self->{Output}/$path/stat_netuser.dat")) {
 				my $i = 1;
+				my $error = 0;
 				while (my $l = <$dat_file_netuser>) {
 					chomp($l);
 					my ($net, $id, $data) = split(/\t/, $l);
@@ -2305,19 +2798,22 @@ sub _read_stat
 						$id = $self->{AnonymizedId}{$id};
 					}
 
-					if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
+					if ($data =~ s/^hits=(\d+);bytes=(\d+);duration=([\-\d]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{hits} += $1;
 						$self->{"stat_netuser_$sum_type"}{$net}{$id}{bytes} += $2;
-						$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += $3;
-						if ($6 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
+						$self->{"stat_netuser_$sum_type"}{$net}{$id}{duration} += abs($3);
+						if ($4 > $self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size}) {
 							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_size} = $4;
 							$self->{"stat_netuser_$sum_type"}{$net}{$id}{largest_file_url} = $5;
 						}
 					} else {
 						print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_netuser.dat\n";
 						print STDERR "$l\n";
-						unlink($self->{pidfile});
-						exit 0;
+						if ($error > $self->{MaxFormatError}) {
+							unlink($self->{pidfile});
+							exit 0;
+						}
+						$error++;
 					}
 					$i++;
 				}
@@ -2331,6 +2827,7 @@ sub _read_stat
 		my $dat_file_mime_type = new IO::File;
 		if ($dat_file_mime_type->open("$self->{Output}/$path/stat_mime_type.dat")) {
 			my $i = 1;
+			my $error = 0;
 			while (my $l = <$dat_file_mime_type>) {
 				chomp($l);
 				if ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+)//) {
@@ -2340,8 +2837,11 @@ sub _read_stat
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_mime_type.dat\n";
 					print STDERR "$l\n";
-					unlink($self->{pidfile});
-					exit 0;
+					if ($error > $self->{MaxFormatError}) {
+						unlink($self->{pidfile});
+						exit 0;
+					}
+					$error++;
 				}
 				$i++;
 			}
@@ -2404,7 +2904,7 @@ sub _print_header
 	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", CORE::localtime);
 	$sortpos ||= 2;
 	my $sorttable = '';
-	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);" if ($sortpos != 100);
+	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);";
 	print $$fileout qq{
 <html>
 <head>
@@ -2502,8 +3002,13 @@ sub buildHTML
 	my $old_day = 0;
 	my $p_month = 0;
 	my $p_year = 0;
-	if ($self->{history_time}) {
+	if ($self->{history_time} || $self->{sg_history_time}) {
 		my @ltime = CORE::localtime($self->{history_time});
+		if ($self->{is_squidguard_log}) {
+			@ltime = CORE::localtime($self->{sg_history_time});
+		} elsif ($self->{is_ufdbguard_log}) {
+			@ltime = CORE::localtime($self->{ug_history_time});
+		}
 		$old_year = $ltime[5]+1900;
 		$old_month = $ltime[4]+1;
 		$old_month = "0$old_month" if ($old_month < 10);
@@ -2511,7 +3016,13 @@ sub buildHTML
 		$old_day = "0$old_day" if ($old_day < 10);
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
-			@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
+				@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+			} elsif (!$self->{is_squidguard_log}) {
+				@ltime = CORE::localtime($self->{ug_history_time}-($self->{preserve}*2592000));
+			} else {
+				@ltime = CORE::localtime($self->{sg_history_time}-($self->{preserve}*2592000));
+			}
 			$p_year = $ltime[5]+1900;
 			$p_month = $ltime[4]+1;
 			$p_month = sprintf("%02d", $p_month);
@@ -2821,6 +3332,7 @@ sub _print_cache_stat
 
 	# Load code statistics
 	my %code_stat = ();
+	my %throughput_stat = ();
 	my %detail_code_stat = ();
 	my $infile = new IO::File;
 	if ($infile->open("$outdir/stat_code.dat")) {
@@ -2833,22 +3345,40 @@ sub _print_cache_stat
 			$hits =~ s/,$//;
 			$bytes =~ s/,$//;
 			my %hits_tmp = split(/[:,]/, $hits);
-			foreach my $tmp (sort {$a <=> $b} keys %hits_tmp) {
+			foreach my $tmp (keys %hits_tmp) {
 				$detail_code_stat{$code}{$tmp}{request} = $hits_tmp{$tmp};
 				$code_stat{$code}{request} += $hits_tmp{$tmp};
 			}
 			my %bytes_tmp = split(/[:,]/, $bytes);
-			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+			foreach my $tmp (keys %bytes_tmp) {
 				$detail_code_stat{$code}{$tmp}{bytes} = $bytes_tmp{$tmp};
 				$code_stat{$code}{bytes} += $bytes_tmp{$tmp};
+			}
+			if ($data =~ /thp_bytes_$type=([^;]+);thp_duration_$type=([^;]+)/) {
+				$bytes = $1 || '';
+				my $elapsed = $2 || '';
+				$bytes =~ s/,$//;
+				$elapsed =~ s/,$//;
+				my %bytes_tmp = split(/[:,]/, $bytes);
+				foreach my $tmp (keys %bytes_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{bytes} = $bytes_tmp{"$tmp"};
+					$throughput_stat{$code}{bytes} += $bytes_tmp{$tmp};
+				}
+				my %elapsed_tmp = split(/[:,]/, $elapsed);
+				foreach my $tmp (keys %elapsed_tmp) {
+					$detail_code_stat{throughput}{"$tmp"}{elapsed} = $elapsed_tmp{"$tmp"};
+					$throughput_stat{$code}{elapsed} += $elapsed_tmp{$tmp};
+				}
 			}
 		}
 		$infile->close();
 	}
-	my $total_request =  ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
-	my $total_bytes =  ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
-	my $total_all_request =  ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
-	my $total_all_bytes =  ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
+	my $total_request = ($code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_bytes = ($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
+	my $total_elapsed = ($throughput_stat{HIT}{elapsed} + $throughput_stat{MISS}{elapsed}) || 1;
+	my $total_throughput = int(($throughput_stat{HIT}{bytes} + $throughput_stat{MISS}{bytes}) / (($total_elapsed/1000) || 1));
+	my $total_all_request = ($code_stat{DENIED}{request} + $code_stat{MISS}{request} + $code_stat{HIT}{request}) || 1;
+	my $total_all_bytes = ($code_stat{DENIED}{bytes} + $code_stat{HIT}{bytes} + $code_stat{MISS}{bytes}) || 1;
 
 	if ($week && !-d "$outdir") {
 		return;
@@ -2869,11 +3399,12 @@ sub _print_cache_stat
 
 	my $total_cost = sprintf("%2.2f", int(($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes})/1000000) * $self->{CostPrice});
 	my $comma_bytes = $self->format_bytes($total_bytes);
+	my $comma_throughput = $self->format_bytes($total_throughput);
 	my $hit_bytes = $self->format_bytes($code_stat{HIT}{bytes});
 	my $miss_bytes = $self->format_bytes($code_stat{MISS}{bytes});
 	my $denied_bytes = $self->format_bytes($code_stat{DENIED}{bytes});
-	my $colspn = 5;
-	$colspn = 6 if ($self->{CostPrice});
+	my $colspn = 6;
+	$colspn = 7 if ($self->{CostPrice});
 
 	my $title = $Translate{'Hourly'} || 'Hourly';
 	my $unit = $Translate{'Hours'} || 'Hours';
@@ -2910,6 +3441,7 @@ sub _print_cache_stat
 	my @hit = ();
 	my @miss = ();
 	my @denied = ();
+	my @throughput = ();
 	my @total = ();
 	for (my $i = 0; $i <= $#xaxis; $i++) {
 		my $ddate = $xaxis[$i];
@@ -2932,10 +3464,17 @@ sub _print_cache_stat
 		} else {
 			push(@denied, "[ $xaxis[$i], 0 ]");
 		}
+		if (exists $detail_code_stat{throughput}{$ddate}{bytes}) {
+			$detail_code_stat{throughput}{$ddate}{elapsed} ||= 1;
+			push(@throughput, "[ $xaxis[$i], " . int($detail_code_stat{throughput}{$ddate}{bytes}/($detail_code_stat{throughput}{$ddate}{elapsed}/1000)) . " ]");
+		} else {
+			push(@throughput, "[ $xaxis[$i], 0 ]");
+		}
 		push(@total, "[ $xaxis[$i], $tot ]");
 		delete $detail_code_stat{HIT}{$ddate}{request};
 		delete $detail_code_stat{MISS}{$ddate}{request};
 		delete $detail_code_stat{DENIED}{$ddate}{request};
+		delete $detail_code_stat{throughput}{$ddate};
 	}
 
 	my $t1 = $Translate{'Graph_cache_hit_title'};
@@ -2991,6 +3530,14 @@ sub _print_cache_stat
 	@denied = ();
 	@total = ();
 
+	$t1 = $Translate{'Graph_throughput_title'};
+	$t1 =~ s/\%s/$title/;
+	$t1 = "$t1 $stat_date";
+	$ylabel = $Translate{'Bytes_graph'} || $Translate{'Bytes'};
+	my $throughput_bytes = $self->flotr2_bargraph(3, 'throughput_bytes', $type, $t1, $xlabel, $ylabel,
+				join(',', @throughput), $Translate{'Throughput_graph'});
+	@throughput = ();
+
 	print $out qq{
 <table class="stata">
 <tr>
@@ -3007,6 +3554,7 @@ sub _print_cache_stat
 <th>$Translate{'Denied'}</th>
 <th>$Translate{'Requests'}</th>
 <th>$Translate{$self->{TransfertUnit}}</th>
+<th>$Translate{'Throughput'}</th>
 <th>$Translate{'Users'}</th>
 <th>$Translate{'Sites'}</th>
 <th>$Translate{'Domains'}</th>
@@ -3020,6 +3568,8 @@ sub _print_cache_stat
 	my $percent_bhit = sprintf("%.2f", ($code_stat{HIT}{bytes}/$total_all_bytes)*100);
 	my $percent_bmiss = sprintf("%.2f", ($code_stat{MISS}{bytes}/$total_all_bytes)*100);
 	my $percent_bdenied = sprintf("%.2f", ($code_stat{DENIED}{bytes}/$total_all_bytes)*100);
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
 	print $out qq{
 </tr>
 <tr>
@@ -3031,6 +3581,7 @@ sub _print_cache_stat
 <td title="$percent_bdenied %">$denied_bytes</td>
 <td>$total_request</td>
 <td>$comma_bytes</td>
+<td>$comma_throughput $trfunit/s</td>
 <td>SA_NUSERS_SA</td>
 <td>SA_NURLS_SA</td>
 <td>SA_NDOMAINS_SA</td>
@@ -3042,7 +3593,31 @@ sub _print_cache_stat
 </tr>
 </table>
 
-<table class="graphs"><tr><td>$code_requests</td><td>$code_bytes</td></tr></table>
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #code_requests, #code_bytes {
+    display: table-cell;
+  }
+  #code_requests { z-index: 999; }
+</style>
+
+<table class="graphs">
+<tr><td>
+<div id="container">
+$code_requests
+</div>
+</td><td>
+<div id="container">
+$code_bytes
+</div>
+</td></tr>
+<tr><td colspan="2" align="center">$throughput_bytes</td></tr>
+</table>
 
 	<h4>$Translate{'Legend'}</h4>
 	<div class="line-separator"></div>
@@ -3119,6 +3694,7 @@ sub _print_mime_stat
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
+
 	# Print title and calendar view
 	print $out $self->_print_title($Translate{'Mime_title'}, $stat_date, $week);
 
@@ -3133,7 +3709,25 @@ sub _print_mime_stat
 	}
 	my $title = "$Translate{'Mime_graph_hits_title'} $stat_date";
 	my $mime_hits = $self->flotr2_piegraph(1, 'mime_hits', $title, $Translate{'Mime_graph'}, '', %data);
-	print $out qq{<table class="graphs"><tr><td>$mime_hits</td>};
+	print $out qq{
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #mime_hits, #mime_bytes {
+    display: table-cell;
+  }
+  #mime_hits { z-index: 999; }
+</style>
+<table class="graphs"><tr><td>
+<div id="container">
+$mime_hits
+</div>
+</td><td>
+};
 	$mime_hits = '';
 	%data = ();
 	$total_bytes ||= 1;
@@ -3147,7 +3741,12 @@ sub _print_mime_stat
 	$data{'others'} = int($data{'others'}/1000000);
 	$title = "$Translate{'Mime_graph_bytes_title'} $stat_date";
 	my $mime_bytes = $self->flotr2_piegraph(1, 'mime_bytes', $title, $Translate{'Mime_graph'}, '', %data);
-	print $out qq{<td>$mime_bytes</td></tr></table>};
+	print $out qq{
+<div id="container">
+$mime_bytes
+</div>
+</td></tr></table>
+};
 	$mime_bytes = '';
 	%data = ();
 
@@ -3244,8 +3843,10 @@ sub _print_network_stat
 			$data = $l;
 		}
 		$data =~ /^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
-
-		next if (!$self->check_inclusions('',$network));
+		if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$network}) {
+			next if (!$self->check_inclusions('', $network));
+			next if ($self->check_exclusions('', $network));
+		}
 
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
@@ -3318,6 +3919,7 @@ sub _print_network_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -3335,6 +3937,7 @@ sub _print_network_stat
 	if (!-d "$outdir/networks") {
 		mkdir("$outdir/networks", 0755) || return;
 	}
+	$total_duration = abs($total_duration);
 	foreach my $net (sort { $network_stat{$b}{"$self->{OrderNetwork}"} <=> $network_stat{$a}{"$self->{OrderNetwork}"} } keys %network_stat) {
 
 		my $h_percent = '0.0';
@@ -3343,12 +3946,15 @@ sub _print_network_stat
 		$b_percent = sprintf("%2.2f", ($network_stat{$net}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($network_stat{$net}{duration}/$total_duration) * 100) if ($total_duration);
-		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($network_stat{$net}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($network_stat{$net}{bytes} / (($network_stat{$net}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
 		my $show = $net;
 		if ($net =~ /^(\d+\.\d+\.\d+)/) {
 			$show = "$1.0";
 			foreach my $r (keys %{$self->{NetworkAlias}}) {
+
 				if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
 					if (&check_ip($net, $r)) {
 						$show = $self->{NetworkAlias}->{$r};
@@ -3367,6 +3973,7 @@ sub _print_network_stat
 <td>$network_stat{$net}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$network_stat{$net}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -3406,7 +4013,25 @@ sub _print_network_stat
 		my $network_hits = $self->flotr2_bargraph(1, 'network_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'} );
 		@hits = ();
-		print $outnet qq{<table class="graphs"><tr><td>$network_hits</td>};
+		print $outnet qq{
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #network_hits, #network_bytes {
+    display: table-cell;
+  }
+  #network_hits { z-index: 999; }
+</style>
+<table class="graphs"><tr><td>
+<div id="container">
+$network_hits
+</div>
+</td><td>
+};
 		$network_hits = '';
 
 		$t1 = $Translate{'Graph_cache_byte_title'};
@@ -3418,7 +4043,12 @@ sub _print_network_stat
 					join(',', @bytes), $Translate{'Bytes'} );
 		@bytes = ();
 
-		print $outnet qq{<td>$network_bytes</td></tr></table>};
+		print $outnet qq{
+<div id="container">
+$network_bytes
+</div>
+</td></tr></table>
+};
 		$network_bytes = '';
 		my $retuser = $self->_print_netuser_stat($outdir, \$outnet, $net);
 		my $comma_largest = $self->format_bytes($network_stat{$net}{largest_file});
@@ -3583,6 +4213,7 @@ sub _print_user_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -3598,6 +4229,7 @@ sub _print_user_stat
 		mkdir("$outdir/users", 0755) || return;
 	}
 
+	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $user_stat{$b}{"$self->{OrderUser}"} <=> $user_stat{$a}{"$self->{OrderUser}"} } keys %user_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($user_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
@@ -3605,8 +4237,10 @@ sub _print_user_stat
 		$b_percent = sprintf("%2.2f", ($user_stat{$usr}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($user_stat{$usr}{duration}/$total_duration) * 100) if ($total_duration);
-		$user_stat{$usr}{duration} = &parse_duration(int($user_stat{$usr}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($user_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($user_stat{$usr}{bytes} / (($user_stat{$usr}{duration}/1000) || 1));
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$user_stat{$usr}{duration} = &parse_duration(int($user_stat{$usr}{duration}/1000));
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
 			if ( $usr =~ /^$u$/i ) {
@@ -3632,6 +4266,7 @@ sub _print_user_stat
 <td>$user_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$user_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 	print $out qq{
 <td>$total_cost</td>
@@ -3676,7 +4311,25 @@ sub _print_user_stat
 		my $user_hits = $self->flotr2_bargraph(1, 'user_hits', $type, $t1, $xlabel, $ylabel,
 					join(',', @hits), $Translate{'Hit_graph'});
 		@hits = ();
-		print $outusr qq{<table class="graphs"><tr><td>$user_hits</td>};
+		print $outusr qq{
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #user_hits, #user_bytes {
+    display: table-cell;
+  }
+  #user_hits { z-index: 999; }
+</style>
+<table class="graphs"><tr><td>
+<div id="container">
+$user_hits
+</div>
+</td><td>
+};
 		$user_hits = '';
 
 		$t1 = $Translate{'Graph_cache_byte_title'};
@@ -3687,7 +4340,12 @@ sub _print_user_stat
 		my $user_bytes = $self->flotr2_bargraph(1, 'user_bytes', $type, $t1, $xlabel, $ylabel,
 					join(',', @bytes), $Translate{'Bytes'});
 		@bytes = ();
-		print $outusr qq{<td>$user_bytes</td></tr></table>};
+		print $outusr qq{
+<div id="container">
+$user_bytes
+</div>
+</td></tr></table>
+};
 		$user_bytes = '';
 
 		delete $user_stat{$usr};
@@ -3754,11 +4412,12 @@ sub _print_netuser_stat
 			$user = $self->{AnonymizedId}{$user};
 		}
 
-		$data =~ /^hits=(\d+);bytes=(\d+);duration=(\d+);largest_file_size=([^;]*);largest_file_url=(.*)/;
+		$data =~ /^hits=(\d+);bytes=(\d+);duration=([\-\d]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
 		$netuser_stat{$user}{hits} = $1;
 		$netuser_stat{$user}{bytes} = $2;
-		$netuser_stat{$user}{duration} = $3;
+		$netuser_stat{$user}{duration} = abs($3);
 		$netuser_stat{$user}{largest_file} = $4;
+
 		$total_hit += $1;
 		$total_bytes += $2;
 		$total_duration += $3;
@@ -3778,6 +4437,7 @@ sub _print_netuser_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
 };
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -3789,6 +4449,7 @@ sub _print_netuser_stat
 </thead>
 <tbody>
 };
+	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $netuser_stat{$b}{"$self->{OrderUser}"} <=> $netuser_stat{$a}{"$self->{OrderUser}"} } keys %netuser_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($netuser_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
@@ -3796,8 +4457,10 @@ sub _print_netuser_stat
 		$b_percent = sprintf("%2.2f", ($netuser_stat{$usr}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($netuser_stat{$usr}{duration}/$total_duration) * 100) if ($total_duration);
-		$netuser_stat{$usr}{duration} = &parse_duration(int($netuser_stat{$usr}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($netuser_stat{$usr}{bytes}/1000000) * $self->{CostPrice});
+		my $total_throughput = int($netuser_stat{$usr}{bytes} / (($netuser_stat{$usr}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$netuser_stat{$usr}{duration} = &parse_duration(int($netuser_stat{$usr}{duration}/1000));
 		my $show = $usr;
 		foreach my $u (keys %{$self->{UserAlias}}) {
 			if ( $usr =~ /^$u$/i ) {
@@ -3823,6 +4486,7 @@ sub _print_netuser_stat
 <td>$netuser_stat{$usr}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$netuser_stat{$usr}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
 };
 		print $$out qq{
 <td>$total_cost</td>
@@ -3868,15 +4532,15 @@ sub _print_user_detail
 			next if ($self->check_exclusions($user));
 		}
 
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = $3;
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
-			$url_stat{$url}{cache_hit} = $7;
-			$url_stat{$url}{cache_bytes} = $8;
+			$url_stat{$url}{cache_hit} += $7;
+			$url_stat{$url}{cache_bytes} += $8;
 			if ($self->check_exclusions('','',$url)) {
 				delete $url_stat{$url};
 				next;
@@ -3886,11 +4550,15 @@ sub _print_user_detail
 			$total_duration += $url_stat{$url}{duration} || 0;
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+			if ($data =~ /;arr_last=(.*)/) {
+				push(@{$url_stat{$url}{arr_last}}, split(/,/, $1));
+				map { $_ = ucfirst(strftime("%b %d %T", CORE::localtime($_))); } @{$url_stat{$url}{arr_last}};
+			}
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			my $url = $6;
-			$url_stat{$6}{hits} = $1;
-			$url_stat{$6}{bytes} = $2;
-			$url_stat{$6}{duration} = $3;
+			$url_stat{$6}{hits} += $1;
+			$url_stat{$6}{bytes} += $2;
+			$url_stat{$6}{duration} += abs($3);
 			$url_stat{$6}{firsthit} = $4 if (!$url_stat{$6}{firsthit} || ($4 < $url_stat{$6}{firsthit}));
 			$url_stat{$6}{lasthit} = $5 if (!$url_stat{$6}{lasthit} || ($5 > $url_stat{$6}{lasthit}));
 			if ($self->{rebuild}) {
@@ -3903,11 +4571,11 @@ sub _print_user_detail
 			$total_bytes += $url_stat{$url}{bytes} || 0;
 			$total_duration += $url_stat{$url}{duration} || 0;
 
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
 			my $url = $4;
-			$url_stat{$4}{hits} = $1;
-			$url_stat{$4}{bytes} = $2;
-			$url_stat{$4}{duration} = $3;
+			$url_stat{$4}{hits} += $1;
+			$url_stat{$4}{bytes} += $2;
+			$url_stat{$4}{duration} = abs($3);
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
 					delete $url_stat{$url};
@@ -3931,10 +4599,11 @@ sub _print_user_detail
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $$out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -3945,6 +4614,7 @@ sub _print_user_detail
 <tbody>
 };
 
+	$total_duration = abs($total_duration);
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($url_stat{$url}{hits}/$total_hit) * 100) if ($total_hit);
@@ -3952,9 +4622,11 @@ sub _print_user_detail
 		$b_percent = sprintf("%2.2f", ($url_stat{$url}{bytes}/$total_bytes) * 100) if ($total_bytes);
 		my $d_percent = '0.0';
 		$d_percent = sprintf("%2.2f", ($url_stat{$url}{duration}/$total_duration) * 100) if ($total_duration);
-		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $total_cost = sprintf("%2.2f", int($url_stat{$url}{bytes}/1000000) * $self->{CostPrice});
 		my $comma_bytes = $self->format_bytes($url_stat{$url}{bytes});
+		my $total_throughput = int($url_stat{$url}{bytes} / (($url_stat{$url}{duration}/1000) || 1) );
+		my $comma_throughput = $self->format_bytes($total_throughput);
+		$url_stat{$url}{duration} = &parse_duration(int($url_stat{$url}{duration}/1000));
 		my $firsthit = '-';
 		if ($url_stat{$url}{firsthit}) {
 			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$url}{firsthit})));
@@ -3975,16 +4647,27 @@ sub _print_user_detail
 				$firsthit = '-';
 			}
 		}
+		if (exists $url_stat{$url}{arr_last}) {
+			$lasthit = qq{
+<div class="tooltipLink"><span class="information">$lasthit</span><div class="tooltip">
+<table><tr><th>$Translate{'Last_visit'}</th></tr>
+};
+			foreach my $tm (reverse @{$url_stat{$url}{arr_last}}) {
+				$lasthit .= "<tr><td>$tm</td></tr>\n";
+			}
+			$lasthit .= "</table>\n</div></div>\n";
+		}
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
 <td>$url_stat{$url}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
+<td>$lasthit</td>
 };
 		print $$out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
 		print $$out qq{
 <td>$total_cost</td>
@@ -4052,15 +4735,15 @@ sub _print_top_url_stat
 			$user = '-';
 		}
 
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = $3;
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
-			$url_stat{$url}{cache_hit} = $7;
-			$url_stat{$url}{cache_bytes} = $8;
+			$url_stat{$url}{cache_hit} += $7;
+			$url_stat{$url}{cache_bytes} += $8;
 	
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
@@ -4073,11 +4756,11 @@ sub _print_top_url_stat
 			$total_duration += $url_stat{$url}{duration} || 0;
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			my $url = $6;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = $3;
+			$url_stat{$url}{hits} += $1;
+			$url_stat{$url}{bytes} += $2;
+			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
 			$url_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
@@ -4090,11 +4773,11 @@ sub _print_top_url_stat
 			$total_hits += $url_stat{$url}{hits} || 0;
 			$total_bytes += $url_stat{$url}{bytes} || 0;
 			$total_duration += $url_stat{$url}{duration} || 0;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
 			my $url = $4;
 			$url_stat{$url}{hits} = $1;
 			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = $3;
+			$url_stat{$url}{duration} = abs($3);
 			$url_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
@@ -4128,7 +4811,7 @@ sub _print_top_url_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Url_number'}: $nurl</h3>\n";
 	for my $tpe ('Hits', 'Bytes', 'Duration') {
 		my $t1 = $Translate{"Url_${tpe}_title"};
@@ -4146,10 +4829,11 @@ sub _print_top_url_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4159,6 +4843,7 @@ sub _print_top_url_stat
 </thead>
 <tbody>
 };
+		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $url_stat{$b}{"\L$tpe\E"} <=> $url_stat{$a}{"\L$tpe\E"} } keys %url_stat) {
 			my $h_percent = '0.0';
@@ -4170,6 +4855,8 @@ sub _print_top_url_stat
 			my $total_cost = sprintf("%2.2f", int($url_stat{$u}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($url_stat{$u}{duration}/1000));
 			my $comma_bytes = $self->format_bytes($url_stat{$u}{bytes});
+			my $total_throughput = int($url_stat{$u}{bytes} / (($url_stat{$u}{duration}/1000) || 1));
+			my $comma_throughput = $self->format_bytes($total_throughput);
 			my $firsthit = '-';
 			if ($url_stat{$u}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($url_stat{$u}{firsthit})));
@@ -4211,10 +4898,11 @@ sub _print_top_url_stat
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</span></td>
+<td>$lasthit</td>
 };
 	print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
 	print $out qq{
 <td>$total_cost</td>
@@ -4266,6 +4954,7 @@ sub _print_top_denied_stat
 	$infile->open("$outdir/stat_denied_url.dat") || return;
 	my %denied_stat = ();
 	my $total_hits = 0;
+	my $total_acl = 0;
 	while (my $l = <$infile>) {
 		chomp($l);
 		my ($user, $data) = split(/\s/, $l);
@@ -4287,7 +4976,7 @@ sub _print_top_denied_stat
 			$user = '-';
 		}
 
-		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)/) {
 			if ($self->{rebuild}) {
 				next if ($self->check_exclusions('','',$4));
 			}
@@ -4296,6 +4985,14 @@ sub _print_top_denied_stat
 			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
 			$total_hits += $1;
 			$denied_stat{$4}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+			if ($5) {
+				my %tmp = split(/,/, $5);
+				foreach my $k (keys %tmp) {
+					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
+					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+					$total_acl += $tmp{$k};
+				}
+			}
 		}
 	}
 	$infile->close();
@@ -4316,8 +5013,29 @@ sub _print_top_denied_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Url_number'}: $ndenied</h3>\n";
+
+	my %data_acl = ();
+	$total_acl ||= 1;
+	foreach my $u (sort { $denied_stat{$b}{hits} <=> $denied_stat{$a}{hits} } keys %denied_stat) {
+		next if (!exists $denied_stat{$u}{blacklist});
+		foreach my $k (sort keys %{$denied_stat{$u}{blacklist}}) {
+			$data_acl{$k} += $denied_stat{$u}{blacklist}{$k};
+		}
+	}
+	foreach my $k (keys %data_acl) {
+		if (($data_acl{$k}/$total_acl)*100 < $self->{MinPie}) {
+			$data_acl{'others'} += $data_acl{$k};
+			delete $data_acl{$k};
+		}
+	} 
+	if (scalar keys %data_acl) {
+		print $out $self->_print_title($Translate{"Blocklist_acl_title"}, $stat_date, $week);
+		my $squidguard_acl = $self->flotr2_piegraph(1, 'squidguard_acl', $Translate{"Blocklist_acl_title"}, $Translate{'Blocklist_acl_graph'}, '', %data_acl);
+		print $out qq{<table class="graphs"><tr><td>$squidguard_acl</td></tr></table>};
+	}
+
 	my $t1 = $Translate{"Url_Hits_title"};
 	$t1 =~ s/\%d/$self->{TopNumber}/;
 	print $out $self->_print_title($t1, $stat_date, $week);
@@ -4327,11 +5045,12 @@ sub _print_top_denied_stat
 <tr>
 <th>$Translate{'Url'}</th>
 <th>$Translate{'Requests'} (%)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
+	print $out qq{<th>Blocklist ACLs</th>};
 	print $out qq{
 </tr>
 </thead>
@@ -4381,12 +5100,20 @@ sub _print_top_denied_stat
 		print $out qq{
 </td>
 <td>$denied_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$lasthit</td>
 };
 		print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
 } if ($type eq 'hour');
+		my $bl = '-';
+		if (exists $denied_stat{$u}{blacklist}) {
+			$bl = '';
+			foreach my $k (sort keys %{$denied_stat{$u}{blacklist}}) {
+				$bl .=  $k . '=' . $denied_stat{$u}{blacklist}{$k} . ' ';
+			}
+		}
 		print $out qq{
+	<td>$bl</td>
 </tr>};
 		$i++;
 		last if ($i > $self->{TopNumber});
@@ -4458,27 +5185,27 @@ sub _print_top_domain_stat
 			next if ($self->check_exclusions($user));
 		}
 
-		if ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
+		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url = lc($6);
 			$hits = $1;
 			$bytes = $2;
-			$duration = $3;
+			$duration = abs($3);
 			$first = $4;
 			$last = $5;
 			$cache_hit = $7;
 			$cache_bytes= $8;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);first=([^;]*);last=([^;]*);url=(.*)/) {
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			$url = lc($6);
 			$hits = $1;
 			$bytes = $2;
-			$duration = $3;
+			$duration = abs($3);
 			$first = $4;
 			$last = $5;
-		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=(\d+);url=(.*)/) {
+		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
 			$url = $4;
 			$hits = $1;
 			$bytes = $2;
-			$duration = $3;
+			$duration = abs($3);
 		}
 
 		if ($self->{rebuild}) {
@@ -4522,7 +5249,7 @@ sub _print_top_domain_stat
 			$perdomain{'others'}{bytes} += $bytes;
 			$domain_stat{'unknown'}{hits} += $hits;
 			$domain_stat{'unknown'}{bytes} += $bytes;
-			$domain_stat{'unknown'}{duration} = $duration;
+			$domain_stat{'unknown'}{duration} += $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
 			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
@@ -4558,7 +5285,7 @@ sub _print_top_domain_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	$self->_print_header(\$out, $self->{menu}, $cal, 100);
+	$self->_print_header(\$out, $self->{menu}, $cal, $sortpos);
 	print $out "<h3>$Translate{'Domain_number'}: $ndom</h3>\n";
 
 	$total_hits ||= 1;
@@ -4591,7 +5318,29 @@ sub _print_top_domain_stat
 			}
 			my $title2 = "$Translate{'Second_domain_graph_hits_title'} $stat_date";
 			my $domain2_hits = $self->flotr2_piegraph(1, 'second_domain_hits', $title2, $Translate{'Domains_graph'}, '', %data);
-			print $out qq{<table class="graphs"><tr><td>$domain_hits</td><td>$domain2_hits</td></tr>};
+			print $out qq{
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #domain_hits, #second_domain_hits {
+    display: table-cell;
+  }
+  #domain_hits { z-index: 999; }
+</style>
+<table class="graphs"><tr><td>
+<div id="container">
+$domain_hits
+</div>
+</td><td>
+<div id="container">
+$domain2_hits
+</div>
+</td></tr>
+};
 			$domain_hits = '';
 			$domain2_hits = '';
 			%data = ();
@@ -4614,7 +5363,27 @@ sub _print_top_domain_stat
 			}
 			$title2 = "$Translate{'Second_domain_graph_bytes_title'} $stat_date";
 			my $domain2_bytes = $self->flotr2_piegraph(1, 'second_domain_bytes', $title2, $Translate{'Domains_graph'}, '', %data);
-			print $out qq{<tr><td>$domain_bytes</td><td>$domain2_bytes</td></tr></table>};
+			print $out qq{<tr><td>
+<style>
+  #container {
+    display: table;
+  }
+  #row  {
+    display: table-row;
+  }
+  #domain_bytes, #second_domain_bytes {
+    display: table-cell;
+  }
+  #domain_bytes { z-index: 999; }
+</style>
+<div id="container">
+$domain_bytes
+</div>
+</td><td>
+<div id="container">
+$domain2_bytes
+</div>
+</td></tr></table>};
 			$domain_bytes = '';
 			$domain2_bytes = '';
 			%data = ();
@@ -4629,10 +5398,11 @@ sub _print_top_domain_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
 <th>$Translate{'First_visit'}</th>
-<th>$Translate{'Last_visit'}</th>
 } if ($type eq 'hour');
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4642,6 +5412,7 @@ sub _print_top_domain_stat
 </thead>
 <tbody>
 };
+		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
 			my $h_percent = '0.0';
@@ -4653,6 +5424,8 @@ sub _print_top_domain_stat
 			my $total_cost = sprintf("%2.2f", int($domain_stat{$u}{bytes}/1000000) * $self->{CostPrice});
 			my $duration = &parse_duration(int($domain_stat{$u}{duration}/1000));
 			my $comma_bytes = $self->format_bytes($domain_stat{$u}{bytes});
+			my $total_throughput = int($domain_stat{$u}{bytes} / (($domain_stat{$u}{duration}/1000) || 1));
+			my $comma_throughput = $self->format_bytes($total_throughput);
 			my $firsthit = '-';
 			if ($domain_stat{$u}{firsthit}) {
 				$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($domain_stat{$u}{firsthit})));
@@ -4697,11 +5470,12 @@ sub _print_top_domain_stat
 <td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$comma_throughput</td>
+<td>$lasthit</td>
 };
 	print $out qq{
 <td>$firsthit</td>
-<td>$lasthit</td>
-}  if ($type eq 'hour');
+} if ($type eq 'hour');
 	print $out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
@@ -4736,8 +5510,11 @@ sub _gen_summary
         closedir DIR;
 
 	my %code_stat = ();
+	my %throughput_stat = ();
 	my %total_request =  ();
 	my %total_bytes = ();
+	my %total_elapsed = ();
+	my %total_throughput = ();
 	foreach my $d (@dirs) {
 		# Load code statistics
 		my $infile = new IO::File;
@@ -4745,7 +5522,7 @@ sub _gen_summary
 		while (my $l = <$infile>) {
 			chomp($l);
 			my ($code, $data) = split(/\s/, $l);
-			$data =~ /hits_month=([^;]+);bytes_month=(.*)/;
+			$data =~ /hits_month=([^;]+);bytes_month=([^;]+)/;
 			my $hits = $1 || '';
 			my $bytes = $2 || '';
 			$hits =~ s/,$//;
@@ -4758,18 +5535,34 @@ sub _gen_summary
 			foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
 				$code_stat{$d}{$code}{bytes} += $bytes_tmp{$tmp};
 			}
+			if ($data =~ /thp_bytes_month=([^;]+);thp_duration_month=([^;]+)/) {
+				$bytes = $1 || '';
+				my $elapsed = $2 || '';
+				$elapsed =~ s/,$//;
+				my %bytes_tmp = split(/[:,]/, $bytes);
+				foreach my $tmp (sort {$a <=> $b} keys %bytes_tmp) {
+					$throughput_stat{$d}{$code}{bytes} += $bytes_tmp{$tmp};
+				}
+				my %elapsed_tmp = split(/[:,]/, $elapsed);
+				foreach my $tmp (sort {$a <=> $b} keys %elapsed_tmp) {
+					$throughput_stat{$d}{$code}{elapsed} += $elapsed_tmp{$tmp};
+				}
+			}
 		}
 		$infile->close();
 		$total_request{$d} =  $code_stat{$d}{HIT}{request} + $code_stat{$d}{MISS}{request};
 		$total_bytes{$d} = $code_stat{$d}{HIT}{bytes} + $code_stat{$d}{MISS}{bytes};
+		$total_bytes{$d} = $code_stat{$d}{HIT}{bytes} + $code_stat{$d}{MISS}{bytes};
+		$total_throughput{$d} = $throughput_stat{$d}{HIT}{bytes} + $throughput_stat{$d}{MISS}{bytes};
+		$total_elapsed{$d} = $code_stat{$d}{HIT}{elapsed} + $code_stat{$d}{MISS}{elapsed};
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
 	$self->_print_header(\$out);
-	my $colspn = 2;
-	$colspn = 3 if ($self->{CostPrice});
+	my $colspn = 3;
+	$colspn = 4 if ($self->{CostPrice});
 	print $out qq{
     <h4>$Translate{'Globals_Statistics'}</h4>
     <div class="line-separator"></div>
@@ -4788,9 +5581,10 @@ sub _gen_summary
 	<th scope="col">$Translate{'Denied'}</th>
 	<th scope="col">$Translate{'Hit'}</th>
 	<th scope="col">$Translate{'Miss'}</th>
-	<th scope="col">$Translate{'Requests'}</th>
 	<th scope="col">$Translate{'Denied'}</th>
+	<th scope="col">$Translate{'Requests'}</th>
 	<th scope="col">$Translate{$self->{TransfertUnit}}</th>
+	<th scope="col">$Translate{'Throughput'}</th>
 };
 	print $out qq{
 	<th scope="col">$Translate{'Cost'} $self->{Currency}</th>
@@ -4806,6 +5600,11 @@ sub _gen_summary
 		my $miss_bytes = $self->format_bytes($code_stat{$year}{MISS}{bytes});
 		my $denied_bytes = $self->format_bytes($code_stat{$year}{DENIED}{bytes});
 		my $total_cost = sprintf("%2.2f", int($total_bytes{$year}/1000000) * $self->{CostPrice});
+		my $subtotal = ($throughput_stat{$year}{MISS}{elapsed}+$throughput_stat{$year}{HIT}{elapsed}) || 1;
+		my $total_throughputs = int($total_throughput{$year}/(($subtotal/1000) || 1));
+		my $comma_throughput = $self->format_bytes($total_throughputs);
+		my $trfunit = $self->{TransfertUnit} || 'B';
+		$trfunit = 'B' if ($trfunit eq 'BYTE');
 		print $out qq{
 	<tr>
 	<td><a href="$year/index.html">$Translate{'Stat_label'} $year *</a></td>
@@ -4817,6 +5616,7 @@ sub _gen_summary
 	<td>$denied_bytes</td>
 	<td>$total_request{$year}</td>
 	<td>$comma_bytes</td>
+	<td>$comma_throughput $trfunit/s</td>
 };
 		print $out qq{<td>$total_cost</td>} if ($self->{CostPrice});
 		print $out qq{</tr>};
@@ -4852,8 +5652,8 @@ sub parse_config
 	while (my $l = <CONF>) {
 		chomp($l);
 		$l =~ s/\r//;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
-		my ($key, $val) = split(/[\s\t]+/, $l, 2);
+		next if (!$l || ($l =~ /^\s*#/));
+		my ($key, $val) = split(/\s+/, $l, 2);
 		if ($key ne 'LogFile') {
 			$opt{$key} = $val;
 		} else {
@@ -4890,6 +5690,10 @@ sub parse_config
 		$self->localdie("ERROR: unknown image format. See option: ImgFormat\n");
 	}
 
+	if ($opt{TimeZone} && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
+		$self->localdie("ERROR: timezone format: +/-HH, ex: +01. See option: TimeZone\n");
+	}
+
 	return %opt;
 }
 
@@ -4905,11 +5709,11 @@ sub parse_network_aliases
 	while (my $l = <ALIAS>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
-		$l =~ s/[\s\t]*#.*//;
+		next if (!$l || ($l =~ /^\s*#/));
+		$l =~ s/\s*#.*//;
 		my @data = split(/\t+/, $l, 2);
 		if ($#data == 1) {
-			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			my @rg = split(/(?<!\{\d)[\s,;](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
 				# If this is not a cidr notation
@@ -4939,11 +5743,11 @@ sub parse_user_aliases
 	while (my $l = <ALIAS>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		my @data = split(/\t+/, $l, 2);
 		$data[0] =~ s/\s+/_SPC_/g; # Replace space, they are not allowed
 		if ($#data == 1) {
-			my @rg = split(/(?<!\{\d)[\s,;\t](?!\d+\})/, $data[1]);
+			my @rg = split(/(?<!\{\d)[\s,;](?!\d+\})/, $data[1]);
 			foreach my $r (@rg) {
 				$r =~ s/^\^//;
 				$r =~ s/([^\\])\$$/$1/;
@@ -4971,12 +5775,12 @@ sub parse_exclusion
 	while (my $l = <EXCLUDED>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		# remove comments at end of line
-		$l =~ s/[\s\t]*#.*//;
-		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)[\s\t]+(.*)#) {
+		$l =~ s/\s*#.*//;
+		if ($l =~ m#^(USER|CLIENT|URI|NETWORK)\s+(.*)#) {
 			my $lbl = lc($1) . 's';
-			my @rg =  split(m#[\s\t]+#, $2);
+			my @rg =  split(m#\s+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
 				$self->check_regex($r, "$file at line $i");
@@ -4984,7 +5788,7 @@ sub parse_exclusion
 			push(@{$exclusion{$lbl}}, @rg);
 		} else {
 			# backward compatibility is not more supported
-			$self->localdie("ERROR: wrong line format in file $file at line $i\n");
+			$self->localdie("ERROR: wrong line format in file $file at line $i => $l\n");
 		}
 	}
 	close(EXCLUDED);
@@ -5004,12 +5808,12 @@ sub parse_inclusion
 	while (my $l = <INCLUDED>) {
 		chomp($l);
 		$i++;
-		next if (!$l || ($l =~ /^[\s\t]*#/));
+		next if (!$l || ($l =~ /^\s*#/));
 		# remove comments at end of line
-		$l =~ s/[\s\t]*#.*//;
-		if ($l =~ m#^(USER|CLIENT|NETWORK)[\s\t]+(.*)#) {
+		$l =~ s/\s*#.*//;
+		if ($l =~ m#^(USER|CLIENT|NETWORK)\s+(.*)#) {
 			my $lbl = lc($1) . 's';
-			my @rg =  split(m#[\s\t]+#, $2);
+			my @rg =  split(m#\s+#, $2);
 			foreach my $r (@rg) {
 				next if ($lbl eq 'networks');
 				$self->check_regex($r, "$file at line $i");
@@ -5138,13 +5942,13 @@ sub _get_calendar
 		}
 		my $path = $outdir;
 		$path =~ s/(\/\d{4})\/\d{2}.*/$1/;
-		my $prefix = $self->{WebUrl};
-		$prefix = '' if ($self->{WebUrl} eq '/');
+		my $prefix = $self->{WebUrl} || '';
+		$prefix .= '/' if ( $self->{WebUrl} && ($self->{WebUrl} !~ m#\/$#) );
 		foreach my $w (sort { $a <=> $b } keys %weeks_num) {
 			my $ww = sprintf("%02d", $w+1);
 			my $week = "<tr><th>$ww</th>";
 			if (-d "$path/week$ww") {
-				$week = "<tr><th><a href=\"$prefix/$year/week$ww\">$ww</a></th>";
+				$week = "<tr><th><a href=\"$prefix$year/week$ww\">$ww</a></th>";
 			}
 			$para .= $week . join('', @{$weeks_num{$w}}) . "</tr>\n";
 		}
@@ -5445,6 +6249,15 @@ sub check_regex
 sub check_ip
 {
 	my ($ip, $block) = @_;
+
+	# When $client_ip is not an ip address proceed to regex search
+	if ($ip !~ /^\d+\.\d+\.\d+\.\d+$/) {
+		if ( $ip =~ /$block/) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
 
 	my @ip = split(/\./, $ip);
 	my $ip1 = $ip[0] * 2**24 + $ip[1] * 2**16 + $ip[2] * 2**8 + $ip[3];

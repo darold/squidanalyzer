@@ -50,7 +50,7 @@ INSTALLATION
                     CONFDIR=/etc \
                     HTMLDIR=/var/www/squidreport \
                     BASEURL=/squidreport \
-                    MANDIR=/usr/man/man3 \
+                    MANDIR=/usr/share/man/man3 \
                     DOCDIR=/usr/share/doc/squidanalyzer
 
     If you want to build a distro package, there are two other options that
@@ -125,7 +125,7 @@ USAGE
                                          By default: /etc/squidanalyzer.conf
             -b | --build_date date     : set the day to be rebuilt, format: yyyy-mm-dd,
                                          yyyy-mm or yyyy. Used with -r or --rebuild.
-            -d | --debug               : show debug informations.
+            -d | --debug               : show debug information.
             -h | --help                : show this message and exit.
             -l | --logfile filename    : path to the Squid logfile to parse.
                                          By default: /var/log/squid/access.log
@@ -160,7 +160,7 @@ AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
 COPYRIGHT
-    Copyright (c) 2001-2015 Gilles DAROLD
+    Copyright (c) 2001-2016 Gilles DAROLD
 
     This package is free software and published under the GPL v3 or above
     license.

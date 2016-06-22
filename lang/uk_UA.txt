@@ -112,3 +112,7 @@ Count				Кількість
 WeekDay				Нд Пн Вт Ср Чт Пт Сб
 Week				Тиждень
 Top_denied_link			Top Denied
+Blocklist_acl_title		Blocklist ACL use
+Throughput			Throughput
+Graph_throughput_title		%s throughput on
+Throughput_graph		Bytes/sec

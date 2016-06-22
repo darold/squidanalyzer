@@ -5,7 +5,8 @@ DESCRIPTION
     SquidAnalyzer parse native access log format of the Squid proxy and
     generate general statistics about hits, bytes, users, networks, top url,
     top second level domain and denied URLs. Common and combined log format
-    are also supported.
+    are also supported. SquidGuard logs can also be parsed and ACL's
+    redirection reported into denied URLs report.
 
     Statistic reports are oriented to user and bandwidth control, this is
     not a pure cache statistics generator. SquidAnalyzer use flat files to
@@ -63,7 +64,7 @@ INSTALLATION
                     CONFDIR=/etc \
                     HTMLDIR=/var/www/squidreport \
                     BASEURL=/squidreport \
-                    MANDIR=/usr/man/man3 \
+                    MANDIR=/usr/share/man/man3 \
                     DOCDIR=/usr/share/doc/squidanalyzer
 
     If you want to build a distro package, there are two other options that
@@ -156,7 +157,7 @@ USAGE
                                      By default: /etc/squidanalyzer/squidanalyzer.conf
         -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
                                      or yyyy-mm or yyyy. Used with -r or --rebuild.
-        -d | --debug               : show debug informations.
+        -d | --debug               : show debug information.
         -h | --help                : show this message and exit.
         -j | --jobs number         : number of jobs to run at same time. Default is 1,
                                      run as single process.
@@ -166,6 +167,10 @@ USAGE
                                      Default /tmp/
         -r | --rebuild             : use this option to rebuild all html and graphs
                                      output from all data files.
+        -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+                                     Use this to adjust date/time of SquidAnalyzer
+                                     output when it is run on a different timezone
+                                     than the squid server.
         -v | version               : show version and exit.
         --no-year-stat             : disable years statistics, reports will start
                                      from month level only.
@@ -190,6 +195,15 @@ USAGE
 
     will only preserve six month of statistics from the last run of
     squidanalyzer.
+
+    If you have a SquidGuard log you can add it to the list of file to be
+    parsed, either in the LogFile configuration directive log list, either
+    at command line:
+
+            squid-analyzer /var/log/squid3/access.log /var/log/squid/SquidGuard.log
+
+    SquidAnalyzer will automatically detect the log format and report
+    SquidGuard ACL's redirection to the Denied Urls report.
 
 MULTIPROCESS
     If you have huges squid access.log you will be interested by using
@@ -255,7 +269,8 @@ CONFIGURATION
         Set the path to the Squid log file. This can be a comma separated
         list of files to process several files at the same time. If the
         files comes from differents Squid servers, they will be merges in a
-        single reports.
+        single reports. You can also add to the list a SquidGuard log file,
+        SquidAnalyzer will automatically detect the format.
 
     UseClientDNSName 0
         If you want to use DNS name instead of client Ip address as username
@@ -343,13 +358,13 @@ CONFIGURATION
         Default is 0, verbose mode.
 
     CostPrice price/Mb
-        Used to set a cost of the bandwith per Mb. If you want to generate
-        invoice per Mb for bandwith traffic this can help you. Value 0 mean
+        Used to set a cost of the bandwidth per Mb. If you want to generate
+        invoice per Mb for bandwidth traffic this can help you. Value 0 mean
         no cost, this is the default value, the "Cost" column is not
         displayed
 
     Currency currency_abreviation
-        Used to set the currency of the bandwith cost. Preferably the html
+        Used to set the currency of the bandwidth cost. Preferably the html
         special character. Default is &euro;
 
     TopNumber number
@@ -369,7 +384,7 @@ CONFIGURATION
         You can also use the NETWORK type to define network address with
         netmask using the CIDR notation: xxx.xxx.xxx.xxx/n
 
-        See example bellow:
+        See example below:
 
                 NETWORK        192.168.1.0/24 10.10.0.0/16
                 CLIENT         192\.168\.1\.2 
@@ -393,7 +408,7 @@ CONFIGURATION
         You can also use the NETWORK type to define network address with
         netmask using the CIDR notation: xxx.xxx.xxx.xxx/n
 
-        See example bellow:
+        See example below:
 
                 NETWORK        192.168.1.0/24 10.10.0.0/16
                 CLIENT         192\.168\.1\.2 
@@ -440,7 +455,7 @@ CONFIGURATION
         report peer cache hit onto your stats.
 
     TransfertUnit
-        Allow to change the default unit used to display transfert size.
+        Allow one to change the default unit used to display transfert size.
         Default is BYTES, other possible values are KB, MB and GB.
 
     MinPie
@@ -456,9 +471,27 @@ CONFIGURATION
 
         with a Locale set to fr_FR.
 
+    MaxFormatError
+        When SquidAnalyzer find a corrupted line in his data file, it exit
+        immedialtly. You can force him to wait for a certain amount of
+        errors before exiting. Of course you might want to remove the
+        corrupted line before the next run. This can be useful if you have
+        special characters in some fields like mime type.
+
+    TimeZone
+        Set timezone to use when SquidAnalyzer is used in a different server
+        than the one running squid and there is a different timezone between
+        these two machines. The value must follow format: +/-HH. Default is
+        to use local time. For example:
+
+                TimeZone        +01
+
+        for a log file generated on zone Europe/Paris with UTC+0100 and
+        parsed on a computer with different timezone.
+
 SUPPORT
-  Release annoucement
-    Please follow us on twitter to receive release annoucement and latest
+  Release announcement
+    Please follow us on twitter to receive release announcement and latest
     news : https://twitter.com/SquidAnalyzer
 
   Bugs and Feature requests
@@ -470,7 +503,7 @@ SUPPORT
     send me your ideas, features request or patches using the tools on the
     git repository at https://github.com/darold/squidanalyzer
 
-    You can also support the developper by donate some contribution by
+    You can also support the developer by donate some contribution by
     clicking on the "Donate" button on the SquidAnalyzer web site at
     http://squidanalyzer.darold.net/
 
@@ -478,7 +511,7 @@ AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
 COPYRIGHT
-    Copyright (c) 2001-2015 Gilles DAROLD
+    Copyright (c) 2001-2016 Gilles DAROLD
 
     This package is free software and published under the GPL v3 or above
     license.
