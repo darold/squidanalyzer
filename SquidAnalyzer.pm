@@ -3910,6 +3910,9 @@ sub _print_network_stat
 		$unit = $Translate{'Months'} || 'Months';
 	}
 
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 	print $out "<h3>$Translate{'Network_number'}: $nnet</h3>\n";
 	print $out qq{
 <table class="sortable stata">
@@ -3919,7 +3922,7 @@ sub _print_network_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4205,6 +4208,9 @@ sub _print_user_stat
 
 	print $out "<h3>$Translate{'User_number'}: $nuser</h3>\n";
 
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 	print $out qq{
 <table class="sortable stata" >
 <thead>
@@ -4213,7 +4219,7 @@ sub _print_user_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 };
 	print $out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4426,6 +4432,9 @@ sub _print_netuser_stat
 	$infile->close();
 	my $nuser = scalar keys %netuser_stat;
 
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 	print $$out qq{
 <h3>$Translate{'User_number'}: $nuser</h3>
 };
@@ -4437,7 +4446,7 @@ sub _print_netuser_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 };
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
@@ -4589,6 +4598,9 @@ sub _print_user_detail
 	}
 	$infile->close();
 
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 	my $nurl = scalar keys %url_stat;
 	print $$out qq{
 <h3>$Translate{'Url_number'}: $nurl</h3>
@@ -4599,7 +4611,7 @@ sub _print_user_detail
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 <th>$Translate{'Last_visit'}</th>
 };
 	print $$out qq{
@@ -4808,6 +4820,9 @@ sub _print_top_url_stat
 	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
 	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
+	my $trfunit = $self->{TransfertUnit} || 'B';
+	$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
@@ -4829,7 +4844,7 @@ sub _print_top_url_stat
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 <th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
@@ -5390,6 +5405,10 @@ $domain2_bytes
 		} else {
 			print $out "<h4>$t1 $stat_date</h4><div class=\"line-separator\"></div>\n";
 		}
+
+		my $trfunit = $self->{TransfertUnit} || 'B';
+		$trfunit = 'B' if ($trfunit eq 'BYTE');
+
 		print $out qq{
 <table class="sortable stata">
 <thead>
@@ -5398,7 +5417,7 @@ $domain2_bytes
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
-<th>$Translate{'Throughput'} (B/s)</th>
+<th>$Translate{'Throughput'} ($trfunit/s)</th>
 <th>$Translate{'Last_visit'}</th>
 };
 	print $out qq{
