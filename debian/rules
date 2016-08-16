@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with apache2
+
+override_dh_auto_configure:
+	perl Makefile.PL \
+		LOGFILE=/var/log/squid3/access.log \
+		BINDIR=/usr/bin \
+		CONFDIR=/etc/squidanalyzer \
+		HTMLDIR=/var/lib/squidanalyzer \
+		BASEURL=/squidreport \
+		MANDIR=/usr/share/man/man3 \
+		DOCDIR=/usr/share/doc/squidanalyzer \
+		DESTDIR=$(CURDIR)/debian/squidanalyzer

@@ -1,0 +1,18 @@
+Source: squidanalyzer
+Section: admin
+Priority: extra
+Maintainer: Gilles Darold <gilles@darold.net> 
+
+Package: squidanalyzer
+Architecture: all
+Description: Squid proxy log analyzer and report generator
+ Squid proxy native log analyzer and reports generator with full
+ statistics about times, hits, bytes, users, networks, top URLs and
+ top domains. Statistic reports are oriented toward user and
+ bandwidth control; this is not a pure cache statistics generator.
+ .
+ SquidAnalyzer uses flat files to store data and doesn't need any SQL,
+ SQL Lite or Berkeley databases.
+ .
+ This log analyzer is incremental and should be run in a daily cron,
+ or more often with heavy proxy usage.
