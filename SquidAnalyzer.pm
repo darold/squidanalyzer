@@ -1210,7 +1210,7 @@ sub _parse_file_part
 		#logformat combined   %>a %[ui %[un [%tl] "%rm %ru HTTP/%rv" %>Hs %<st "%{Referer}>h" "%{User-Agent}>h" %Ss:%Sh
 		# Parse log with format: time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost mime_type
 		my $format = 'native';
-		if ( $line =~ $native_format_regex1 ) {
+		if ( !$self->{is_squidguard_log} && !$self->{is_ufdbguard_log} && ($line =~ $native_format_regex1) ) {
 			$time = $1;
 			$time += $tz;
 			$elapsed = abs($2);
@@ -1219,7 +1219,7 @@ sub _parse_file_part
 			$bytes = $5;
 			$method = $6;
 			$line = $7;
-		} elsif ( $line =~ $common_format_regex1 ) {
+		} elsif ( !$self->{is_squidguard_log} && !$self->{is_ufdbguard_log} && ($line =~ $common_format_regex1) ) {
 			$format = 'http';
 			$client_ip = $1;
 			$elapsed = abs($2);
@@ -1242,7 +1242,7 @@ sub _parse_file_part
 			if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
 				$mime_type = 'invalid/type';
 			}
-                } elsif ($line =~ $sg_format_regex1) {
+                } elsif ( !$self->{is_ufdbguard_log} && ($line =~ $sg_format_regex1) ) {
                         $format = 'squidguard';
 			$self->{is_squidguard_log} = 1;
 			$acl = $7;
@@ -1938,6 +1938,12 @@ sub _parseData
 			$self->{stat_denied_url_day}{$id}{$dest}{firsthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{firsthit} || ($time < $self->{stat_denied_url_day}{$id}{$dest}{firsthit}));
 			$self->{stat_denied_url_day}{$id}{$dest}{lasthit} = $time if (!$self->{stat_denied_url_day}{$id}{$dest}{lasthit} || ($time > $self->{stat_denied_url_day}{$id}{$dest}{lasthit}));
 			$self->{stat_denied_url_day}{$id}{$dest}{blacklist}{$acl}++ if ($acl);
+			$self->{stat_user_hour}{$id}{$hour}{hits} += 0;
+			$self->{stat_user_hour}{$id}{$hour}{bytes} += 0;
+			$self->{stat_user_hour}{$id}{$hour}{duration} += 0;
+			$self->{stat_user_day}{$id}{$self->{last_day}}{hits} += 0;
+			$self->{stat_user_day}{$id}{$self->{last_day}}{bytes} += 0;
+			$self->{stat_user_day}{$id}{$self->{last_day}}{duration} += 0;
 		}
 		return;
 	}
@@ -2414,8 +2420,6 @@ sub _read_stat
 
 	return if (! -d "$self->{Output}/$path");
 
-	#print STDERR "Reading data from previous dat files for $sum_type($type) in $self->{Output}/$path/$kind.dat\n" if (!$self->{QuietMode});
-
 	my $k = '';
 	my $key = '';
 	$key = $day if ($sum_type eq 'day');
@@ -2640,6 +2644,7 @@ sub _read_stat
 		}
 
 		if (!$kind || ($kind eq 'stat_denied_url')) {
+
 			my $dat_file_denied_url = new IO::File;
 			if ($dat_file_denied_url->open("$self->{Output}/$path/stat_denied_url.dat")) {
 				my $i = 1;
