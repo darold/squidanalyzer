@@ -31,7 +31,7 @@ my $BASEURL = $ENV{BASEURL} || '/squidreport';
 my $DOCDIR = $ENV{DOCDIR} || '';
 my $MANDIR = $ENV{MANDIR} || '/usr/local/man/man3';
 my $DESTDIR = $ENV{DESTDIR} || '';
-$ENV{INSTALLDIRS} ||= 'vendor';
+$ENV{INSTALLDIRS} ||= 'site';
 
 unless(open(INST, ">install_all.sh")) {
         print "\nError: can't write post install file install_all.sh, $!\n";

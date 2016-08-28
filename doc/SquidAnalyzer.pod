@@ -59,6 +59,9 @@ please proceed as follow:
 as the issue is related to an install into the default Perl vendor installdirs
 it will then use Perl site installdirs.
 
+Note: you may not encountered this issue any more, since v6.6 SquidAnalyzer use
+site as default installation directory.
+
 =head2 Custom install
 
 You can create your fully customized SquidAnalyzer installation by using the
