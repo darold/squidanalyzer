@@ -4361,6 +4361,7 @@ $user_bytes
 
 		delete $user_stat{$usr};
 		if ($self->{UrlReport}) {
+			$self->_print_user_denied_detail(\$outusr, $outdir, $usr, $type);
 			$self->_print_user_detail(\$outusr, $outdir, $usr, $type);
 		}
 		$self->_print_footer(\$outusr);
@@ -4524,7 +4525,7 @@ sub _print_user_detail
 
 	$0 = "squid-analyzer: Printing user details statistics in $outdir";
 
-	# Load code statistics
+	# Load user statistics
 	my $infile = new IO::File;
 	$infile->open("$outdir/stat_user_url.dat") || return;
 	my %url_stat = ();
@@ -4701,6 +4702,119 @@ sub _print_user_detail
 };
 
 }
+
+sub _print_user_denied_detail
+{
+	my ($self, $out, $outdir, $usr, $type) = @_;
+
+	$0 = "squid-analyzer: Printing user denied statistics in $outdir";
+
+	# Load user URL statistics
+	my $infile = new IO::File;
+	$infile->open("$outdir/stat_denied_url.dat") || return;
+	my %denied_stat = ();
+	my $total_hits = 0;
+	while (my $l = <$infile>) {
+		chomp($l);
+		my ($user, $data) = split(/\s/, $l);
+		next if ($user ne $usr);
+
+		if ($self->{rebuild}) {
+			next if (!$self->check_inclusions($user));
+			next if ($self->check_exclusions($user));
+		}
+
+		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)/) {
+			if ($self->{rebuild}) {
+				next if ($self->check_exclusions('','',$4));
+			}
+			$denied_stat{$4}{hits} += $1;
+			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
+			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
+			$total_hits += $1;
+			if ($5) {
+				my %tmp = split(/,/, $5);
+				foreach my $k (keys %tmp) {
+					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
+					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+				}
+			}
+		}
+	}
+	$infile->close();
+
+	return if (!$total_hits);
+
+	print $$out qq{
+<h3>$Translate{'Top_denied_link'}</h3>
+<table class="sortable stata">
+<thead>
+<tr>
+<th>$Translate{'Url'}</th>
+<th>Blocklist ACLs</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{'Last_visit'}</th>
+};
+	print $$out qq{
+<th>$Translate{'First_visit'}</th>
+} if ($type eq 'hour');
+	print $$out qq{
+</tr>
+</thead>
+<tbody>
+};
+	my $i = 0;
+	foreach my $u (sort { $denied_stat{$b}{hits} <=> $denied_stat{$a}{hits} } keys %denied_stat) {
+		my $h_percent = '0.0';
+		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
+		my $firsthit = '-';
+		if ($denied_stat{$u}{firsthit}) {
+			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+		}
+		my $lasthit = '-';
+		if ($denied_stat{$u}{lasthit}) {
+			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+		}
+		if ($type eq 'hour') {
+			if ($denied_stat{$u}{firsthit}) {
+				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+			} else {
+				$firsthit = '-';
+			}
+			if ($denied_stat{$u}{lasthit}) {
+				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+			} else {
+				$firsthit = '-';
+			}
+		}
+		my $bl = '-';
+		if (exists $denied_stat{$u}{blacklist}) {
+			$bl = '';
+			foreach my $k (sort keys %{$denied_stat{$u}{blacklist}}) {
+				$bl .=  $k . '=' . $denied_stat{$u}{blacklist}{$k} . ' ';
+			}
+		}
+		print $$out qq{
+<tr><td>
+<a href="http://$u/" target="_blank" class="domainLink">$u</a>
+</td>
+<td>$bl</td>
+<td>$denied_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$lasthit</td>
+};
+		print $$out qq{
+<td>$firsthit</td>
+} if ($type eq 'hour');
+		$i++;
+		last if ($i > $self->{TopNumber});
+	}
+	print $$out qq{
+</tbody>
+</table>
+};
+
+}
+
 
 sub _print_top_url_stat
 {
@@ -5000,7 +5114,7 @@ sub _print_top_denied_stat
 			if ($self->{rebuild}) {
 				next if ($self->check_exclusions('','',$4));
 			}
-			$denied_stat{$4}{hits} = $1;
+			$denied_stat{$4}{hits} += $1;
 			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
 			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
 			$total_hits += $1;
