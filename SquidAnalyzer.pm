@@ -4633,6 +4633,7 @@ sub _print_user_detail
 };
 
 	$total_duration = abs($total_duration);
+	my $i = 0;
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($url_stat{$url}{hits}/$total_hit) * 100) if ($total_hit);
@@ -4692,6 +4693,8 @@ sub _print_user_detail
 } if ($self->{CostPrice});
 		print $$out qq{
 </tr>};
+		$i++;
+		last if ($i > $self->{TopNumber});
 	}
 	my $sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
