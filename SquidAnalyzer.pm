@@ -4867,11 +4867,14 @@ sub _print_top_url_stat
 			$user = '-';
 		}
 		my $url = '';
+		my $hits = 0;
+		my $bytes = 0;
+		my $duration = 0;
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
 			$url = $6;
-			$url_stat{$url}{hits} += $1;
-			$url_stat{$url}{bytes} += $2;
-			$url_stat{$url}{duration} += abs($3);
+			$hits = $1;
+			$bytes = $2;
+			$duration = abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
 			$url_stat{$url}{cache_hit} += $7;
@@ -4883,16 +4886,13 @@ sub _print_top_url_stat
 					next;
 				}
 			}
-			$total_hits += $url_stat{$url}{hits} || 0;
-			$total_bytes += $url_stat{$url}{bytes} || 0;
-			$total_duration += $url_stat{$url}{duration} || 0;
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
 			$url = $6;
-			$url_stat{$url}{hits} += $1;
-			$url_stat{$url}{bytes} += $2;
-			$url_stat{$url}{duration} += abs($3);
+			$hits = $1;
+			$bytes = $2;
+			$duration = abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
 			if ($self->{rebuild}) {
@@ -4901,25 +4901,29 @@ sub _print_top_url_stat
 					next;
 				}
 			}
-			$total_hits += $url_stat{$url}{hits} || 0;
-			$total_bytes += $url_stat{$url}{bytes} || 0;
-			$total_duration += $url_stat{$url}{duration} || 0;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
 			$url = $4;
-			$url_stat{$url}{hits} = $1;
-			$url_stat{$url}{bytes} = $2;
-			$url_stat{$url}{duration} = abs($3);
+			$hits = $1;
+			$bytes = $2;
+			$duration = abs($3);
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
 					delete $url_stat{$url};
 					next;
 				}
 			}
-			$total_hits += $url_stat{$url}{hits} || 0;
-			$total_bytes += $url_stat{$url}{bytes} || 0;
-			$total_duration += $url_stat{$url}{duration} || 0;
 		}
-		$url_stat{$url}{users}{$user}++ if ($url && $self->{TopUrlUser} && $self->{UserReport});
+		$url_stat{$url}{hits} += $hits;
+		$url_stat{$url}{bytes} += $bytes;
+		$url_stat{$url}{duration} += $duration;
+		$total_hits += $url_stat{$url}{hits} || 0;
+		$total_bytes += $url_stat{$url}{bytes} || 0;
+		$total_duration += $url_stat{$url}{duration} || 0;
+		if ($url && $self->{TopUrlUser} && $self->{UserReport}) {
+			$url_stat{$url}{users}{$user}{hits} += $hits;
+			$url_stat{$url}{users}{$user}{bytes} += $bytes;
+			$url_stat{$url}{users}{$user}{duration} += $bytes;
+		}
 	}
 	$infile->close();
 
@@ -5029,13 +5033,22 @@ sub _print_top_url_stat
 			}
 			print $out "<tr><td>\n";
 			if (exists $url_stat{$u}{users} && $self->{UserReport}) {
-				print $out qq{
-<div class="tooltipLink"><span class="information"><a href="http://$u/" target="_blank" class="domainLink">$u</a></span><div class="tooltip">
-<table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
-};
+				my $label = 'Duration';
+				if ($tpe eq 'Bytes') {
+					$label = 'Megabytes';
+				} elsif ($tpe eq 'Hits') {
+					$label = 'Requests';
+				}
+				print $out "<div class=\"tooltipLink\"><span class=\"information\"><a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a></span><div class=\"tooltip\"><table><tr><th>$Translate{'User'}</th><th>$Translate{$label}</th></tr>\n";
 				my $k = 1;
-				foreach my $user (sort { $url_stat{$u}{users}{$b} <=> $url_stat{$u}{users}{$a} } keys %{$url_stat{$u}{users}}) {
-					print $out "<tr><td>$user</td><td>$url_stat{$u}{users}{$user}</td></tr>\n";
+				foreach my $user (sort { $url_stat{$u}{users}{$b}{lc($tpe)} <=> $url_stat{$u}{users}{$a}{lc($tpe)} } keys %{$url_stat{$u}{users}}) {
+					my $value = $url_stat{$u}{users}{$user}{lc($tpe)};
+					if ($tpe eq 'Bytes') {
+						$value = $self->format_bytes($value);
+					} elsif ($tpe eq 'Duration') {
+						$value = &parse_duration(int($value/1000));
+					}
+					print $out "<tr><td>$user</td><td>$value</td></tr>\n";
 					$k++;
 					last if ($k > $self->{TopUrlUser});
 				}
@@ -5388,7 +5401,6 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
-				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
 				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
@@ -5402,7 +5414,6 @@ sub _print_top_domain_stat
 				$domain_stat{"$1$2"}{duration} += $duration;
 				$domain_stat{"$1$2"}{firsthit} = $first if (!$domain_stat{"$1$2"}{firsthit} || ($first < $domain_stat{"$1$2"}{firsthit}));
 				$domain_stat{"$1$2"}{lasthit} = $last if (!$domain_stat{"$1$2"}{lasthit} || ($last > $domain_stat{"$1$2"}{lasthit}));
-				$domain_stat{"$1$2"}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 				$domain_stat{"$1$2"}{cache_hit} += $cache_hit;
 				$domain_stat{"$1$2"}{cache_bytes} += $cache_bytes;
 				$perdomain{"$2"}{hits} += $hits;
@@ -5410,6 +5421,11 @@ sub _print_top_domain_stat
 				$perdomain{"$2"}{cache_hit} += $cache_hit;
 				$perdomain{"$2"}{cache_bytes} += $cache_bytes;
 				$done = 1;
+			}
+			if ($self->{TopUrlUser} && $self->{UserReport}) {
+				$domain_stat{"$1$2"}{users}{$user}{hits} += $hits;
+				$domain_stat{"$1$2"}{users}{$user}{bytes}+= $bytes;
+				$domain_stat{"$1$2"}{users}{$user}{duration}+= $duration;
 			}
 		}
 		if (!$done) {
@@ -5420,7 +5436,11 @@ sub _print_top_domain_stat
 			$domain_stat{'unknown'}{duration} += $duration;
 			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
 			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
-			$domain_stat{'unknown'}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+			if ($self->{TopUrlUser} && $self->{UserReport}) {
+				$domain_stat{'unknown'}{users}{$user}{hits} += $hits;
+				$domain_stat{'unknown'}{users}{$user}{bytes}+= $bytes;
+				$domain_stat{'unknown'}{users}{$user}{duration}+= $duration;
+			}
 			$domain_stat{'unknown'}{cache_hit} += $cache_hit;
 			$domain_stat{'unknown'}{cache_bytes} += $cache_bytes;
 			$perdomain{'others'}{cache_hit} += $cache_hit;
@@ -5638,13 +5658,22 @@ $domain2_bytes
 			if (exists $domain_stat{$u}{users} && $self->{UserReport}) {
 				my $dname = "*.$u";
 				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown'));
-				print $out qq{
-<div class="tooltipLink"><span class="information">$dname</span><div class="tooltip">
-<table><tr><th>$Translate{'User'}</th><th>$Translate{'Count'}</th></tr>
-};
+				my $label = 'Duration';
+				if ($tpe eq 'Bytes') {
+					$label = 'Megabytes';
+				} elsif ($tpe eq 'Hits') {
+					$label = 'Requests';
+				}
+				print $out "<div class=\"tooltipLink\"><span class=\"information\">$dname</span><div class=\"tooltip\"><table><tr><th>$Translate{'User'}</th><th>$Translate{$label}</th></tr>\n";
 				my $k = 1;
-				foreach my $user (sort { $domain_stat{$u}{users}{$b} <=> $domain_stat{$u}{users}{$a} } keys %{$domain_stat{$u}{users}}) {
-					print $out "<tr><td>$user</td><td>$domain_stat{$u}{users}{$user}</td></tr>\n";
+				foreach my $user (sort { $domain_stat{$u}{users}{$b}{lc($tpe)} <=> $domain_stat{$u}{users}{$a}{lc($tpe)} } keys %{$domain_stat{$u}{users}}) {
+					my $value = $domain_stat{$u}{users}{$user}{lc($tpe)};
+					if ($tpe eq 'Bytes') {
+						$value = $self->format_bytes($value);
+					} elsif ($tpe eq 'Duration') {
+						$value = &parse_duration(int($value/1000));
+					}
+					print $out "<tr><td>$user</td><td>$value</td></td></tr>\n";
 					$k++;
 					last if ($k > $self->{TopUrlUser});
 				}
