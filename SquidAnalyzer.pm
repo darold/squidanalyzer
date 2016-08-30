@@ -4697,8 +4697,6 @@ sub _print_user_detail
 		last if ($i > $self->{TopNumber});
 	}
 	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 	print $$out qq{
 </tbody>
 </table>
@@ -4868,9 +4866,9 @@ sub _print_top_url_stat
 		} else {
 			$user = '-';
 		}
-
+		my $url = '';
 		if ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*?);cache_hit=(\d*);cache_bytes=(\d*)/) {
-			my $url = $6;
+			$url = $6;
 			$url_stat{$url}{hits} += $1;
 			$url_stat{$url}{bytes} += $2;
 			$url_stat{$url}{duration} += abs($3);
@@ -4891,13 +4889,12 @@ sub _print_top_url_stat
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)/) {
-			my $url = $6;
+			$url = $6;
 			$url_stat{$url}{hits} += $1;
 			$url_stat{$url}{bytes} += $2;
 			$url_stat{$url}{duration} += abs($3);
 			$url_stat{$url}{firsthit} = $4 if (!$url_stat{$url}{firsthit} || ($4 < $url_stat{$url}{firsthit}));
 			$url_stat{$url}{lasthit} = $5 if (!$url_stat{$url}{lasthit} || ($5 > $url_stat{$url}{lasthit}));
-			$url_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
 					delete $url_stat{$url};
@@ -4908,11 +4905,10 @@ sub _print_top_url_stat
 			$total_bytes += $url_stat{$url}{bytes} || 0;
 			$total_duration += $url_stat{$url}{duration} || 0;
 		} elsif ($data =~ /hits=(\d+);bytes=(\d+);duration=([\-\d]+);url=(.*)/) {
-			my $url = $4;
+			$url = $4;
 			$url_stat{$url}{hits} = $1;
 			$url_stat{$url}{bytes} = $2;
 			$url_stat{$url}{duration} = abs($3);
-			$url_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
 			if ($self->{rebuild}) {
 				if ($self->check_exclusions('','',$url)) {
 					delete $url_stat{$url};
@@ -4923,6 +4919,7 @@ sub _print_top_url_stat
 			$total_bytes += $url_stat{$url}{bytes} || 0;
 			$total_duration += $url_stat{$url}{duration} || 0;
 		}
+		$url_stat{$url}{users}{$user}++ if ($url && $self->{TopUrlUser} && $self->{UserReport});
 	}
 	$infile->close();
 
@@ -4939,8 +4936,6 @@ sub _print_top_url_stat
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	my $trfunit = $self->{TransfertUnit} || 'B';
 	$trfunit = 'B' if ($trfunit eq 'BYTE');
@@ -4963,9 +4958,27 @@ sub _print_top_url_stat
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
+};
+		if ($tpe eq 'Hits') {
+			print $out qq{
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+}
+		} elsif ($tpe eq 'Bytes') {
+			print $out qq{
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
+}
+		} else {
+			print $out qq{
+<th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+}
+		}
+		print $out qq{
 <th>$Translate{'Throughput'} ($trfunit/s)</th>
 <th>$Translate{'Last_visit'}</th>
 };
@@ -5032,9 +5045,27 @@ sub _print_top_url_stat
 			}
 			print $out qq{
 </td>
+};
+	if ($tpe eq 'Hits') {
+		print $out qq{
 <td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+	} elsif ($tpe eq 'Bytes') {
+		print $out qq{
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+	} else {
+		print $out qq{
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+};
+	}
+	print $out qq{
 <td>$comma_throughput</span></td>
 <td>$lasthit</td>
 };
@@ -5416,8 +5447,6 @@ sub _print_top_domain_stat
 	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
 
 	my $sortpos = 1;
-	$sortpos = 2 if ($self->{OrderUrl} eq 'bytes');
-	$sortpos = 3 if ($self->{OrderUrl} eq 'duration');
 
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
@@ -5536,9 +5565,27 @@ $domain2_bytes
 <thead>
 <tr>
 <th>$Translate{'Url'}</th>
+};
+		if ($tpe eq 'Hits') {
+			print $out qq{
 <th>$Translate{'Requests'} (%)</th>
 <th>$Translate{$self->{TransfertUnit}} (%)</th>
 <th>$Translate{'Duration'} (%)</th>
+};
+		} elsif ($tpe eq 'Bytes') {
+			print $out qq{
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{'Duration'} (%)</th>
+};
+		} else {
+			print $out qq{
+<th>$Translate{'Duration'} (%)</th>
+<th>$Translate{'Requests'} (%)</th>
+<th>$Translate{$self->{TransfertUnit}} (%)</th>
+};
+	}
+		print $out qq{
 <th>$Translate{'Throughput'} ($trfunit/s)</th>
 <th>$Translate{'Last_visit'}</th>
 };
@@ -5608,9 +5655,27 @@ $domain2_bytes
 			print $out qq{
 </div></div>
 </td>
+};
+	if ($tpe eq 'Hits') {
+		print $out qq{
 <td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+	} elsif ($tpe eq 'Bytes') {
+		print $out qq{
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+	} else {
+		print $out qq{
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$domain_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+};
+	}
+	print $out qq{
 <td>$comma_throughput</td>
 <td>$lasthit</td>
 };
