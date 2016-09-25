@@ -136,7 +136,7 @@ $SIG{'CHLD'} = 'DEFAULT';
 
 my $t1;
 # Run parsing only if we have a log file or that we are not in rebuild mode
-if (!$rebuild || ($#logfile >= 0)) {
+if (!$rebuild || ($#{$sa->{LogFile}} >= 0)) {
 	$sa->parseFile();
 	if ($debug) {
 		$t1 = Benchmark->new;
