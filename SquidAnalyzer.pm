@@ -5240,7 +5240,9 @@ sub _print_top_denied_stat
 		print $out qq{<table class="graphs"><tr><td>$squidguard_acl</td></tr></table>};
 	}
 
-	my $t1 = $Translate{"Url_Hits_title"}t1 =~ s/\%d/$self->{TopNumber}/;
+	my $t1 = $Translate{"Url_Hits_title"};
+	$t1 =~ s/\%d/$self->{TopNumber}/;
+
 	print $out $self->_print_title($t1, $stat_date, $week);
 	print $out qq{
 <table class="sortable stata">
