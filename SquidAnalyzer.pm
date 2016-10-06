@@ -4770,20 +4770,20 @@ sub _print_user_denied_detail
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
 		if ($denied_stat{$u}{firsthit}) {
-			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
 		if ($denied_stat{$u}{lasthit}) {
-			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
 			if ($denied_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+				$firsthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
 			if ($denied_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+				$lasthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{lasthit})));
 			} else {
 				$firsthit = '-';
 			}
@@ -5243,20 +5243,20 @@ sub _print_top_denied_stat
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
 		if ($denied_stat{$u}{firsthit}) {
-			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
 		if ($denied_stat{$u}{lasthit}) {
-			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
 			if ($denied_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+				$firsthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
 			if ($denied_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+				$lasthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{lasthit})));
 			} else {
 				$firsthit = '-';
 			}
