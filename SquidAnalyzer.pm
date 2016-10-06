@@ -4781,11 +4781,11 @@ sub _print_user_denied_detail
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
-		if ($denied_stat{$u}{firsthit}) {
+		if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
 			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
-		if ($denied_stat{$u}{lasthit}) {
+		if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
 			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
@@ -5240,8 +5240,7 @@ sub _print_top_denied_stat
 		print $out qq{<table class="graphs"><tr><td>$squidguard_acl</td></tr></table>};
 	}
 
-	my $t1 = $Translate{"Url_Hits_title"};
-	$t1 =~ s/\%d/$self->{TopNumber}/;
+	my $t1 = $Translate{"Url_Hits_title"}t1 =~ s/\%d/$self->{TopNumber}/;
 	print $out $self->_print_title($t1, $stat_date, $week);
 	print $out qq{
 <table class="sortable stata">
@@ -5265,20 +5264,20 @@ sub _print_top_denied_stat
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
-		if ($denied_stat{$u}{firsthit}) {
+		if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
 			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
-		if ($denied_stat{$u}{lasthit}) {
+		if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
 			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
-			if ($denied_stat{$u}{firsthit}) {
+			if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
 				$firsthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
-			if ($denied_stat{$u}{lasthit}) {
+			if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
 				$lasthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{lasthit})));
 			} else {
 				$firsthit = '-';
