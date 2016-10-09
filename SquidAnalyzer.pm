@@ -4733,18 +4733,30 @@ sub _print_user_denied_detail
 		}
 
 		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)/) {
+			my $hits = $1;
+			my $firsthit = $2;
+			my $lasthit = $3;
+			my $url = $4;
+			my $blacklist = $5;
 			if ($self->{rebuild}) {
-				next if ($self->check_exclusions('','',$4));
+				next if ($self->check_exclusions('','',$url));
 			}
-			$denied_stat{$4}{hits} += $1;
-			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
-			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
-			$total_hits += $1;
-			if ($5) {
-				my %tmp = split(/,/, $5);
+			$total_hits += $hits;
+			$denied_stat{$url}{hits} += $hits;
+			if ($lasthit =~ /^(\d{10})\d+/) {
+				$lasthit = $1;
+			}
+			if ($firsthit =~ /^(\d{10})\d+/) {
+				$firsthit = $1;
+			}
+			$denied_stat{$url}{firsthit} = $firsthit if (!$denied_stat{$url}{firsthit} || ($firsthit < $denied_stat{$url}{firsthit}));
+			$denied_stat{$url}{lasthit} = $lasthit if (!$denied_stat{$url}{lasthit} || ($lasthit > $denied_stat{$url}{lasthit}));
+			$denied_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+			if ($blacklist) {
+				my %tmp = split(/,/, $blacklist);
 				foreach my $k (keys %tmp) {
-					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
-					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+					$denied_stat{$url}{blacklist}{$k} += $tmp{$k};
+					$denied_stat{$url}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
 				}
 			}
 		}
@@ -4776,21 +4788,21 @@ sub _print_user_denied_detail
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
-		if ($denied_stat{$u}{firsthit}) {
-			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+		if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
+			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
-		if ($denied_stat{$u}{lasthit}) {
-			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+		if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
+			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
-			if ($denied_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+			if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
+				$firsthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
-			if ($denied_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+			if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
+				$lasthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{lasthit})));
 			} else {
 				$firsthit = '-';
 			}
@@ -5167,19 +5179,30 @@ sub _print_top_denied_stat
 		}
 
 		if ($data =~ /hits=(\d+);first=([^;]*);last=([^;]*);url=(.*);blacklist=(.*)/) {
+			my $hits = $1;
+			my $firsthit = $2;
+			my $lasthit = $3;
+			my $url = $4;
+			my $blacklist = $5;
 			if ($self->{rebuild}) {
-				next if ($self->check_exclusions('','',$4));
+				next if ($self->check_exclusions('','',$url));
 			}
-			$denied_stat{$4}{hits} += $1;
-			$denied_stat{$4}{firsthit} = $2 if (!$denied_stat{$4}{firsthit} || ($2 < $denied_stat{$4}{firsthit}));
-			$denied_stat{$4}{lasthit} = $3 if (!$denied_stat{$4}{lasthit} || ($3 > $denied_stat{$4}{lasthit}));
-			$total_hits += $1;
-			$denied_stat{$4}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
-			if ($5) {
-				my %tmp = split(/,/, $5);
+			$total_hits += $hits;
+			$denied_stat{$url}{hits} += $hits;
+			if ($lasthit =~ /^(\d{10})\d+/) {
+				$lasthit = $1;
+			}
+			if ($firsthit =~ /^(\d{10})\d+/) {
+				$firsthit = $1;
+			}
+			$denied_stat{$url}{firsthit} = $firsthit if (!$denied_stat{$url}{firsthit} || ($firsthit < $denied_stat{$url}{firsthit}));
+			$denied_stat{$url}{lasthit} = $lasthit if (!$denied_stat{$url}{lasthit} || ($lasthit > $denied_stat{$url}{lasthit}));
+			$denied_stat{$url}{users}{$user}++ if ($self->{TopUrlUser} && $self->{UserReport});
+			if ($blacklist) {
+				my %tmp = split(/,/, $blacklist);
 				foreach my $k (keys %tmp) {
-					$denied_stat{$4}{blacklist}{$k} += $tmp{$k};
-					$denied_stat{$4}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
+					$denied_stat{$url}{blacklist}{$k} += $tmp{$k};
+					$denied_stat{$url}{users}{$user}{blacklist}{$k} += $tmp{$k} if ($self->{TopUrlUser} && $self->{UserReport});
 					$total_acl += $tmp{$k};
 				}
 			}
@@ -5228,6 +5251,7 @@ sub _print_top_denied_stat
 
 	my $t1 = $Translate{"Url_Hits_title"};
 	$t1 =~ s/\%d/$self->{TopNumber}/;
+
 	print $out $self->_print_title($t1, $stat_date, $week);
 	print $out qq{
 <table class="sortable stata">
@@ -5251,21 +5275,21 @@ sub _print_top_denied_stat
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($denied_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 		my $firsthit = '-';
-		if ($denied_stat{$u}{firsthit}) {
-			$firsthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{firsthit})));
+		if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
+			$firsthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{firsthit})));
 		}
 		my $lasthit = '-';
-		if ($denied_stat{$u}{lasthit}) {
-			$lasthit = ucfirst(strftime("%b %d %T", localtime($denied_stat{$u}{lasthit})));
+		if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
+			$lasthit = ucfirst(strftime("%b %d %T", CORE::localtime($denied_stat{$u}{lasthit})));
 		}
 		if ($type eq 'hour') {
-			if ($denied_stat{$u}{firsthit}) {
-				$firsthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{firsthit})));
+			if ($denied_stat{$u}{firsthit} && ($denied_stat{$u}{firsthit} =~ /^\d{10}(\.\d{3})?$/)) {
+				$firsthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{firsthit})));
 			} else {
 				$firsthit = '-';
 			}
-			if ($denied_stat{$u}{lasthit}) {
-				$lasthit = ucfirst(strftime("%T", localtime($denied_stat{$u}{lasthit})));
+			if ($denied_stat{$u}{lasthit} && ($denied_stat{$u}{lasthit} =~ /^\d{10}(\.\d{3})?$/)) {
+				$lasthit = ucfirst(strftime("%T", CORE::localtime($denied_stat{$u}{lasthit})));
 			} else {
 				$firsthit = '-';
 			}
