@@ -86,6 +86,7 @@ Largest				Найбільший
 Url				URL
 User_title			Статистика по Користувачам за
 User_number			Кількість Користувачів
+Url_title			Toп %d URL
 Url_Hits_title			Toп %d URL запитів за
 Url_Bytes_title			Toп %d URL трафік за
 Url_Duration_title		Toп %d URL тривалість за

@@ -85,6 +85,7 @@ Largest				Groesste
 Url				Url
 User_title			Benutzer Statistik
 User_number			Anzahl der Benutzer
+Url_title			Top %d Url
 Url_Hits_title			Top %d Url Treffer
 Url_Bytes_title			Top %d Url Bytes
 Url_Duration_title		Top %d Url Dauer
