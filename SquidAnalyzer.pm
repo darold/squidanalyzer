@@ -3994,7 +3994,6 @@ sub _print_network_stat
 		my $outnet = new IO::File;
 		$outnet->open(">$outdir/networks/$net/$net.html") || return;
 		# Print the HTML header
-		#my $cal = 'SA_CALENDAR_SA';
 		my $cal = '';
 		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date, $week);
@@ -4296,10 +4295,11 @@ sub _print_user_stat
 		my $outusr = new IO::File;
 		$outusr->open(">$outdir/users/$upath/$upath.html") || return;
 		# Print the HTML header
-		#my $cal = 'SA_CALENDAR_SA';
 		my $cal = '';
 		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
-		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date, $week);
+		my $usr_lbl = $usr;
+		$usr_lbl =~ s/_SPC_/ /g;
+		print $outusr $self->_print_title("$Translate{'User_title'} $usr_lbl -", $stat_date, $week);
 
 		my @hits = ();
 		my @bytes = ();
@@ -5055,7 +5055,9 @@ sub _print_top_url_stat
 					} elsif ($tpe eq 'Duration') {
 						$value = &parse_duration(int($value/1000));
 					}
-					print $out "<tr><td>$user</td><td>$value</td></tr>\n";
+					my $usr_lbl = $user;
+					$usr_lbl =~ s/_SPC_/ /g;
+					print $out "<tr><td>$usr_lbl</td><td>$value</td></tr>\n";
 					$k++;
 					last if ($k > $self->{TopUrlUser});
 				}
@@ -5680,7 +5682,9 @@ $domain2_bytes
 					} elsif ($tpe eq 'Duration') {
 						$value = &parse_duration(int($value/1000));
 					}
-					print $out "<tr><td>$user</td><td>$value</td></td></tr>\n";
+					my $usr_lbl = $user;
+					$usr_lbl =~ s/_SPC_/ /g;
+					print $out "<tr><td>$usr_lbl</td><td>$value</td></td></tr>\n";
 					$k++;
 					last if ($k > $self->{TopUrlUser});
 				}
