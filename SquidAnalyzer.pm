@@ -127,6 +127,7 @@ my %Translate = (
 	'Url' => 'Url',
 	'User_title' => 'User Statistics on',
 	'User_number' => 'Number of user',
+	'Url_title' => 'Top %d Url on',
 	'Url_Hits_title' => 'Top %d Url hits on',
 	'Url_Bytes_title' => 'Top %d Url bytes on',
 	'Url_Duration_title' => 'Top %d Url duration on',
@@ -3993,7 +3994,8 @@ sub _print_network_stat
 		my $outnet = new IO::File;
 		$outnet->open(">$outdir/networks/$net/$net.html") || return;
 		# Print the HTML header
-		my $cal = 'SA_CALENDAR_SA';
+		#my $cal = 'SA_CALENDAR_SA';
+		my $cal = '';
 		$self->_print_header(\$outnet, $self->{menu2}, $cal, $sortpos);
 		print $outnet $self->_print_title("$Translate{'Network_title'} $show -", $stat_date, $week);
 
@@ -4294,7 +4296,8 @@ sub _print_user_stat
 		my $outusr = new IO::File;
 		$outusr->open(">$outdir/users/$upath/$upath.html") || return;
 		# Print the HTML header
-		my $cal = 'SA_CALENDAR_SA';
+		#my $cal = 'SA_CALENDAR_SA';
+		my $cal = '';
 		$self->_print_header(\$outusr, $self->{menu2}, $cal, $sortpos);
 		print $outusr $self->_print_title("$Translate{'User_title'} $usr -", $stat_date, $week);
 
@@ -4608,8 +4611,12 @@ sub _print_user_detail
 	$trfunit = 'B' if ($trfunit eq 'BYTE');
 
 	my $nurl = scalar keys %url_stat;
+
+	my $t1 = $Translate{"Url_title"};
+	$t1 =~ s/\%d/$self->{TopNumber}\/$nurl/;
+
 	print $$out qq{
-<h3>$Translate{'Url_number'}: $nurl</h3>
+<h3>$t1</h3>
 <table class="sortable stata">
 <thead>
 <tr>
