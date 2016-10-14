@@ -5303,7 +5303,9 @@ sub _print_top_denied_stat
 };
 			my $k = 1;
 			foreach my $user (sort { $denied_stat{$u}{users}{$b} <=> $denied_stat{$u}{users}{$a} } keys %{$denied_stat{$u}{users}}) {
-				print $out "<tr><td>$user</td><td>$denied_stat{$u}{users}{$user}</td></tr>\n";
+				my $usr_lbl = $user;
+				$usr_lbl =~ s/_SPC_/ /g;
+				print $out "<tr><td>$usr_lbl</td><td>$denied_stat{$u}{users}{$user}</td></tr>\n";
 				$k++;
 				last if ($k > $self->{TopUrlUser});
 			}
