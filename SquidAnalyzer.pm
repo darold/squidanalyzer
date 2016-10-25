@@ -677,6 +677,12 @@ sub parseFile
 				my $line = <$logfile>;
 				chomp($line);
 
+				# Remove syslog header and mark the format
+				if ($line =~ s/^... \d+ \d{2}:\d{2}:\d{2} [^\s]+ [^\s]+ \d+ [^\s]+ (\d{10}\.\d{3}) /$1 /) {
+					print STDERR "DEBUG: log was generated through syslog, the header will be removed.\n" if (!$self->{QuietMode});
+					$self->{Syslog} = 1;
+				}
+
 				my $curtime = $self->look_for_timestamp($line);
 
 				my $hist_time = $self->{history_time};
@@ -702,6 +708,10 @@ sub parseFile
 					for (my $i = 1; $i <= 10000; $i++) {
 						$line = <$logfile>;
 						chomp($line);
+						# Remove syslog header and mark the format
+						if ($self->{Syslog}) {
+							$line =~ s/^[A-Z][a-z]{2} \d{2}:\d{2}:\d{2} [^\s]+ [^\s]+ \d+ \[[^\]]+\] (\d{10}\.\d{3})/$1/;
+						}
 						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
 							# If timestamp found at startup is lower than the history file,
@@ -732,6 +742,10 @@ sub parseFile
 					for (my $i = 1; $i <= 10; $i++) {
 						$line = <$logfile>;
 						chomp($line);
+						# Remove syslog header and mark the format
+						if ($self->{Syslog}) {
+							$line =~ s/^[A-Z][a-z]{2} \d{2}:\d{2}:\d{2} [^\s]+ [^\s]+ \d+ \[[^\]]+\] (\d{10}\.\d{3})/$1/;
+						}
 						$curtime = $self->look_for_timestamp($line);
 						if ($curtime) {
 							if ($curtime < $hist_time) {
@@ -1150,6 +1164,7 @@ sub _parse_file_part
 	my $login = '';
 	my $status = '';
 	my $mime_type = '';
+	$self->{Syslog} = 0;
 
 	my $acl = '';
 
@@ -1199,6 +1214,17 @@ sub _parse_file_part
 
 		# skip immediately lines that squid is not able to tag.
 		next if ($line =~ / TAG_NONE(_ABORTED)?\//);
+
+		# Remove syslog header and mark the format
+		if ($self->{Syslog} == 1) {
+			$line =~ s/^... \d+ \d{2}:\d{2}:\d{2} [^\s]+ [^\s]+ \d+ [^\s]+ (\d{10}\.\d{3}) /$1 /;
+		# Remove syslog header and mark the format
+		} elsif (!$self->{Syslog} && ($line =~ s/^... \d+ \d{2}:\d{2}:\d{2} [^\s]+ [^\s]+ \d+ [^\s]+ (\d{10}\.\d{3}) /$1 /)) {
+			print STDERR "DEBUG: log was generated through syslog, the header will be removed.\n" if (!$self->{QuietMode});
+			$self->{Syslog} = 1;
+		} else {
+			$self->{Syslog} = 2;
+		}
 
 		# Number of log lines parsed
 		$line_count++;
@@ -1542,6 +1568,7 @@ sub _init
 	$self->{rebuild} = $rebuild || 0;
 	$self->{is_squidguard_log} = 0;
 	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
+	$self->{Syslog} = 0;
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
