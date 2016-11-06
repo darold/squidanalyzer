@@ -3008,7 +3008,8 @@ sub buildHTML
 	my $old_day = 0;
 	my $p_month = 0;
 	my $p_year = 0;
-	if ($self->{history_time} || $self->{sg_history_time}) {
+	my $p_week = 0;
+	if ($self->{history_time} || $self->{sg_history_time} || $self->{end_time}) {
 		my @ltime = CORE::localtime($self->{history_time});
 		if ($self->{is_squidguard_log}) {
 			@ltime = CORE::localtime($self->{sg_history_time});
@@ -3032,13 +3033,52 @@ sub buildHTML
 			$p_year = $ltime[5]+1900;
 			$p_month = $ltime[4]+1;
 			$p_month = sprintf("%02d", $p_month);
-	        	print STDERR "Obsolete statistics before $p_year-$p_month\n" if (!$self->{QuietMode});
+			$p_week = &get_week_number($p_year, $p_month, "01");
+
+	        	print STDERR "Obsolete statistics before $p_year-$p_month, week $p_year-$p_week\n" if (!$self->{QuietMode});
+		}
+	}
+
+	# Remove obsolete directories first
+	opendir(DIR, $outdir) || die "Error: can't opendir $outdir: $!";
+	my @years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
+	closedir DIR;
+	if ($self->{preserve} && $p_year) {
+		foreach my $y (sort {$a <=> $b} @years) {
+			# Remove the full year repository if it is older that the last year to preserve
+			if ($y < $p_year) {
+				print STDERR "Removing obsolete statistics for year $y\n" if (!$self->{QuietMode});
+				system ($RM_PROG, "-rf", "$outdir/$y");
+				next;
+			}
+			# Remove the full month repository if it is older that the last month to preserve
+			opendir(DIR, "$outdir/$y") || $self->localdie("FATAL: can't opendir $outdir/$y: $!");
+			my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
+			closedir DIR;
+			foreach my $m (sort {$a <=> $b} @months) {
+				if ("$y$m" < "$p_year$p_month") {
+					print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
+					system ($RM_PROG, "-rf", "$outdir/$y/$m");
+				}
+			}
+			# Remove the full week repository if it is older that the last week to preserve
+			opendir(DIR, "$outdir/$y") || $self->localdie("FATAL: can't opendir $outdir/$y: $!");
+			my @weeks  = grep { -d "$outdir/$y/$_" && /^week\d{2}/ } readdir(DIR);
+			closedir DIR;
+			map { s/^week(\d{2})/$1/; } @weeks;
+			foreach my $w (sort {$a <=> $b} @weeks) {
+				# Remove the full week repository if it is older that the last date to preserve
+				if ("$y$w" < "$p_year$p_week") {
+					print STDERR "Removing obsolete statistics for week $y-week$w\n" if (!$self->{QuietMode});
+					system ($RM_PROG, "-rf", "$outdir/$y/week$w");
+				}
+			}
 		}
 	}
 
 	# Generate all HTML output
 	opendir(DIR, $outdir) || die "Error: can't opendir $outdir: $!";
-	my @years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
+	@years = grep { /^\d{4}$/ && -d "$outdir/$_"} readdir(DIR);
 	closedir DIR;
 	$self->{child_count} = 0;
 	my @years_cal = ();
@@ -3048,13 +3088,7 @@ sub buildHTML
 	foreach my $y (sort {$a <=> $b} @years) {
 		next if (!$y || ($y < $self->{first_year}));
 		next if ($self->check_build_date($y));
-		# Remove the full year repository if it is older that the last date to preserve
-		if ($p_year && ($y < $p_year)) {
-			print STDERR "Removing obsolete statistics for year $y\n" if (!$self->{QuietMode});
-			system ($RM_PROG, "-rf", "$outdir/$y");
-			next;
-		}
-		next if (!$p_year && ($y < $old_year));
+		next if ($y < $old_year);
 		opendir(DIR, "$outdir/$y") || $self->localdie("FATAL: can't opendir $outdir/$y: $!");
 		my @months = grep { /^\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
 		my @weeks  = grep { /^week\d{2}$/ && -d "$outdir/$y/$_"} readdir(DIR);
@@ -3063,12 +3097,6 @@ sub buildHTML
 		foreach my $m (sort {$a <=> $b} @months) {
 			next if (!$m || ($m < $self->{first_month}{$y}));
 			next if ($self->check_build_date($y, $m));
-			# Remove the full month repository if it is older that the last date to preserve
-			if ($p_year && ("$y$m" < "$p_year$p_month")) {
-				print STDERR "Removing obsolete statistics for month $y-$m\n" if (!$self->{QuietMode});
-				system ($RM_PROG, "-rf", "$outdir/$y/$m");
-				next;
-			}
 			next if ("$y$m" < "$old_year$old_month");
 			opendir(DIR, "$outdir/$y/$m") || $self->localdie("FATAL: can't opendir $outdir/$y/$m: $!");
 			my @days = grep { /^\d{2}$/ && -d "$outdir/$y/$m/$_"} readdir(DIR);
@@ -3097,7 +3125,6 @@ sub buildHTML
 		print STDERR "Generating statistics for year $y\n" if (!$self->{QuietMode});
 		$self->gen_html_output($outdir, $y);
 		push(@years_cal, "$outdir/$y");
-
 	}
 
 	# Wait for last child stop
