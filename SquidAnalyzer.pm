@@ -3037,11 +3037,11 @@ sub buildHTML
 	my $p_year = 0;
 	my $p_week = 0;
 	if ($self->{history_time} || $self->{sg_history_time} || $self->{end_time}) {
-		my @ltime = CORE::localtime($self->{history_time});
+		my @ltime = CORE::localtime($self->{history_time} || $self->{sg_history_time} || $self->{end_time});
 		if ($self->{is_squidguard_log}) {
-			@ltime = CORE::localtime($self->{sg_history_time});
+			@ltime = CORE::localtime($self->{sg_history_time} || $self->{end_time});
 		} elsif ($self->{is_ufdbguard_log}) {
-			@ltime = CORE::localtime($self->{ug_history_time});
+			@ltime = CORE::localtime($self->{ug_history_time} || $self->{end_time});
 		}
 		$old_year = $ltime[5]+1900;
 		$old_month = $ltime[4]+1;
