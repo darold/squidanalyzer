@@ -492,6 +492,10 @@ CONFIGURATION
         for a log file generated on zone Europe/Paris with UTC+0100 and
         parsed on a computer with different timezone.
 
+    UseUrlPort
+        Enable this directive if you want to include port number into Url
+        statistics. Default is to remove the port information from the Url.
+
 SUPPORT
   Release announcement
     Please follow us on twitter to receive release announcement and latest

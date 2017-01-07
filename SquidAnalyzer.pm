@@ -1570,6 +1570,7 @@ sub _init
 	$self->{is_squidguard_log} = 0;
 	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
 	$self->{Syslog} = 0;
+	$self->{UseUrlPort} = 1;
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
@@ -1881,7 +1882,7 @@ sub _parseData
 	}
 
 	# Extract the domainname part of the URL
-	$url =~ s/:\d+.*//;
+	$url =~ s/:\d+.*// if (!$self->{UseUrlPort});
 	$url =~ m/^[^\/]+\/\/([^\/]+)/;
 	my $dest = $1 || $url;
 
@@ -5131,40 +5132,37 @@ sub _print_top_url_stat
 			} else {
 				print $out "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>\n";
 			}
+			print $out qq{</td>};
+			if ($tpe eq 'Hits') {
+				print $out qq{
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+			} elsif ($tpe eq 'Bytes') {
+				print $out qq{
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+};
+			} else {
+				print $out qq{
+<td>$duration <span class="italicPercent">($d_percent)</span></td>
+<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
+<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
+};
+			}
 			print $out qq{
-</td>
-};
-	if ($tpe eq 'Hits') {
-		print $out qq{
-<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
-<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
-<td>$duration <span class="italicPercent">($d_percent)</span></td>
-};
-	} elsif ($tpe eq 'Bytes') {
-		print $out qq{
-<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
-<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
-<td>$duration <span class="italicPercent">($d_percent)</span></td>
-};
-	} else {
-		print $out qq{
-<td>$duration <span class="italicPercent">($d_percent)</span></td>
-<td>$url_stat{$u}{hits} <span class="italicPercent">($h_percent)</span></td>
-<td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
-};
-	}
-	print $out qq{
 <td>$comma_throughput</span></td>
 <td>$lasthit</td>
 };
-	print $out qq{
+			print $out qq{
 <td>$firsthit</td>
 } if ($type eq 'hour');
-	print $out qq{
+			print $out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
-	print $out qq{
-</tr>};
+			print $out qq{</tr>};
 			$i++;
 			last if ($i > $self->{TopNumber});
 		}
@@ -5481,6 +5479,8 @@ sub _print_top_domain_stat
 		if ($self->{rebuild}) {
 			next if ($self->check_exclusions('','',$url));
 		}
+
+		$url =~ s/:\d+//;
 
 		my $done = 0;
 		if ($url !~ /\.\d+$/) {
