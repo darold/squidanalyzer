@@ -529,6 +529,13 @@ computer with different timezone.
 Enable this directive if you want to include port number into Url statistics.
 Default is to remove the port information from the Url.
 
+=item UpdateAlias
+
+Enable this directive if you want to apply immedialtly the changes made in
+aliases files to avoid duplicates. You still have to use --rebuild to
+recreate previous reports with new aliases. Enabling this will imply a lost
+of performances with huges log files.
+
 =back
 
 =head1 SUPPORT

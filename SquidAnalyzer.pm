@@ -1415,7 +1415,7 @@ sub _parse_file_part
 				}
 
 				# Now parse data and generate statistics
-				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl);
+				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl, $method);
 				$line_stored_count++;
 
 			}
@@ -1849,9 +1849,41 @@ sub _gethostbyaddr
 	return $CACHE{$ip} || $ip;
 }
 
+sub apply_network_alias
+{
+	my ($self, $ip) = @_;
+
+	foreach my $r (keys %{$self->{NetworkAlias}}) {
+		if ($r =~ $cidr_regex) {
+			if (&check_ip($ip, $r)) {
+				$ip = $self->{NetworkAlias}->{$r};
+				last;
+			}
+		} elsif ($ip =~ /^$r/) {
+			$ip = $self->{NetworkAlias}->{$r};
+			last;
+		}
+	}
+	return $ip;
+}
+
+sub apply_user_alias
+{
+	my ($self, $id) = @_;
+
+	foreach my $u (keys %{$self->{UserAlias}}) {
+		if ( $id =~ /^$u$/i ) {
+			$id = $self->{UserAlias}->{$u};
+			last;
+		}
+	}
+
+	return $id;
+}
+
 sub _parseData
 {
-	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type, $acl) = @_;
+	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type, $acl, $method) = @_;
 
 	# Save original IP address for dns resolving
 	my $client_ip_addr = $client;
@@ -1898,18 +1930,7 @@ sub _parseData
 	}
 
 	# Replace network by his aliases if any
-	my $network = '';
-	foreach my $r (keys %{$self->{NetworkAlias}}) {
-		if ($r =~ $cidr_regex) {
-			if (&check_ip($client, $r)) {
-				$network = $self->{NetworkAlias}->{$r};
-				last;
-			}
-		} elsif ($client =~ /^$r/) {
-			$network = $self->{NetworkAlias}->{$r};
-			last;
-		}
-	}
+	my $network = $self->apply_network_alias($client);
 
 	# Set default to a class A network
 	if (!$network) {
@@ -1918,12 +1939,7 @@ sub _parseData
 	}
 
 	# Replace username by his alias if any
-	foreach my $u (keys %{$self->{UserAlias}}) {
-		if ( $id =~ /^$u$/i ) {
-			$id = $self->{UserAlias}->{$u};
-			last;
-		}
-	}
+	$id = $self->apply_user_alias($id);
 
 	# Stores last parsed date part
 	if (!$self->{last_year} || ("$year$month$day" gt "$self->{last_year}$self->{last_month}{$self->{last_year}}$self->{last_day}{$self->{last_year}}")) {
@@ -2074,6 +2090,7 @@ sub _parseData
 	$self->{stat_mime_type_day}{"$type"}{hits}++;
 	$self->{stat_mime_type_day}{"$type"}{bytes} += $bytes;
 
+print STDERR "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ $method : $dest\n" if ($method eq 'CONNECT');
 }
 
 sub _load_history
@@ -2757,6 +2774,12 @@ sub _read_stat
 				if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$net}) {
 					next if (!$self->check_inclusions('', $net));
 					next if ($self->check_exclusions('', $net));
+
+				}
+
+				if ($self->{UpdateAlias}) {
+					# Replace network by his aliases if any
+					$net = $self->apply_network_alias($net);
 				}
 
 				if ($data =~ s/^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
@@ -3909,6 +3932,11 @@ sub _print_network_stat
 			next if ($self->check_exclusions('', $network));
 		}
 
+		if ($self->{UpdateAlias}) {
+			# Replace network by his aliases if any
+			$network = $self->apply_network_alias($network);
+		}
+
 		my $hits = $1 || '';
 		my $bytes = $2 || '';
 		my $duration = $3 || '';
@@ -4014,22 +4042,7 @@ sub _print_network_stat
 		my $total_throughput = int($network_stat{$net}{bytes} / (($network_stat{$net}{duration}/1000) || 1) );
 		my $comma_throughput = $self->format_bytes($total_throughput);
 		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
-		my $show = $net;
-		if ($net =~ /^(\d+\.\d+\.\d+)/) {
-			$show = "$1.0";
-			foreach my $r (keys %{$self->{NetworkAlias}}) {
-
-				if ($r =~ /^\d+\.\d+\.\d+\.\d+\/\d+$/) {
-					if (&check_ip($net, $r)) {
-						$show = $self->{NetworkAlias}->{$r};
-						last;
-					}
-				} elsif ($show =~ /$r/) {
-					$show = $self->{NetworkAlias}->{$r};
-					last;
-				}
-			}
-		}
+		my $show = $self->apply_network_alias($net);
 		my $comma_bytes = $self->format_bytes($network_stat{$net}{bytes});
 		print $out qq{
 <tr>
@@ -4308,13 +4321,7 @@ sub _print_user_stat
 		my $total_throughput = int($user_stat{$usr}{bytes} / (($user_stat{$usr}{duration}/1000) || 1));
 		my $comma_throughput = $self->format_bytes($total_throughput);
 		$user_stat{$usr}{duration} = &parse_duration(int($user_stat{$usr}{duration}/1000));
-		my $show = $usr;
-		foreach my $u (keys %{$self->{UserAlias}}) {
-			if ( $usr =~ /^$u$/i ) {
-				$show = $self->{UserAlias}->{$u};
-				last;
-			}
-		}
+		my $show = $self->apply_user_alias($usr);
 		$show =~ s/_SPC_/ /g;
 		my $upath = &escape($usr);
 		my $comma_bytes = $self->format_bytes($user_stat{$usr}{bytes});
@@ -4534,13 +4541,7 @@ sub _print_netuser_stat
 		my $total_throughput = int($netuser_stat{$usr}{bytes} / (($netuser_stat{$usr}{duration}/1000) || 1) );
 		my $comma_throughput = $self->format_bytes($total_throughput);
 		$netuser_stat{$usr}{duration} = &parse_duration(int($netuser_stat{$usr}{duration}/1000));
-		my $show = $usr;
-		foreach my $u (keys %{$self->{UserAlias}}) {
-			if ( $usr =~ /^$u$/i ) {
-				$show = $self->{UserAlias}->{$u};
-				last;
-			}
-		}
+		my $show = $self->apply_user_alias($usr);
 		$show =~ s/_SPC_/ /g;
 		my $url = &escape($usr);
 		my $comma_bytes = $self->format_bytes($netuser_stat{$usr}{bytes});
