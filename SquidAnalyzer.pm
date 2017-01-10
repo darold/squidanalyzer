@@ -1932,7 +1932,7 @@ sub _parseData
 	# Replace network by his aliases if any
 	my $network = $self->apply_network_alias($client);
 
-	# Set default to a class A network
+	# Set default to a class C network
 	if (!$network) {
 		$client =~ /^(.*)([:\.]+)\d+$/;
 		$network = "$1$2". "0";
@@ -2089,8 +2089,6 @@ sub _parseData
 	$self->{stat_mime_type_hour}{"$type"}{bytes} += $bytes;
 	$self->{stat_mime_type_day}{"$type"}{hits}++;
 	$self->{stat_mime_type_day}{"$type"}{bytes} += $bytes;
-
-print STDERR "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ $method : $dest\n" if ($method eq 'CONNECT');
 }
 
 sub _load_history
@@ -2846,6 +2844,9 @@ sub _read_stat
 						next if (!$self->check_inclusions($id, $net));
 						next if ($self->check_exclusions($id, $net));
 					}
+
+					# Replace network by his aliases if any
+					$net = $self->apply_network_alias($net);
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
