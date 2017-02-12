@@ -28,6 +28,8 @@ my $timezone   = '';
 my $no_year_stat = 0;
 my $no_week_stat = 0;
 my $t0 = Benchmark->new;
+my $start_time = '';
+my $stop_time = '';
 
 # get the command line parameters
 my $result = GetOptions (
@@ -40,6 +42,8 @@ my $result = GetOptions (
 	"p|preserve=i"         => \$preserve,
 	"P|pid_dir=s"          => \$pid_dir,
 	"r|rebuild!"           => \$rebuild,
+	"s|start=s"            => \$start_time,
+	"S|stop=s"             => \$stop_time,
 	"t|timezone=s"         => \$timezone,
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
@@ -63,6 +67,13 @@ if ($build_date) {
 		die("FATAL: bad syntax for build_date, expecting format: yyyy-mm-dd, yyyy-mm or yyyy\n");
 		exit 0;
 	}
+}
+
+if ($start_time && $start_time !~ /^[0-2]\d:[0-5]\d$/) {
+	die("FATAL: bad format on start time, must be HH:MM.\n"); 
+}
+if ($stop_time && $stop_time !~ /^[0-2]\d:[0-5]\d$/) {
+	die("FATAL: bad format on stop time, must be HH:MM.\n");
 }
 
 # Add multiple log files given from command line
@@ -96,6 +107,8 @@ my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $
 $sa->{no_year_stat} = $no_year_stat;
 $sa->{no_week_stat} = $no_week_stat;
 $sa->{queue_size} = $queue_size;
+$sa->{TimeStart} = $start_time;
+$sa->{TimeStop} = $stop_time;
 
 # Die cleanly on signal
 sub terminate
@@ -187,15 +200,17 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug information.
     -h | --help                : show this message and exit.
-    -j | --jobs number         : number of jobs to run at same time. Default is 1,
-                                 run as single process.
+    -j | --jobs number         : number of jobs to run at same time. Default
+                                 is 1, run as single process.
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
-    -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+    -s | --start HH:MM         : log lines before this time will not be parsed.
+    -S | --stop  HH:MM         : log lines after this time will not be parsed.
+    -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
                                  Use this to adjust date/time of SquidAnalyzer
                                  output when it is run on a different timezone
                                  than the squid server.

@@ -166,15 +166,17 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug information.
     -h | --help                : show this message and exit.
-    -j | --jobs number         : number of jobs to run at same time. Default is 1,
-                                 run as single process.
+    -j | --jobs number         : number of jobs to run at same time. Default
+                                 is 1, run as single process.
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
-    -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+    -s | --start HH:MM         : log lines before this time will not be parsed.
+    -S | --stop  HH:MM         : log lines after this time will not be parsed.
+    -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
                                  Use this to adjust date/time of SquidAnalyzer
                                  output when it is run on a different timezone
                                  than the squid server.
@@ -535,6 +537,12 @@ Enable this directive if you want to apply immedialtly the changes made in
 aliases files to avoid duplicates. You still have to use --rebuild to
 recreate previous reports with new aliases. Enabling this will imply a lost
 of performances with huges log files.
+
+=item TimeStart and TimeStop
+
+The two following configuration directive allow you to specify a start and
+stop time. Log line out of this time range will not be parsed. The format
+of the value is HH:MM
 
 =back
 

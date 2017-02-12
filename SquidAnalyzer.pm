@@ -1246,6 +1246,11 @@ sub _parse_file_part
 			$bytes = $5;
 			$method = $6;
 			$line = $7;
+			if ($self->{TimeStart} || $self->{TimeStop}) {
+				my $hour = strftime("%H:%M", CORE::localtime($time));
+				next if ($self->{TimeStart} && $hour lt $self->{TimeStart});
+				last if ($self->{TimeStop} && $hour gt $self->{TimeStop});
+			}
 		} elsif ( !$self->{is_squidguard_log} && !$self->{is_ufdbguard_log} && ($line =~ $common_format_regex1) ) {
 			$format = 'http';
 			$client_ip = $1;
@@ -1260,6 +1265,8 @@ sub _parse_file_part
 			$code = $11;
 			$mime_type = $12;
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
+			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
+			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
 			if (!$self->{TimeZone}) {
 				$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
 			} else {
@@ -1282,6 +1289,8 @@ sub _parse_file_part
                         $bytes = 0;
                         $code = $12 . ':';
                         $mime_type = '';
+			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
+			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
 			if (!$self->{TimeZone}) {
 				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 			} else {
@@ -1301,6 +1310,8 @@ sub _parse_file_part
                         $bytes = 0;
                         $code = 'REDIRECT:';
                         $mime_type = '';
+			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
+			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
 			if (!$self->{TimeZone}) {
 				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
 			} else {
@@ -1571,6 +1582,8 @@ sub _init
 	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
 	$self->{Syslog} = 0;
 	$self->{UseUrlPort} = 1;
+	$self->{TimeStart} = $options{TimeStart} || '';
+	$self->{TimeStop} = $options{TimeStop} || '';
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
