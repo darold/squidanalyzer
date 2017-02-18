@@ -398,6 +398,13 @@ special character. Default is &euro;
 Used to set the number of top url and second level domain to show.
 Default is top 100.
 
+=item TopStorage number
+
+Top number of url to preserve on each data file sorted by OrderUrl.
+On huge access log it will improve a lot the performances but you
+will have less precision in the top url. Default to 0, all url will
+be stored.
+
 =item TopUrlUser
 Use this directive to show the top N users that look at an URL or a domain.
 Set it to 0 to disable this feature. Default is top 10.

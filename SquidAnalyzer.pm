@@ -1656,6 +1656,7 @@ sub _init
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
 	$self->{TopNumber} = $options{TopNumber} || 10;
+	$self->{TopStorage} = $options{TopStorage} || 0;
 	$self->{TransfertUnit} = $options{TransfertUnit} || 'BYTES';
 	if (!grep(/^$self->{TransfertUnit}$/i, 'BYTES', 'KB', 'MB', 'GB')) {
 		die "ERROR: TransfertUnit must be one of these values: KB, MB or GB\n";
@@ -2389,9 +2390,14 @@ sub _write_stat_data
 	#### Save url statistics per user
 	if ($kind eq 'stat_user_url') {
 		foreach my $id (sort {$a cmp $b} keys %{$self->{"stat_user_url_$type"}}) {
-			foreach my $dest (keys %{$self->{"stat_user_url_$type"}{$id}}) {
+			my $i = 0;
+			foreach my $dest (sort  {
+				$self->{"stat_user_url_$type"}{$id}{$b}{$self->{OrderUrl}} <=>  $self->{"stat_user_url_$type"}{$id}{$a}{$self->{OrderUrl}}
+						} keys %{$self->{"stat_user_url_$type"}{$id}}) {
+				last if ($self->{TopStorage} && ($i > $self->{TopStorage}));
 				my $u = $id;
 				$u = '-' if (!$self->{UserReport});
+				$i++;
 				$fh->print(
 					"$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
 					"bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{bytes} . ";" .
