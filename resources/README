@@ -1,0 +1,34 @@
+Resources files are collected from their respective download places as follow:
+
+sorttable:
+----------
+
+wget https://kryogenix.org/code/browser/sorttable/sorttable.js -O orig/sorttable.js
+
+SquidAnalyzer use a modified version of the library using patch:
+
+	patch -p 1 orig/sorttable.js < sa-sorttable.diff
+
+See file sa-sorttable.diff to see the changes.
+
+bean:
+-----
+
+wget https://github.com/fat/bean/archive/v1.0.14.tar.gz
+tar xzf v1.0.14.tar.gz  bean-1.0.14/src/bean.js
+cp bean-1.0.14/src/bean.js orig/bean.js
+
+
+underscore.js:
+--------------
+
+wget http://underscorejs.org/underscore.js -O orig/underscore.js
+
+flotr2:
+-------
+
+wget https://raw.githubusercontent.com/HumbleSoftware/Flotr2/master/flotr2.nolibs.js -O orig/flotr2.nolibs.js
+
+Files are minified using yui-compressor before being appended with the content of squidanalyzer.js file
+to the final flotr2.js file.
+
