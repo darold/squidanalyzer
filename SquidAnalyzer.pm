@@ -1369,7 +1369,7 @@ sub _parse_file_part
 				$code = 'HIT';
 			} elsif ($code =~ m#(MISS|MODIFIED|TUNNEL)[:/]#) {
 				$code = 'MISS';
-			} elsif ($code =~ m#(DENIED|REDIRECT)[:/]#) {
+			} elsif ($code =~ m#(DENIED|DENIED_REPLY|REDIRECT)[:/]#) {
 				$code = 'DENIED';
 			} else {
 				next;
