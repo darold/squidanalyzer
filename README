@@ -310,6 +310,9 @@ CONFIGURATION
 
             FULL_USERNAME IP_ADDRESS
 
+        When 'UseClientDNSName' is ebabled you can replace ip address by a
+        DNS name.
+
         If you have auth_proxy enable but want to replace login name by full
         user name for example, create a file with this format:
 
@@ -319,9 +322,6 @@ CONFIGURATION
 
         You can use regex to match and group some user login or ip
         addresses. See user-aliases file for examples.
-
-        You can also replace default ip address by his DNS name by enabling
-        directive 'UseClientDNSName'.
 
     AnonymizeLogin 0
         Set this to 1 if you want to anonymize all user login. The username

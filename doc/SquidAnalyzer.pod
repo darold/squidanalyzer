@@ -321,6 +321,8 @@ show username or computer name instead, create a file with this format:
 
     FULL_USERNAME IP_ADDRESS
 
+When 'UseClientDNSName' is ebabled you can replace ip address by a DNS name.
+
 If you have auth_proxy enable but want to replace login name by full
 user name for example, create a file with this format:
 
@@ -330,9 +332,6 @@ Separator for both must be a tabulation.
 
 You can use regex to match and group some user login or ip addresses. See
 user-aliases file for examples.
-
-You can also replace default ip address by his DNS name by enabling
-directive 'UseClientDNSName'.
 
 =item AnonymizeLogin  0
 
