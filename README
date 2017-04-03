@@ -297,7 +297,8 @@ CONFIGURATION
 
             LOCATION_NAME IP_NETWORK_ADDRESS
 
-        Separator must be a tabulation.
+        Separator must be a tabulation this allow the use of space character
+        in the network alias name.
 
         You can use regex to match and group some network addresses. See
         network-aliases file for examples.
@@ -318,7 +319,8 @@ CONFIGURATION
 
             FULL_USERNAME LOGIN_NAME
 
-        Separator for both must be a tabulation.
+        Separator for both must be a tabulation this allow the use of space
+        character in the user alias name.
 
         You can use regex to match and group some user login or ip
         addresses. See user-aliases file for examples.
