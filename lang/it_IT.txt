@@ -86,7 +86,7 @@ Largest				Dim. Max DL
 Url				Url
 User_title			Statistiche utente per
 User_number			Numero di utenti
-Url_title			Principali %d Url
+Url_title			Principali %d siti
 Url_Hits_title			Principali %d Url acceduti con successo
 Url_Bytes_title			Principali  %d Url per numero di byte per  
 Url_Duration_title		Principali %d Url per durata temporale

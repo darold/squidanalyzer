@@ -85,7 +85,7 @@ Largest				Plus gros transfert
 Url				Url
 User_title			Statistiques utilisateurs pour
 User_number			Nombre d'utilisateurs
-Url_title			Top %d Urls
+Url_title			Top %d des sites
 Url_Hits_title			Top %d des Urls par requêtes pour
 Url_Bytes_title			Top %d des Urls par transferts pour
 Url_Duration_title		Top %d des Urls par durée pour

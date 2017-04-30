@@ -85,7 +85,7 @@ Largest				Największy
 Url				Url
 User_title			Statystyki użytkowników z dnia
 User_number			Liczba użytkowników
-Url_title			Topowych %d Url
+Url_title			Topowych %d witryn
 Url_Hits_title			Topowych %d trafień dla Url w
 Url_Bytes_title			Topowych %d bajtów dla Url w
 Url_Duration_title		Topowych %d czasów trwania dla Url w
