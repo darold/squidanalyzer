@@ -59,6 +59,9 @@ please proceed as follow:
 as the issue is related to an install into the default Perl vendor installdirs
 it will then use Perl site installdirs.
 
+Note: you may not encountered this issue any more, since v6.6 SquidAnalyzer use
+site as default installation directory.
+
 =head2 Custom install
 
 You can create your fully customized SquidAnalyzer installation by using the
@@ -163,15 +166,17 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 or yyyy-mm or yyyy. Used with -r or --rebuild.
     -d | --debug               : show debug information.
     -h | --help                : show this message and exit.
-    -j | --jobs number         : number of jobs to run at same time. Default is 1,
-                                 run as single process.
+    -j | --jobs number         : number of jobs to run at same time. Default
+                                 is 1, run as single process.
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
-    -t, --timezone +/-HH       : set number of hours from GMT of the timezone.
+    -s | --start HH:MM         : log lines before this time will not be parsed.
+    -S | --stop  HH:MM         : log lines after this time will not be parsed.
+    -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
                                  Use this to adjust date/time of SquidAnalyzer
                                  output when it is run on a different timezone
                                  than the squid server.
@@ -303,7 +308,8 @@ create a file with this format:
 
     LOCATION_NAME IP_NETWORK_ADDRESS
 
-Separator must be a tabulation.
+Separator must be a tabulation this allow the use of space character
+in the network alias name.
 
 You can use regex to match and group some network addresses. See
 network-aliases file for examples.
@@ -316,18 +322,18 @@ show username or computer name instead, create a file with this format:
 
     FULL_USERNAME IP_ADDRESS
 
+When 'UseClientDNSName' is ebabled you can replace ip address by a DNS name.
+
 If you have auth_proxy enable but want to replace login name by full
 user name for example, create a file with this format:
 
     FULL_USERNAME LOGIN_NAME
 
-Separator for both must be a tabulation.
+Separator for both must be a tabulation this allow the use of space character
+in the user alias name.
 
 You can use regex to match and group some user login or ip addresses. See
 user-aliases file for examples.
-
-You can also replace default ip address by his DNS name by enabling
-directive 'UseClientDNSName'.
 
 =item AnonymizeLogin  0
 
@@ -392,6 +398,13 @@ special character. Default is &euro;
 
 Used to set the number of top url and second level domain to show.
 Default is top 100.
+
+=item TopStorage number
+
+Top number of url to preserve on each data file sorted by OrderUrl.
+On huge access log it will improve a lot the performances but you
+will have less precision in the top url. Default to 0, all url will
+be stored.
 
 =item TopUrlUser
 Use this directive to show the top N users that look at an URL or a domain.
@@ -521,6 +534,24 @@ For example:
 for a log file generated on zone Europe/Paris with UTC+0100 and parsed on a
 computer with different timezone.
 
+=item UseUrlPort
+
+Enable this directive if you want to include port number into Url statistics.
+Default is to remove the port information from the Url.
+
+=item UpdateAlias
+
+Enable this directive if you want to apply immedialtly the changes made in
+aliases files to avoid duplicates. You still have to use --rebuild to
+recreate previous reports with new aliases. Enabling this will imply a lost
+of performances with huges log files.
+
+=item TimeStart and TimeStop
+
+The two following configuration directive allow you to specify a start and
+stop time. Log line out of this time range will not be parsed. The format
+of the value is HH:MM
+
 =back
 
 =head1 SUPPORT
@@ -548,7 +579,7 @@ Gilles DAROLD <gilles@darold.net>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2016 Gilles DAROLD
+Copyright (c) 2001-2017 Gilles DAROLD
     
 This package is free software and published under the GPL v3 or above
 license.

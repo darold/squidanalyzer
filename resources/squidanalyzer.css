@@ -100,7 +100,7 @@ table.stata td a:hover { color: #76add2; }
 
 ul { padding:0; margin:0; list-style-type:none; }
 li { float:right; }
-ul li a { display:block; width:125px; text-decoration:none; text-align:center; padding:5px; color: white; font-variant: small-caps; letter-spacing: 2px; }
+ul li a { display:block; width:135px; text-decoration:none; text-align:center; padding:5px; color: white; font-variant: small-caps; letter-spacing: 2px; }
 ul li a:hover { color: #76add2; }
 #menu { margin: 0 auto; padding: 0 auto; height: 28px; clear: both; background-color: #222222; border-bottom: 3px solid #76add2; }
 

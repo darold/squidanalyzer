@@ -85,6 +85,7 @@ Largest				Největší
 Url				Url
 User_title			Uživatelská Statistika
 User_number			Počet uživatelů
+Url_title			Top %d webů
 Url_Hits_title			Top %d Url hitů
 Url_Bytes_title			Top %d Url Bytů
 Url_Duration_title		Top %d Url doba přenosu

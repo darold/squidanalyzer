@@ -85,6 +85,7 @@ Largest				El més llarg
 Url				Url
 User_title			Estadístiques d'usuari en
 User_number			Nombre d'usuaris
+Url_title			Top %d site
 Url_Hits_title			Top %d de clicks en
 Url_Bytes_title			Top %d de bytes de Url en
 Url_Duration_title		Top %d de duració de visita en

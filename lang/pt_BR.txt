@@ -87,6 +87,7 @@ Largest				Maior
 Url				URL
 User_title			Estat&iacute;sticas de usu&aacute;rios em
 User_number			N&uacute;mero de usu&aacute;rios
+Url_title			As Top %d sites
 Url_Hits_title			As Top %d URLs por n&uacute;mero de acessos em
 Url_Bytes_title			As Top %d URLs por bytes transferidos em
 Url_Duration_title		As Top %d URLs por tempo de transfer&ecirc;ncia em

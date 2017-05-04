@@ -1,0 +1,5 @@
+squidanalyzer (6.5-1) experimental; urgency=low
+
+  - Initial Debian package release
+
+ -- Benjamin Renard <brenard@easter-eggs.com>  Thu, 11 Aug 2016 12:09:18 +0200

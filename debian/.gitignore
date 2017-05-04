@@ -1,0 +1,4 @@
+squidanalyzer
+*.debhelper*
+squidanalyzer.substvars
+files

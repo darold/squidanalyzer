@@ -1,0 +1,32 @@
+--- sorttable.js	2012-10-15 21:11:14.000000000 +0200
++++ ../sorttable.js	2017-02-19 12:09:38.499610414 +0100
+@@ -151,6 +151,8 @@
+ 	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+ 	        /* and comment out this one */
+ 	        row_array.sort(this.sorttable_sortfunction);
++		// SquidAnalyzer: Sort in descending order first
++		row_array.reverse();
+ 
+ 	        tb = this.sorttable_tbody;
+ 	        for (var j=0; j<row_array.length; j++) {
+@@ -266,8 +268,18 @@
+     return aa-bb;
+   },
+   sort_alpha: function(a,b) {
+-    if (a[0]==b[0]) return 0;
+-    if (a[0]<b[0]) return -1;
++    // SquidAnalyzer: remove percentage for numeric sort
++    if (a[0].replace(/ <.*\(.*%\).*/, '')) {
++	b[0].replace(/ <.*\(.*%\).*/,''); 
++	aa = parseFloat(a[0].replace(/[^0-9.-]/g,''));
++	if (isNaN(aa)) aa = 0;
++	bb = parseFloat(b[0].replace(/[^0-9.-]/g,'')); 
++	if (isNaN(bb)) bb = 0;
++	return aa-bb;
++    } else {
++	if (a[0]==b[0]) return 0;
++	if (a[0]<b[0]) return -1;
++    }
+     return 1;
+   },
+   sort_ddmm: function(a,b) {
