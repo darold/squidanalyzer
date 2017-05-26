@@ -1,5 +1,126 @@
 Revision history for SquidAnalyzer
 
+6.6 - Sun May  7 16:38:14 CEST 2017
+
+This is a maintenance release that fix one year of issues reported by users.
+There is also some additional features, configuration directives all listed
+here:
+
+    * Add TopStorage configuration directive to limit the storage of url to
+      a certain quantity in data file and sorted by OrderUrl. On huge access
+      log it will improve a lot the performances but you will have less
+      precision in the top url. Default to 0, all url will be stored.
+    
+      Here are the performances of SquidAnalayzer on a 1.4 GB access log
+      file to parse and compute full reports over one week:
+    
+      UrlReport | UserReport | Duration
+      ----------+------------+---------
+          0     |     0      |  2m30s
+          0     |     1      |  3m00s
+          1     |     1      | 18m15s
+          1     |     1      |  9m55s when TopStorage is set to 100
+
+    * Add a cache to network and user aliases for speed improvement. Thanks to
+      Louis-Berthier Soulliere for the report.
+    * Add TimeStart and TimeStop configuration directives to allow to
+      specify a start and stop time. Log line out of this time range
+      will not be parsed. The format of the value is HH:MM. These
+      directives can be overriden with the -s | --start and -S | --stop
+      command line options. Thanks to Louis-Berthier Soulliere for the
+      feature request.
+    * Add UpdateAlias configuratio directive to apply immediately the changes
+      made in aliases files to avoid duplicates. You still have to use
+      --rebuild to recreate previous reports with new aliases. Enabling
+      this will imply a lost of performances with huges log files.
+    * Add UseUrlPort configuration directive to be able to include port number
+      into Url statistics. Default is to remove the port information from the
+      Url. Thanks to Tobias Wigand for the feature request.
+    * Add report of top denied url on user statistic page. Thanks to delumerlino
+      and Pavel Podkorytov for the feature request.
+    * Add last visited timestamp on urls reports and show last ten visit on user
+      url report. The last visit are counted after 5 minutes in hour view, after
+      30 minutes in day views and per day in month view. Thanks to Ringa Mari
+      Sundberg for the feature request.
+    * Add support to ipv6 address dns resolving, you need perl > 5.014. Thanks
+      to Brian J. Murrell for the report.
+
+Full list of other bug fixes:
+
+    - Change user top url title from "Top n/N Url" into "Top n/N sites". Thanks
+      to Daniel Bareiro for the report.
+    - Update documentation to clarify the use of space character in aliases
+      files. Thanks to Darren Spruell for the report.
+    - Fix explanation of UserAlias file format about ip address vs DNS name.
+      Thanks to Darren Spruell for the report.
+    - Fix missing report of TCP_DENIED_REPLY messages. Thanks to Jeff Gebhardt
+      for the report.
+    - Add license file about resources file and a script to retrieve original
+      javascript libraries.
+    - Fix html report building that was limited to the last day.
+    - Fix missing network alias replacement.
+    - Update year in copyrights.
+    - Disabled bandwidth cost report by default.
+    - Fix removing of obsolete year directory.
+    - Fix obsolete statistics no longer being deleted. Thanks to andreybrasil
+      for the report.
+    - Allow parsing of access.log generated through syslog. Thanks to Celine
+      Labrude for the report.
+    - Add Url_Hit label in translation files.
+    - Fix remaining _SPC_ in username. Thanks to roshanroche for the report.
+    - Fix remaining SA_CALENDAR_SA in html output. Thanks to roshanroche for
+      the report.
+    - Add more fix to denied stat datafile corruption. Thanks to PiK2K for the
+      report.
+    - Fix denied stat datafile corruption. Thanks to PiK2K for the report.
+    - Use CORE::localtime to format denied first and last hit.
+    - Fix potential unparsed log case when log file are set in configuration
+      file and not on command line.
+    - Change the in-line popup (on top domain and top URL) to show hits on hits
+      tables, bytes on the bytes tables and duration on the duration tables,
+      instead of count. Thanks to Wesley Bresson for the feature request.
+    - Only apply OrderUrl to user url list, other reports in Top domain and Top
+      Url are now always ordered following the first column, which is the sorted
+      column of the report (hits, bytes and duration).
+    - Fix missing limit total number of URLs shown for a user to TopNumber.
+       Thanks to Graham Wing for the report.
+    - Update statistic on users with DENIED code to have the full list of
+      user/ip even if they never hit an url.
+    - Change Perl install directory from vendor to site to avoid well know issue
+      on BSD. Thanks to dspruell for the report.
+    - Add initial Debian package build files
+    - Update squidanalyzer.css changed the width of the single menu tabs,
+      because in German language, it looks better at the tab "TOP DENIED" is in
+      German language "TOP VERBOTEN" and will be displayed better, no wordwrap
+      anymore, will be done with this change. Thanks to Klaus Tachtler for the
+      patch.
+    - Fix Throughput label for unit/s that was not dynamically changed during
+      value formating and always labelled as B/s. Thanks to aabaker for the
+      report.
+    - Fix typo in graph titles. Thanks to aabaker for the patch.
+    - Update missing fields to German language file. Thanks to Klaus Tachtler
+      for the patch.
+    - Fix top url report that was not cumulate statistics anymore. Thanks to
+      Wesley Bresson for the report.
+    - Fix typo about Network exclusion. Thanks to Mathieu Parent for the patch.
+    - Manpages fixes. Thanks to Mathieu Parent for the patch.
+    - Use FHS for manpages path. Thanks to Mathieu Parent for the patch.
+    - Update russian language file. Thanks to Yuri Voinov for the patch.
+    - Fix typo in mime type redefinition.
+    - Mark mime-types with invalid characters as "invalid/type". Thanks to
+      gitdevmod for the report.
+    - Add missing throughput translation entries in lang files. Thanks to Yuri
+      Voinov for the report.
+    - Fix major issue in squidguard and ubfguard history file managment. Thanks
+      to Guttilla Elmi for the report and the help.
+    - Fix path to xzcat program durinf install. Thanks to Johan Glenac for
+      the report.
+    - Fix auto detection of SquidGuard log file when there is no denied entry
+      in the first lines.
+    - Fix typo in debug messages
+    - Add warning when DNSLookupTimeout is reach. Thanks to gitdevmod for the
+      report.
+
 6.5 - Sun Jan  3 16:12:12 CET 2016
 
 This is a mantenance release to fix an overlaping bug on bytes charts with

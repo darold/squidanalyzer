@@ -29,7 +29,7 @@ BEGIN {
 	setlocale(LC_ALL,     'C');
 
 	# Set all internal variable
-	$VERSION = '6.5';
+	$VERSION = '6.6';
 	$COPYRIGHT = 'Copyright (c) 2001-2017 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
