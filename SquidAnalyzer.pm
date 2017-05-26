@@ -1948,7 +1948,7 @@ sub _parseData
 
 	# Extract the domainname part of the URL
 	$url =~ s/:\d+.*// if (!$self->{UseUrlPort});
-	$url =~ m/^[^\/]+\/\/([^\/]+)/;
+	$url =~ m/^(?:[^\/]+\/\/|)([^\/:]+)/;
 	my $dest = $1 || $url;
 
 	# Replace username by his dnsname if there's no username
