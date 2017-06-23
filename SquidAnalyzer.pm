@@ -26,7 +26,7 @@ BEGIN {
 	use FileHandle;
 	use POSIX qw(locale_h);
 	setlocale(LC_NUMERIC, '');
-	setlocale(LC_ALL,     'C');
+	setlocale(LC_ALL,    'C');
 
 	# Set all internal variable
 	$VERSION = '6.6';
@@ -1883,13 +1883,23 @@ sub apply_network_alias
 				last;
 			}
 		} elsif ($ip =~ /^$r/) {
+
 			$self->{NetworkAliasCache}{$ip} = $self->{NetworkAlias}->{$r};
 			$ip = $self->{NetworkAlias}->{$r};
 			$found = 1;
 			last;
 		}
 	}
-	$self->{NetworkAliasCache}{$ip} = $ip if (!$found);
+
+	if (!$found) {
+		# Set default to a class C network
+		if ($ip =~ /^(.*)([:\.]+)\d+$/) {
+			$self->{NetworkAliasCache}{$ip} = "$1$2". "0";
+			$ip = "$1$2". "0";
+		} else {
+			$self->{NetworkAliasCache}{$ip} = $ip;
+		}
+	}
 
 	return $ip;
 }
@@ -1963,12 +1973,11 @@ sub _parseData
 	}
 
 	# Replace network by his aliases if any
-	my $network = (!$self->{has_nework_alias}) ? $client : $self->apply_network_alias($client);
-
-	# Set default to a class C network
+	my $network = (!$self->{has_nework_alias}) ? '' : $self->apply_network_alias($client);
 	if (!$network) {
+		# set network to a default class C
 		$client =~ /^(.*)([:\.]+)\d+$/;
-		$network = "$1$2". "0";
+		$network = "$1$2" . "0";
 	}
 
 	# Replace username by his alias if any
@@ -2812,7 +2821,6 @@ sub _read_stat
 					next if ($self->check_exclusions('', $net));
 
 				}
-
 				if ($self->{UpdateAlias}) {
 					# Replace network by his aliases if any
 					$net = (!$self->{has_nework_alias}) ? $net : $self->apply_network_alias($net)
@@ -3966,6 +3974,7 @@ sub _print_network_stat
 			$data = $l;
 		}
 		$data =~ /^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)/;
+
 		if ($self->{rebuild} && !exists $self->{NetworkAlias}->{$network}) {
 			next if (!$self->check_inclusions('', $network));
 			next if ($self->check_exclusions('', $network));
