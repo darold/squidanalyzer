@@ -1568,6 +1568,7 @@ sub _init
 	$self->{Locale} = $options{Locale} || '';
 	$self->{TopUrlUser} = $options{TopUrlUser} || 0;
 	$self->{no_year_stat} = 0;
+	$self->{with_month_stat} = 0;
 	$self->{no_week_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
 	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
@@ -2187,7 +2188,10 @@ sub _append_stat
 	$dat_file_code->close();
 
 	#### With huge log file we only store global statistics in year and month views
-	return if ( $self->{no_year_stat} && ($type ne 'hour') );
+	if ( $self->{no_year_stat} && ($type ne 'hour') ) {
+		# unless month view is explicitly wanted
+		return if (!$self->{with_month_stat} || ($type ne 'day'));
+	}
 
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
@@ -2277,7 +2281,11 @@ sub _save_stat
 	$dat_file_code->close();
 
 	#### With huge log file we only store global statistics in year and month views
-	return if ( $self->{no_year_stat} && (($type ne 'hour') && !$wn) );
+	if ( $self->{no_year_stat} && (($type ne 'hour') && !$wn) ) {
+print STDERR "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU $self->{with_month_stat} || ($type ne 'day') ==> ($type ne 'hour') && !$wn)\n";
+		# unless month view is explicitly wanted
+		return if (!$self->{with_month_stat} || ($type ne 'day'));
+	}
 
 	#### Save url statistics per user
 	if ($self->{UrlReport}) {
@@ -2572,7 +2580,10 @@ sub _read_stat
 	}
 
 	#### With huge log file we only store global statistics in year and month views
-	return if ($self->{no_year_stat} && ($type ne 'hour'));
+	if ( $self->{no_year_stat} && ($type ne 'hour') ) {
+		# unless month view is explicitly wanted
+		return if (!$self->{with_month_stat} || ($type ne 'day'));
+	}
 
 	#### Read previous client statistics
 	if (!$kind || ($kind eq 'stat_user')) {
@@ -3377,7 +3388,7 @@ sub gen_html_output
 	}
 
 	#### With huge log file we do not store detail statistics
-	if ( !$self->{no_year_stat} || ($self->{no_year_stat} && ($day || $week)) ) {
+	if ( (!$self->{no_year_stat} || $self->{with_month_stat}) || ($self->{no_year_stat} && ($day || $week)) ) {
 		if ($self->{queue_size} <= 1) {
 			if ($self->{UserReport}) {
 				$self->_print_user_stat($dir, $year, $month, $day, $week);
@@ -3520,13 +3531,12 @@ sub _print_cache_stat
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
-	if ( !$self->{no_year_stat} || ($type ne 'month') ) {
+	if ( (!$self->{no_year_stat} || $self->{with_month_stat}) || ($type ne 'month') ) {
 		$self->_print_header(\$out, $self->{menu}, $cal);
-		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 	} else {
 		$self->_print_header(\$out, $self->{menu3}, $cal);
-		print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 	}
+	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 
 	my $total_cost = sprintf("%2.2f", int(($code_stat{HIT}{bytes} + $code_stat{MISS}{bytes})/1000000) * $self->{CostPrice});
 	my $comma_bytes = $self->format_bytes($total_bytes);

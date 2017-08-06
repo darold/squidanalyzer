@@ -26,6 +26,7 @@ my $pidfile    = 'squid-analyzer.pid';
 my $queue_size = 0;
 my $timezone   = '';
 my $no_year_stat = 0;
+my $with_month_stat = 0;
 my $no_week_stat = 0;
 my $t0 = Benchmark->new;
 my $start_time = '';
@@ -48,6 +49,7 @@ my $result = GetOptions (
 	"v|version!"           => \$version,
 	"no-year-stat!"        => \$no_year_stat,
 	"no-week-stat!"        => \$no_week_stat,
+	"with-month-stat!"     => \$with_month_stat,
 ); 
 
 # Show warning for obsolete options
@@ -105,6 +107,7 @@ unlink("$pid_dir/last_parsed.tmp");
 # Instanciate SquidAnalyzer.pm perl module
 my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone);
 $sa->{no_year_stat} = $no_year_stat;
+$sa->{with_month_stat} = $with_month_stat;
 $sa->{no_week_stat} = $no_week_stat;
 $sa->{queue_size} = $queue_size;
 $sa->{TimeStart} = $start_time;
@@ -218,6 +221,7 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
     --no-year-stat             : disable years statistics, reports will start
                                  from month level only.
     --no-week-stat             : disable weekly statistics.
+    --with-month-stat          : enable month stats when --no-year-stat is used.
 
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will
