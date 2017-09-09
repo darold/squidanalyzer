@@ -2282,7 +2282,6 @@ sub _save_stat
 
 	#### With huge log file we only store global statistics in year and month views
 	if ( $self->{no_year_stat} && (($type ne 'hour') && !$wn) ) {
-print STDERR "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU $self->{with_month_stat} || ($type ne 'day') ==> ($type ne 'hour') && !$wn)\n";
 		# unless month view is explicitly wanted
 		return if (!$self->{with_month_stat} || ($type ne 'day'));
 	}
