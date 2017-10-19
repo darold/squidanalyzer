@@ -3,7 +3,7 @@
 Summary:	Squid proxy log analyzer and report generator
 Name:		squidanalyzer
 Version:	6.6
-Release:	2
+Release:	3
 License:	GPLv3
 Group:		Monitoring
 URL:		http://%{name}.darold.net/
@@ -62,13 +62,12 @@ echo -e "#!/bin/sh\n%{_bindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron
 %config(noreplace) %attr(0754,root,root) %{_sysconfdir}/cron.daily/0%{name}
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}/lang
 %{_sysconfdir}/%{name}/lang/*
-%attr(0755,root,root) %dir %{contentdir}/html/%{name}
-%{contentdir}/html/%{name}/flotr2.js
-%{contentdir}/html/%{name}/sorttable.js
-%{contentdir}/html/%{name}/%{name}.css
-%attr(0755,root,root) %dir %{contentdir}/html/%{name}/images
-%{contentdir}/html/%{name}/images/*.png
+%attr(0755,root,root) %dir %{contentdir}/%{name}
+%{contentdir}/%{name}/flotr2.js
+%{contentdir}/%{name}/sorttable.js
+%{contentdir}/%{name}/%{name}.css
+%attr(0755,root,root) %dir %{contentdir}/%{name}/images
+%{contentdir}/%{name}/images/*.png
 
 %clean
 rm -rf %{buildroot}
-
