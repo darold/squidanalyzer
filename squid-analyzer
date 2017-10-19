@@ -7,6 +7,7 @@ use SquidAnalyzer;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use Benchmark;
 use POSIX ":sys_wait_h";
+use Time::Local;
 
 $| = 1;
 
@@ -31,6 +32,9 @@ my $no_week_stat = 0;
 my $t0 = Benchmark->new;
 my $start_time = '';
 my $stop_time = '';
+my $start_date = '';
+my $stop_date = '';
+my $outputdir = '';
 
 # get the command line parameters
 my $result = GetOptions (
@@ -40,6 +44,7 @@ my $result = GetOptions (
 	"h|help"               => \$help,
 	"j|jobs=i"             => \$queue_size,
 	"l|logfile"            => \$obsolete,
+	"o|outputdir=s"        => \$outputdir,
 	"p|preserve=i"         => \$preserve,
 	"P|pid_dir=s"          => \$pid_dir,
 	"r|rebuild!"           => \$rebuild,
@@ -50,6 +55,8 @@ my $result = GetOptions (
 	"no-year-stat!"        => \$no_year_stat,
 	"no-week-stat!"        => \$no_week_stat,
 	"with-month-stat!"     => \$with_month_stat,
+	"startdate=s"          => \$start_date,
+	"stopdate=s"           => \$stop_date,
 ); 
 
 # Show warning for obsolete options
@@ -77,6 +84,14 @@ if ($start_time && $start_time !~ /^[0-2]\d:[0-5]\d$/) {
 if ($stop_time && $stop_time !~ /^[0-2]\d:[0-5]\d$/) {
 	die("FATAL: bad format on stop time, must be HH:MM.\n");
 }
+if ($start_date && $start_date !~ /^\d{4}[-\\\/]?[0-1]\d[-\\\/]?[0-3]\d\s*[0-2]\d[-:]?[0-5]\d[-:]?[0-5]\d$/) {
+	die("FATAL: bad format on start date, must be YYYYMMDDHHMMSS.\n");
+}
+$start_date =~ s/[-\\\/:\s]//g if ($start_date);
+if ($stop_date && $stop_date !~ /^\d{4}[-\\\/]?[0-1]\d[-\\\/]?[0-3]\d\s*[0-2]\d[-:]?[0-5]\d[-:]?[0-5]\d$/) {
+	die("FATAL: bad format on stop date, must be YYYYMMDDHHMMSS.\n");
+}
+$stop_date =~ s/[-\\\/:\s]//g if ($stop_date);
 
 # Add multiple log files given from command line
 foreach my $f (@ARGV) {
@@ -112,6 +127,33 @@ $sa->{no_week_stat} = $no_week_stat;
 $sa->{queue_size} = $queue_size;
 $sa->{TimeStart} = $start_time;
 $sa->{TimeStop} = $stop_time;
+
+# Set start and end time (for custom date range reports)
+if ($start_date && $start_date =~ /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)/) {
+	my $t = timelocal($6, $5, $4, $3, $2-1, $1);
+	$sa->{report_starttime} = POSIX::strftime("%a %b %e %H:%M:%S %Y", localtime($t));
+	--$t; # 1 second less
+	$sa->{history_time} = $sa->{sg_history_time} = $sa->{ug_history_time} = "$t.999";
+	print STDERR "DEBUG: report start time set to $sa->{report_starttime}\n" if ($debug);
+}
+if ($stop_date && $stop_date =~ /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)/) {
+	my $t = timelocal($6, $5, $4, $3, $2-1, $1);
+	$sa->{report_endtime} = POSIX::strftime("%a %b %e %H:%M:%S %Y", localtime($t));
+	$sa->{history_endtime} = "$t.999";
+	print STDERR "DEBUG: report end time set to $sa->{report_endtime}\n" if ($debug);
+}
+
+# Set output directory
+if ($outputdir) {
+	die "ERROR: Invalid output directory name specified\n" if ($outputdir !~ /^[-\w\/]+$/);
+	$outputdir = "$sa->{Output}/$outputdir" if ($outputdir !~ /^\//);
+	if (! -e $outputdir) {
+		mkdir ($outputdir) || die "ERROR: can't create directory $outputdir, $!\n";
+	}
+	$sa->{Output} = $outputdir;
+	print STDERR "DEBUG: Output directory set to $outputdir\n" if ($debug);
+}
+
 
 # Die cleanly on signal
 sub terminate
@@ -149,6 +191,7 @@ sub terminate
 $SIG{'INT'} = \&terminate;
 $SIG{'TERM'} = \&terminate;
 $SIG{'CHLD'} = 'DEFAULT';
+$SIG{'HUP'} = 'IGNORE'; # don't die on HUP
 
 my $t1;
 # Run parsing only if we have a log file or that we are not in rebuild mode
@@ -169,7 +212,7 @@ if ($preserve) {
 # In rebuild mode history time is not use and we must store the
 # specific rebuild date if any is provided at command line.
 if ($rebuild) {
-	$sa->{history_time} = '';
+	$sa->{history_time} = $sa->{sg_history_time} = $sa->{ug_history_time} = '';
 	$sa->{build_date} = $build_date;
 }
 
@@ -205,6 +248,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
     -h | --help                : show this message and exit.
     -j | --jobs number         : number of jobs to run at same time. Default
                                  is 1, run as single process.
+    -o | --outputdir name      : set output directory. If it does not start
+				 with / then prefixes Output from configfile
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
@@ -222,6 +267,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
                                  from month level only.
     --no-week-stat             : disable weekly statistics.
     --with-month-stat          : enable month stats when --no-year-stat is used.
+    --startdate YYYYMMDDHHMMSS : lines before this datetime will not be parsed.
+    --stopdate  YYYYMMDDHHMMSS : lines after this datetime will not be parsed.
 
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will

@@ -168,6 +168,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
     -h | --help                : show this message and exit.
     -j | --jobs number         : number of jobs to run at same time. Default
                                  is 1, run as single process.
+    -o | --outputdir name      : set output directory. If it does not start
+				 with / then prefixes Output from configfile
     -p | --preserve number     : used to set the statistic obsolescence in
 				 number of month. Older stats will be removed.
     -P | --pid_dir directory   : set directory where pid file will be stored.
@@ -185,6 +187,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
                                  from month level only.
     --no-week-stat             : disable weekly statistics.
     --with-month-stat          : enable month stats when --no-year-stat is used.
+    --startdate YYYYMMDDHHMMSS : lines before this datetime will not be parsed.
+    --stopdate  YYYYMMDDHHMMSS : lines after this datetime will not be parsed.
 
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will
