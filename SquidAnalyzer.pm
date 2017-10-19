@@ -100,6 +100,8 @@ my %Translate = (
 	'Denied_help' => 'Objects with denied access',
 	'Cost_help' => '1 Mega byte =',
 	'Generation' => 'Report generated on',
+	'Generation_from' => 'From %s ',
+	'Generation_to' => 'Upto %s',
 	'Main_cache_title' => 'Cache Statistics',
 	'Cache_title' => 'Cache Statistics on',
 	'Stat_label' => 'Stat',
@@ -1322,6 +1324,9 @@ sub _parse_file_part
 		}
 		
 		if ($time) {
+			# end parsing if time range exceeded
+			last if ($self->{history_endtime} && ($time > $self->{history_endtime}));
+
 			# Do not parse some unwanted method
 			my $qm_method = quotemeta($method) || '';
 			next if (($#{$self->{ExcludedMethods}} >= 0) && grep(/^$qm_method$/, @{$self->{ExcludedMethods}}));
@@ -1341,21 +1346,21 @@ sub _parse_file_part
 
 			# Register the last parsing time and last offset position in logfile
 			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
-				$self->{end_time} = $time if (!$time || ($self->{end_time} < $time));
+				$self->{end_time} = $time if ($self->{end_time} < $time);
 				# Register the first parsing time
 				if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
 					$self->{begin_time} = $time;
 					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 				}
 			} elsif (!$self->{is_squidguard_log}) {
-				$self->{ug_end_time} = $time if (!$time || ($self->{ug_end_time} < $time));
+				$self->{ug_end_time} = $time if ($self->{ug_end_time} < $time);
 				# Register the first parsing time
 				if (!$self->{ug_begin_time} || ($self->{ug_begin_time} > $time)) {
 					$self->{ug_begin_time} = $time;
 					print STDERR "UFDBGUARD LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
 				}
 			} else {
-				$self->{sg_end_time} = $time if (!$time || ($self->{sg_end_time} < $time));
+				$self->{sg_end_time} = $time if ($self->{sg_end_time} < $time);
 				# Register the first parsing time
 				if (!$self->{sg_begin_time} || ($self->{sg_begin_time} > $time)) {
 					$self->{sg_begin_time} = $time;
@@ -1592,6 +1597,7 @@ sub _init
 	}
 
 	$self->{CustomHeader} = $options{CustomHeader} || qq{<a href="$self->{WebUrl}"><img src="$self->{WebUrl}images/logo-squidanalyzer.png" title="SquidAnalyzer $VERSION" border="0"></a> SquidAnalyzer};
+	$self->{CustomTitle} = $options{CustomTitle} || qq{SquidAnalyzer $VERSION Report};
 	$self->{ExcludedMethods} = ();
 	if ($options{ExcludedMethods}) {
 		push(@{$self->{ExcludedMethods}}, split(/\s*,\s*/, $options{ExcludedMethods}));
@@ -1692,6 +1698,9 @@ sub _init
 	$self->{week_parsed} = ();
 	# Used to stored command line parameters from squid-analyzer
 	$self->{history_time} = 0;
+	$self->{history_endtime} = 0;
+	$self->{sg_history_time} = 0;
+	$self->{ug_history_time} = 0;
 	$self->{preserve} = 0;
 	$self->{sg_end_time} = 0;
 	$self->{sg_end_offset} = 0;
@@ -3019,6 +3028,21 @@ sub _print_header
 	$sortpos ||= 2;
 	my $sorttable = '';
 	$sorttable = "var myTH = document.getElementById('contenu').getElementsByTagName('th')[$sortpos]; sorttable.innerSortFunction.apply(myTH, []);";
+	my $reportrange = '';
+	if ($self->{report_starttime} || $self->{report_endtime}) {
+		$reportrange = '<br>';
+		if ($self->{report_starttime}) {
+			my $t1 = $Translate{'Generation_from'};
+			$t1 =~ s/\%s/$self->{report_starttime}/;
+			$reportrange .= $t1;
+		}
+		if ($self->{report_endtime}) {
+			my $t1 = $Translate{'Generation_to'};
+			$t1 =~ s/\%s/$self->{report_endtime}/;
+			$reportrange .= $t1;
+		}
+		$reportrange .= '.';
+	}
 	print $$fileout qq{
 <html>
 <head>
@@ -3029,7 +3053,7 @@ sub _print_header
 <meta HTTP-EQUIV="Generator" CONTENT="SquidAnalyzer $VERSION" />
 <meta HTTP-EQUIV="Date" CONTENT="$now" />
 <meta HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=$Translate{'CharSet'}" />
-<title>SquidAnalyzer $VERSION Report</title>
+<title>$self->{CustomTitle}</title>
 <link rel="stylesheet" type="text/css" href="$self->{WebUrl}squidanalyzer.css" media="screen" />
 <!-- javascript to sort table -->
 <script type="text/javascript" src="$self->{WebUrl}sorttable.js"></script>
@@ -3046,7 +3070,7 @@ sub _print_header
 		$self->{CustomHeader}
 		</h1>
 		<p class="sous-titre">
-		$Translate{'Generation'} $now.
+		$Translate{'Generation'} $now.$reportrange
 		</p>
 		</div>
 		$calendar
@@ -3117,8 +3141,8 @@ sub buildHTML
 	my $p_month = 0;
 	my $p_year = 0;
 	my $p_week = 0;
-	if ($self->{history_time} || $self->{sg_history_time} || $self->{begin_time}) {
-		my @ltime = CORE::localtime($self->{history_time} || $self->{sg_history_time} || $self->{begin_time});
+	if ($self->{history_time} || $self->{sg_history_time} || $self->{ug_history_time} || $self->{begin_time}) {
+		my @ltime = CORE::localtime($self->{history_time} || $self->{sg_history_time} || $self->{ug_history_time} || $self->{begin_time});
 		if ($self->{is_squidguard_log}) {
 			@ltime = CORE::localtime($self->{sg_history_time} || $self->{begin_time});
 		} elsif ($self->{is_ufdbguard_log}) {
