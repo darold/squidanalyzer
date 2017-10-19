@@ -3,7 +3,7 @@
 Summary:	Squid proxy log analyzer and report generator
 Name:		squidanalyzer
 Version:	6.6
-Release:	1
+Release:	2
 License:	GPLv3
 Group:		Monitoring
 URL:		http://%{name}.darold.net/
@@ -32,7 +32,7 @@ or more often with heavy proxy usage.
 %setup -q
 
 %build
-perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_bindir} HTMLDIR=%{contentdir}/html/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
+perl Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_bindir} HTMLDIR=%{contentdir}/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
 
 make
 
