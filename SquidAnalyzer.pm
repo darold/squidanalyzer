@@ -6082,7 +6082,7 @@ sub parse_config
 	} elsif (!$rebuild) {
 		foreach my $f (@{$opt{LogFile}}) {
 			if (!-f $f) {
-				$self->localdie("ERROR: you must give a valid path to the Squid log file.\n");
+				$self->localdie("ERROR: you must give a valid path to the Squid log file, \"$f\" is not valid.\n");
 			}
 		}
 	}
