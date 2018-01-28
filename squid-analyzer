@@ -35,6 +35,8 @@ my $stop_time = '';
 my $start_date = '';
 my $stop_date = '';
 my $outputdir = '';
+my $skip_history = 0;
+my $override_history = 0;
 
 # get the command line parameters
 my $result = GetOptions (
@@ -57,6 +59,8 @@ my $result = GetOptions (
 	"with-month-stat!"     => \$with_month_stat,
 	"startdate=s"          => \$start_date,
 	"stopdate=s"           => \$stop_date,
+	"skip-history!"        => \$skip_history,
+	"override-history!"    => \$override_history,
 ); 
 
 # Show warning for obsolete options
@@ -93,6 +97,10 @@ if ($stop_date && $stop_date !~ /^\d{4}[-\\\/]?[0-1]\d[-\\\/]?[0-3]\d\s*[0-2]\d[
 }
 $stop_date =~ s/[-\\\/:\s]//g if ($stop_date);
 
+if ($override_history and ! $skip_history) {
+	die("FATAL: --override-history option can be used only with --skip-history.\nSee usage (--help) for more information.\n");
+}
+
 # Add multiple log files given from command line
 foreach my $f (@ARGV) {
 	push(@logfile, $f) if (-f $f && !-z $f);
@@ -120,13 +128,14 @@ close(OUT);
 unlink("$pid_dir/last_parsed.tmp");
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone);
+my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history);
 $sa->{no_year_stat} = $no_year_stat;
 $sa->{with_month_stat} = $with_month_stat;
 $sa->{no_week_stat} = $no_week_stat;
 $sa->{queue_size} = $queue_size;
 $sa->{TimeStart} = $start_time;
 $sa->{TimeStop} = $stop_time;
+$sa->{OverrideHistory} = $override_history;
 
 # Set start and end time (for custom date range reports)
 if ($start_date && $start_date =~ /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)/) {
@@ -269,6 +278,13 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
     --with-month-stat          : enable month stats when --no-year-stat is used.
     --startdate YYYYMMDDHHMMSS : lines before this datetime will not be parsed.
     --stopdate  YYYYMMDDHHMMSS : lines after this datetime will not be parsed.
+    --skip-history             : used to not take care of the history file. Log
+                                 parsing offset will start at 0 but old history
+                                 file will be preserved at end. Useful if you
+                                 want to parse and old log file.
+    --override-history         : when skip-history is used the current history
+                                 file will be overriden by the offset of the
+                                 last log file parsed.
 
 Log files to parse can be given as command line arguments or as a comma separated
 list of file for the LogFile configuration directive. By default SquidAnalyer will

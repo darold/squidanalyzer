@@ -872,7 +872,7 @@ sub parseFile
 		}
 
 		# Set the current start time into history file
-		$self->save_current_line();
+		$self->save_current_line() if (!$self->{SkipHistory} || $self->{OverrideHistory});
 
 		# Force reordering and unique sorting of data files
 		my $child_count = 0;
@@ -1523,7 +1523,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history) = @_;
 
 	# Set path to pid file
 	$pidfile = $pid_dir . '/' . $pidfile;
@@ -1590,6 +1590,8 @@ sub _init
 	$self->{UseUrlPort} = 1;
 	$self->{TimeStart} = $options{TimeStart} || '';
 	$self->{TimeStop} = $options{TimeStop} || '';
+	$self->{SkipHistory} = $skip_history || 0;
+	$self->{OverrideHistory} = 0;
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
@@ -1719,7 +1721,7 @@ sub _init
 	}
 
 	# Get the last parsing date for Squid log incremental parsing
-	if (!$rebuild && -e "$self->{Output}/SquidAnalyzer.current") {
+	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/SquidAnalyzer.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/SquidAnalyzer.current")) {
 			print STDERR "ERROR: Can't read file $self->{Output}/SquidAnalyzer.current, $!\n" if (!$self->{QuietMode});
@@ -1737,7 +1739,7 @@ sub _init
 	}
 
 	# Get the last parsing date for SquidGuard log incremental parsing
-	if (!$rebuild && -e "$self->{Output}/SquidGuard.current") {
+	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/SquidGuard.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/SquidGuard.current")) {
 			print STDERR "ERROR: Can't read file $self->{Output}/SquidGuard.current, $!\n" if (!$self->{QuietMode});
@@ -1755,7 +1757,7 @@ sub _init
 	}
 
 	# Get the last parsing date for ufdbGuard log incremental parsing
-	if (!$rebuild && -e "$self->{Output}/ufdbGuard.current") {
+	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/ufdbGuard.current") {
 		my $current = new IO::File;
 		unless($current->open("$self->{Output}/ufdbGuard.current")) {
 			print STDERR "ERROR: Can't read file $self->{Output}/ufdbGuard.current, $!\n" if (!$self->{QuietMode});

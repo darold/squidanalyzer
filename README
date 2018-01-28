@@ -185,6 +185,13 @@ USAGE
         --with-month-stat          : enable month stats when --no-year-stat is used.
         --startdate YYYYMMDDHHMMSS : lines before this datetime will not be parsed.
         --stopdate  YYYYMMDDHHMMSS : lines after this datetime will not be parsed.
+        --skip-history             : used to not take care of the history file. Log
+                                     parsing offset will start at 0 but old history
+                                     file will be preserved at end. Useful if you
+                                     want to parse and old log file.
+        --override-history         : when skip-history is used the current history
+                                     file will be overriden by the offset of the
+                                     last log file parsed.
 
     Log files to parse can be given as command line arguments or as a comma
     separated list of file for the LogFile configuration directive. By
