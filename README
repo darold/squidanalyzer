@@ -190,7 +190,7 @@ USAGE
                                      file will be preserved at end. Useful if you
                                      want to parse and old log file.
         --override-history         : when skip-history is used the current history
-                                     file will be overriden by the offset of the
+                                     file will be overridden by the offset of the
                                      last log file parsed.
 
     Log files to parse can be given as command line arguments or as a comma
@@ -551,7 +551,7 @@ AUTHOR
     Gilles DAROLD <gilles@darold.net>
 
 COPYRIGHT
-    Copyright (c) 2001-2017 Gilles DAROLD
+    Copyright (c) 2001-2018 Gilles DAROLD
 
     This package is free software and published under the GPL v3 or above
     license.

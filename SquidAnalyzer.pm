@@ -4,7 +4,7 @@ package SquidAnalyzer;
 # Name     : SquidAnalyzer.pm
 # Language : Perl 5
 # OS       : All
-# Copyright: Copyright (c) 2001-2017 Gilles Darold - All rights reserved.
+# Copyright: Copyright (c) 2001-2018 Gilles Darold - All rights reserved.
 # Licence  : This program is free software; you can redistribute it
 #            and/or modify it under the same terms as Perl itself.
 # Author   : Gilles Darold, gilles _AT_ darold _DOT_ net
@@ -30,7 +30,7 @@ BEGIN {
 
 	# Set all internal variable
 	$VERSION = '6.6';
-	$COPYRIGHT = 'Copyright (c) 2001-2017 Gilles Darold - All rights reserved.';
+	$COPYRIGHT = 'Copyright (c) 2001-2018 Gilles Darold - All rights reserved.';
 	$AUTHOR = "Gilles Darold - gilles _AT_ darold _DOT_ net";
 
 	@ISA = qw(Exporter);
