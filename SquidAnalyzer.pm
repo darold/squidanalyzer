@@ -420,14 +420,14 @@ my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (B
 
 sub new
 {
-	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone) = @_;
+	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone);
+	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history);
 
 	# Return the instance
 	return($self);
