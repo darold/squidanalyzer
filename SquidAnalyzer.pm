@@ -1029,7 +1029,8 @@ sub split_logfile
 	my $lfile = undef;
 	open($lfile, $logf) || die "FATAL: cannot read log file $logf. $!\n";
 	while ($i < $self->{queue_size}) {
-		my $pos = int(($totalsize/$self->{queue_size}) * $i);
+		my $pos = int((($totalsize-$offsplit)/$self->{queue_size}) * $i);
+		$pos += $offsplit;
 		if ($pos > $chunks[0]) {
 			$lfile->seek($pos, 0);
 			#Move the offset to the BEGINNING of each line, because the logic in process_file requires so
