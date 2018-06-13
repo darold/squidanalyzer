@@ -1055,18 +1055,27 @@ sub check_exclusions
 
 	# check for user exclusion
 	if (exists $self->{Exclude}{users} && $login) {
+		return 1 if (grep(/^$login$/i, @{ $self->{UserExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{users}}) {
 			# look for users using the following format: user@domain.tld, domain\user and user 
 			if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
+				push(@{ $self->{UsersExcludeCache} }, $login);
 				return 1;
 			}
 		}
 	}
 
+	# If login is a client ip, checked login against clients and networks filters
+	if (!$client_ip && ($login =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9a-fA-F:]+$/)) {
+		$client_ip = $login;
+	}
+
 	# check for client exclusion
 	if (exists $self->{Exclude}{clients} && $client_ip) {
+		return 1 if (grep(/^$client_ip$/i, @{ $self->{ClientExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{clients}}) {
 			if ($client_ip =~ m#^$e$#i) {
+				push(@{ $self->{ClientExcludeCache} }, $client_ip);
 				return 1;
 			}
 		}
@@ -1074,8 +1083,10 @@ sub check_exclusions
 
 	# check for Network exclusion
 	if (exists $self->{Exclude}{networks} && $client_ip) {
+		return 1 if (grep(/^$client_ip$/, @{ $self->{ClientExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
+				push(@{ $self->{ClientExcludeCache} }, $client_ip);
 				return 1;
 			}
 		}
@@ -1083,8 +1094,10 @@ sub check_exclusions
 
 	# check for URL exclusion
 	if (exists $self->{Exclude}{uris} && $url) {
+		return 1 if (grep(/^$url$/i, @{ $self->{UrlExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{uris}}) {
 			if ($url =~ m#^$e$#i) {
+				push(@{ $self->{UrlExcludeCache} }, $url);
 				return 1;
 			}
 		}
@@ -1101,23 +1114,27 @@ sub check_inclusions
 
 	# check for user inclusion
 	if (exists $self->{Include}{users} && $login) {
+		return 1 if (grep(/^$login$/i, @{ $self->{UserIncludeCache} }));
 		foreach my $e (@{$self->{Include}{users}}) {
 			# look for users using the following format: user@domain.tld, domain\user and user 
 			if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
+				push(@{ $self->{UserIncludeCache} }, $login);
 				return 1;
 			}
 		}
 	}
 
 	# If login is a client ip, checked login against clients and networks filters
-	if (!$client_ip && ($login =~ /^\d+\.\d+\.\d+\.\d+$/)) {
+	if (!$client_ip && ($login =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9a-fA-F:]+$/)) {
 		$client_ip = $login;
 	}
 
 	# check for client inclusion
 	if (exists $self->{Include}{clients} && $client_ip) {
+		return 1 if (grep(/^$client_ip$/i, @{ $self->{ClientIncludeCache} }));
 		foreach my $e (@{$self->{Include}{clients}}) {
 			if ($client_ip =~ m#^$e$#i) {
+				push(@{ $self->{ClientIncludeCache} }, $client_ip);
 				return 1;
 			}
 		}
@@ -1125,8 +1142,10 @@ sub check_inclusions
 
 	# check for Network inclusion
 	if (exists $self->{Include}{networks} && $client_ip) {
+		return 1 if (grep(/^$client_ip$/i, @{ $self->{ClientIncludeCache} }));
 		foreach my $e (@{$self->{Include}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
+				push(@{ $self->{ClientIncludeCache} }, $client_ip);
 				return 1;
 			}
 		}
@@ -1658,8 +1677,14 @@ sub _init
 	%{$self->{UserAlias}}    = $self->parse_user_aliases($options{UserAlias} || '');
 	%{$self->{Exclude}}      = $self->parse_exclusion($options{Exclude} || '');
 	%{$self->{Include}}      = $self->parse_inclusion($options{Include} || '');
-	%{$self->{NetworkAliasCache}} = ();
-	%{$self->{UserAliasCache}} = ();
+	# Some caches to improve parsing speed
+	%{$self->{NetworkAliasCache}}  = ();
+	%{$self->{UserAliasCache}}     = ();
+	@{$self->{UserExcludeCache}}   = ();
+	@{$self->{ClientExcludeCache}} = ();
+	@{$self->{UrlExcludeCache}}    = ();
+	@{$self->{UserIncludeCache}}   = ();
+	@{$self->{ClientIncludeCache}} = ();
 	$self->{has_nework_alias} = scalar keys %{$self->{NetworkAlias}};
 	$self->{has_user_alias} = scalar keys %{$self->{UserAlias}};
 
@@ -1849,7 +1874,7 @@ sub _gethostbyaddr
 				$host = gethostbyaddr(inet_aton($ip), AF_INET);
 			} else {
 				# We also need to resolve IPV6 addresses
-				if ($ip =~ /^\d+\.\d+\.\d+\.\d+$/) {
+				if ($ip =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
 					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET } );
 				} else {
 					($err, @addrs) = Socket::getaddrinfo( $ip, 0, { 'protocol' => Socket::IPPROTO_TCP, 'family' => Socket::AF_INET6 } );
@@ -6662,8 +6687,8 @@ sub check_ip
 	my ($ip, $block) = @_;
 
 	# When $client_ip is not an ip address proceed to regex search
-	if ($ip !~ /^\d+\.\d+\.\d+\.\d+$/) {
-		if ( $ip =~ /$block/) {
+	if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9a-fA-F:]+$/) {
+		if ( $ip =~ /$block/ ) {
 			return 1;
 		} else {
 			return 0;
