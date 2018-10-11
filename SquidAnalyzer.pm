@@ -4420,6 +4420,7 @@ sub _print_user_stat
 
 	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $user_stat{$b}{"$self->{OrderUser}"} <=> $user_stat{$a}{"$self->{OrderUser}"} } keys %user_stat) {
+		next if (!$user_stat{$usr}{hits}); # Entries with no hits may be reject
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($user_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
 		my $b_percent = '0.0';
@@ -4640,6 +4641,7 @@ sub _print_netuser_stat
 };
 	$total_duration = abs($total_duration);
 	foreach my $usr (sort { $netuser_stat{$b}{"$self->{OrderUser}"} <=> $netuser_stat{$a}{"$self->{OrderUser}"} } keys %netuser_stat) {
+		next if (!$netuser_stat{$usr}{hits});
 		my $h_percent = '0.0';
 		$h_percent = sprintf("%2.2f", ($netuser_stat{$usr}{hits}/$total_hit) * 100) if ($total_hit);
 		my $b_percent = '0.0';
@@ -5184,6 +5186,7 @@ sub _print_top_url_stat
 		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $url_stat{$b}{"\L$tpe\E"} <=> $url_stat{$a}{"\L$tpe\E"} } keys %url_stat) {
+			next if (!$url_stat{$u}{hits});
 			my $h_percent = '0.0';
 			$h_percent = sprintf("%2.2f", ($url_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 			my $b_percent = '0.0';
@@ -5822,6 +5825,7 @@ $domain2_bytes
 		$total_duration = abs($total_duration);
 		my $i = 0;
 		foreach my $u (sort { $domain_stat{$b}{"\L$tpe\E"} <=> $domain_stat{$a}{"\L$tpe\E"} } keys %domain_stat) {
+			next if (!$domain_stat{$u}{hits});
 			my $h_percent = '0.0';
 			$h_percent = sprintf("%2.2f", ($domain_stat{$u}{hits}/$total_hits) * 100) if ($total_hits);
 			my $b_percent = '0.0';
