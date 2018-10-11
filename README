@@ -22,7 +22,7 @@ REQUIREMENT
 
 INSTALLATION
   Generic install
-    If you want the package to be intalled into the Perl distribution just
+    If you want the package to be installed into the Perl distribution just
     do the following:
 
         perl Makefile.PL
@@ -285,7 +285,7 @@ CONFIGURATION
     LogFile squid_access_log_file
         Set the path to the Squid log file. This can be a comma separated
         list of files to process several files at the same time. If the
-        files comes from differents Squid servers, they will be merges in a
+        files comes from different Squid servers, they will be merges in a
         single reports. You can also add to the list a SquidGuard log file,
         SquidAnalyzer will automatically detect the format.
 
@@ -323,7 +323,7 @@ CONFIGURATION
 
             FULL_USERNAME IP_ADDRESS
 
-        When 'UseClientDNSName' is ebabled you can replace ip address by a
+        When 'UseClientDNSName' is enabled you can replace ip address by a
         DNS name.
 
         If you have auth_proxy enable but want to replace login name by full
@@ -357,7 +357,7 @@ CONFIGURATION
 
     UrlReport 0|1
         Should SquidAnalyzer display user url details. This will show all
-        URL read by user. Take care to have enougth space disk for large
+        URL read by user. Take care to have enough space disk for large
         user. Default is 0, no url detail report.
 
     UserReport 0|1
@@ -382,7 +382,7 @@ CONFIGURATION
         no cost, this is the default value, the "Cost" column is not
         displayed
 
-    Currency currency_abreviation
+    Currency currency_abbreviation
         Used to set the currency of the bandwidth cost. Preferably the html
         special character. Default is &euro;
 
@@ -498,7 +498,7 @@ CONFIGURATION
 
     MaxFormatError
         When SquidAnalyzer find a corrupted line in his data file, it exit
-        immedialtly. You can force him to wait for a certain amount of
+        immediately. You can force him to wait for a certain amount of
         errors before exiting. Of course you might want to remove the
         corrupted line before the next run. This can be useful if you have
         special characters in some fields like mime type.
@@ -519,7 +519,7 @@ CONFIGURATION
         statistics. Default is to remove the port information from the Url.
 
     UpdateAlias
-        Enable this directive if you want to apply immedialtly the changes
+        Enable this directive if you want to apply immediately the changes
         made in aliases files to avoid duplicates. You still have to use
         --rebuild to recreate previous reports with new aliases. Enabling
         this will imply a lost of performances with huges log files.
