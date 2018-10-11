@@ -285,7 +285,7 @@ CONFIGURATION
     LogFile squid_access_log_file
         Set the path to the Squid log file. This can be a comma separated
         list of files to process several files at the same time. If the
-        files comes from different Squid servers, they will be merges in a
+        files comes from different Squid servers, they will be merged in a
         single reports. You can also add to the list a SquidGuard log file,
         SquidAnalyzer will automatically detect the format.
 

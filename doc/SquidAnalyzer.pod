@@ -30,7 +30,7 @@ browser side without extra installation required.
 
 =head2 Generic install
 
-If you want the package to be intalled into the Perl distribution just
+If you want the package to be installed into the Perl distribution just
 do the following:
 
     perl Makefile.PL
@@ -294,8 +294,8 @@ For example:
 =item LogFile squid_access_log_file
 
 Set the path to the Squid log file. This can be a comma separated list of files
-to process several files at the same time. If the files comes from differents
-Squid servers, they will be merges in a single reports. You can also add to the
+to process several files at the same time. If the files comes from different
+Squid servers, they will be merged in a single reports. You can also add to the
 list a SquidGuard log file, SquidAnalyzer will automatically detect the format.
 
 =item UseClientDNSName        0
@@ -334,7 +334,7 @@ show username or computer name instead, create a file with this format:
 
     FULL_USERNAME IP_ADDRESS
 
-When 'UseClientDNSName' is ebabled you can replace ip address by a DNS name.
+When 'UseClientDNSName' is enabled you can replace ip address by a DNS name.
 
 If you have auth_proxy enable but want to replace login name by full
 user name for example, create a file with this format:
@@ -373,7 +373,7 @@ Value can be: bytes or hits. Default is bytes.
 =item UrlReport 0|1
 
 Should SquidAnalyzer display user url details. This will show all
-URL read by user. Take care to have enougth space disk for large
+URL read by user. Take care to have enough space disk for large
 user. Default is 0, no url detail report.
 
 =item UserReport 0|1
@@ -401,7 +401,7 @@ Used to set a cost of the bandwidth per Mb. If you want to generate
 invoice per Mb for bandwidth traffic this can help you. Value 0 mean
 no cost, this is the default value, the "Cost" column is not displayed
 
-=item Currency currency_abreviation
+=item Currency currency_abbreviation
 
 Used to set the currency of the bandwidth cost. Preferably the html
 special character. Default is &euro;
@@ -529,7 +529,7 @@ with a Locale set to fr_FR.
 
 =item MaxFormatError
 
-When SquidAnalyzer find a corrupted line in his data file, it exit immedialtly.
+When SquidAnalyzer find a corrupted line in his data file, it exit immediately.
 You can force him to wait for a certain amount of errors before exiting. Of
 course you might want to remove the corrupted line before the next run. This
 can be useful if you have special characters in some fields like mime type.
@@ -553,7 +553,7 @@ Default is to remove the port information from the Url.
 
 =item UpdateAlias
 
-Enable this directive if you want to apply immedialtly the changes made in
+Enable this directive if you want to apply immediately the changes made in
 aliases files to avoid duplicates. You still have to use --rebuild to
 recreate previous reports with new aliases. Enabling this will imply a lost
 of performances with huges log files.
