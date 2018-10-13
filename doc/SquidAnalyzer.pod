@@ -153,6 +153,27 @@ can use the user-aliases file to do so.
 See the file squidanalyzer.conf to customized your output statistics and
 match your network and file system configuration.
 
+=head2 Upgrade
+
+Upgrade to a new release or to last development code is just like installation.
+To install latest development code to use latest ehancements process as follow:
+
+	wget https://github.com/darold/squidanalyzer/archive/master.zip
+	unzip master.zip
+	cd squidanalyzer-master/
+	perl Makefile.PL
+	make
+	sudo make install
+
+then to apply change to current reports you have to rebuild them using:
+
+	squid-analyser --rebuild
+
+This command will rebuild all your reports where there is still data
+files I mean not removed by the retention limit. It can takes a very
+long time if you have lot of historic, in this case you may want to
+use option -b or --build_date to limit the rebuild period.
+
 =head1 USAGE
 
 SquidAnalyzer can be run manually or by cron job using the squid-analyzer Perl

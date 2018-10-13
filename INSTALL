@@ -8,7 +8,7 @@ REQUIREMENT
 
 INSTALLATION
   Generic install
-    If you want the package to be intalled into the Perl distribution just
+    If you want the package to be installed into the Perl distribution just
     do the following:
 
         perl Makefile.PL
@@ -39,6 +39,9 @@ INSTALLATION
 
     as the issue is related to an install into the default Perl vendor
     installdirs it will then use Perl site installdirs.
+
+    Note: you may not encountered this issue any more, since v6.6
+    SquidAnalyzer use site as default installation directory.
 
   Custom install
     You can create your fully customized SquidAnalyzer installation by using
@@ -102,40 +105,104 @@ INSTALLATION
 
     4. Setup a cronjob to run squid-analyzer daily or more often:
 
-         # SquidAnalyzer log reporting daily
-         0 2 * * * /usr/local/bin/squid-analyzer > /dev/null 2>&1
+            # SquidAnalyzer log reporting daily
+            0 2 * * * /usr/local/bin/squid-analyzer > /dev/null 2>&1
 
     or run it manually. For more information, see README file.
 
-    You can use network name instead of network ip addresses by using the
-    network-aliases file. Also if you don't have authentication enable and
-    want to replace client ip addresses by some know user or computer you
-    can use the user-aliases file to do so.
+    If your squid logfiles are rotated then cron isn't going to give the
+    expected result as there exists a time between when the cron is run and
+    the logfiles are rotated. It would be better to call squid-analyzer from
+    logrotate, eg:
+
+            /var/log/proxy/squid-access.log {
+                daily
+                compress
+                rotate 730
+                missingok
+                nocreate
+                sharedscripts
+                postrotate
+                    test ! -e /var/run/squid.pid || /usr/sbin/squid -k rotate
+                    /usr/bin/squid-analyzer -d -l /var/log/proxy/squid-access.log.1
+                endscript
+            }
+
+    You can also use network name instead of network ip addresses by using
+    the network-aliases file. Also if you don't have authentication enable
+    and want to replace client ip addresses by some know user or computer
+    you can use the user-aliases file to do so.
 
     See the file squidanalyzer.conf to customized your output statistics and
     match your network and file system configuration.
+
+  Upgrade
+    Upgrade to a new release or to last development code is just like
+    installation. To install latest development code to use latest
+    ehancements process as follow:
+
+            wget https://github.com/darold/squidanalyzer/archive/master.zip
+            unzip master.zip
+            cd squidanalyzer-master/
+            perl Makefile.PL
+            make
+            sudo make install
+
+    then to apply change to current reports you have to rebuild them using:
+
+            squid-analyser --rebuild
+
+    This command will rebuild all your reports where there is still data
+    files I mean not removed by the retention limit. It can takes a very
+    long time if you have lot of historic, in this case you may want to use
+    option -b or --build_date to limit the rebuild period.
 
 USAGE
     SquidAnalyzer can be run manually or by cron job using the
     squid-analyzer Perl script. Here are authorized usage:
 
-        Usage: squid-analyzer [ -c squidanalyzer.conf ] [-l logfile]
+    Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 
-            -c | --configfile filename : path to the SquidAnalyzer configuration file.
-                                         By default: /etc/squidanalyzer.conf
-            -b | --build_date date     : set the day to be rebuilt, format: yyyy-mm-dd,
-                                         yyyy-mm or yyyy. Used with -r or --rebuild.
-            -d | --debug               : show debug information.
-            -h | --help                : show this message and exit.
-            -l | --logfile filename    : path to the Squid logfile to parse.
-                                         By default: /var/log/squid/access.log
-            -p | --preserve number     : used to set the statistic obsolescence in
-                                         number of month. Older stats will be removed.
-            -r | --rebuild             : use this option to rebuild all html and graphs
-                                         output from all data files.
-            -v | version               : show version and exit.
-            --no-year-stat             : disable years statistics, reports will
-                                         start from month level only.
+        -c | --configfile filename : path to the SquidAnalyzer configuration file.
+                                     By default: /etc/squidanalyzer/squidanalyzer.conf
+        -b | --build_date date     : set the date to be rebuilt, format: yyyy-mm-dd
+                                     or yyyy-mm or yyyy. Used with -r or --rebuild.
+        -d | --debug               : show debug information.
+        -h | --help                : show this message and exit.
+        -j | --jobs number         : number of jobs to run at same time. Default
+                                     is 1, run as single process.
+        -o | --outputdir name      : set output directory. If it does not start
+                                     with / then prefixes Output from configfile
+        -p | --preserve number     : used to set the statistic obsolescence in
+                                     number of month. Older stats will be removed.
+        -P | --pid_dir directory   : set directory where pid file will be stored.
+                                     Default /tmp/
+        -r | --rebuild             : use this option to rebuild all html and graphs
+                                     output from all data files.
+        -s | --start HH:MM         : log lines before this time will not be parsed.
+        -S | --stop  HH:MM         : log lines after this time will not be parsed.
+        -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
+                                     Use this to adjust date/time of SquidAnalyzer
+                                     output when it is run on a different timezone
+                                     than the squid server.
+        -v | version               : show version and exit.
+        --no-year-stat             : disable years statistics, reports will start
+                                     from month level only.
+        --no-week-stat             : disable weekly statistics.
+        --with-month-stat          : enable month stats when --no-year-stat is used.
+        --startdate YYYYMMDDHHMMSS : lines before this datetime will not be parsed.
+        --stopdate  YYYYMMDDHHMMSS : lines after this datetime will not be parsed.
+        --skip-history             : used to not take care of the history file. Log
+                                     parsing offset will start at 0 but old history
+                                     file will be preserved at end. Useful if you
+                                     want to parse and old log file.
+        --override-history         : when skip-history is used the current history
+                                     file will be overridden by the offset of the
+                                     last log file parsed.
+
+    Log files to parse can be given as command line arguments or as a comma
+    separated list of file for the LogFile configuration directive. By
+    default SquidAnalyer will use file: /var/log/squid/access.log
 
     There is special options like --rebuild that force SquidAnalyzer to
     rebuild all HTML reports, useful after an new feature or a bug fix. If
@@ -152,6 +219,15 @@ USAGE
 
     will only preserve six month of statistics from the last run of
     squidanalyzer.
+
+    If you have a SquidGuard log you can add it to the list of file to be
+    parsed, either in the LogFile configuration directive log list, either
+    at command line:
+
+            squid-analyzer /var/log/squid3/access.log /var/log/squid/SquidGuard.log
+
+    SquidAnalyzer will automatically detect the log format and report
+    SquidGuard ACL's redirection to the Denied Urls report.
 
 CONFIGURATION
     See README file.
