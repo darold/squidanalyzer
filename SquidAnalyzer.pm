@@ -420,14 +420,14 @@ my $ug_format_regex1 = qr/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) .* (B
 
 sub new
 {
-	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history) = @_;
+	my ($class, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history, $refresh) = @_;
 
 	# Construct the class
 	my $self = {};
 	bless $self, $class;
 
 	# Initialize all variables
-	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history);
+	$self->_init($conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history, $refresh);
 
 	# Return the instance
 	return($self);
@@ -1543,7 +1543,7 @@ sub _clear_stats
 
 sub _init
 {
-	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history) = @_;
+	my ($self, $conf_file, $log_file, $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history, $refresh_time) = @_;
 
 	# Set path to pid file
 	$pidfile = $pid_dir . '/' . $pidfile;
@@ -1666,6 +1666,7 @@ sub _init
 			die "ERROR: 'LogFile' configuration directive must be set or a log file given at command line.\n";
 		}
 	}
+	$self->{RefreshTime} = $refresh_time || $options{RefreshTime} || 0;
 	$self->{OrderUser} = lc($options{OrderUser}) || 'bytes';
 	$self->{OrderNetwork} = lc($options{OrderNetwork}) || 'bytes';
 	$self->{OrderUrl} = lc($options{OrderUrl}) || 'bytes';
@@ -3057,9 +3058,16 @@ sub _append_data
 }
 
 
+sub _print_main_header
+{
+	my ($self, $fileout, $menu, $calendar) = @_;
+
+	$self->_print_header($fileout, $menu, $calendar, undef, 1);
+}
+
 sub _print_header
 {
-	my ($self, $fileout, $menu, $calendar, $sortpos) = @_;
+	my ($self, $fileout, $menu, $calendar, $sortpos, $dorefresh) = @_;
 
 	my $now = $self->{start_date} || strftime("%a %b %e %H:%M:%S %Y", CORE::localtime);
 	$sortpos ||= 2;
@@ -3080,6 +3088,11 @@ sub _print_header
 		}
 		$reportrange .= '.';
 	}
+
+	my $refresh_tag = '';
+	if ($self->{RefreshTime}) {
+		$refresh_tag = '<meta HTTP-EQUIV="refresh" CONTENT="' . $self->{RefreshTime}*60 . '">';
+	}
 	print $$fileout qq{
 <html>
 <head>
@@ -3090,6 +3103,7 @@ sub _print_header
 <meta HTTP-EQUIV="Generator" CONTENT="SquidAnalyzer $VERSION" />
 <meta HTTP-EQUIV="Date" CONTENT="$now" />
 <meta HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=$Translate{'CharSet'}" />
+$refresh_tag
 <title>$self->{CustomTitle}</title>
 <link rel="stylesheet" type="text/css" href="$self->{WebUrl}squidanalyzer.css" media="screen" />
 <!-- javascript to sort table -->
@@ -3587,14 +3601,14 @@ sub _print_cache_stat
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
+	$out->open(">$file.tmp") || $self->localdie("ERROR: Unable to open $file.tmp. $!\n");
 	# Print the HTML header
 	my $cal = 'SA_CALENDAR_SA';
 	$cal = '' if ($week);
 	if ( (!$self->{no_year_stat} || $self->{with_month_stat}) || ($type ne 'month') ) {
-		$self->_print_header(\$out, $self->{menu}, $cal);
+		$self->_print_main_header(\$out, $self->{menu}, $cal);
 	} else {
-		$self->_print_header(\$out, $self->{menu3}, $cal);
+		$self->_print_main_header(\$out, $self->{menu3}, $cal);
 	}
 	print $out $self->_print_title($Translate{'Cache_title'}, $stat_date, $week);
 
@@ -3840,6 +3854,7 @@ $code_bytes
 	%code_stat = ();
 	$self->_print_footer(\$out);
 	$out->close();
+	rename("$file.tmp", "$file");
 }
 
 
@@ -6007,9 +6022,9 @@ sub _gen_summary
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
+	$out->open(">$file.tmp") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	$self->_print_header(\$out);
+	$self->_print_main_header(\$out);
 	my $colspn = 3;
 	$colspn = 4 if ($self->{CostPrice});
 	print $out qq{
@@ -6087,6 +6102,7 @@ sub _gen_summary
 };
 	$self->_print_footer(\$out);
 	$out->close();
+	rename("$file.tmp", "$file");
 
 }
 
@@ -6740,9 +6756,9 @@ sub _gen_year_summary
 	}
 	my $file = $outdir . '/index.html';
 	my $out = new IO::File;
-	$out->open(">$file") || $self->localdie("ERROR: Unable to open $file. $!\n");
+	$out->open(">$file.tmp") || $self->localdie("ERROR: Unable to open $file. $!\n");
 	# Print the HTML header
-	$self->_print_header(\$out);
+	$self->_print_main_header(\$out);
 	my $colspn = 2;
 	$colspn = 3 if ($self->{CostPrice});
 	print $out qq{
@@ -6780,6 +6796,7 @@ sub _gen_year_summary
 };
 	$self->_print_footer(\$out);
 	$out->close();
+	rename("$file.tmp", "$file");
 
 }
 

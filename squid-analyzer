@@ -37,6 +37,7 @@ my $stop_date = '';
 my $outputdir = '';
 my $skip_history = 0;
 my $override_history = 0;
+my $refresh_time = 0;
 
 # get the command line parameters
 my $result = GetOptions (
@@ -50,6 +51,7 @@ my $result = GetOptions (
 	"p|preserve=i"         => \$preserve,
 	"P|pid_dir=s"          => \$pid_dir,
 	"r|rebuild!"           => \$rebuild,
+	"R|refresh=i"          => \$refresh_time,
 	"s|start=s"            => \$start_time,
 	"S|stop=s"             => \$stop_time,
 	"t|timezone=s"         => \$timezone,
@@ -128,7 +130,7 @@ close(OUT);
 unlink("$pid_dir/last_parsed.tmp");
 
 # Instanciate SquidAnalyzer.pm perl module
-my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history);
+my $sa = new SquidAnalyzer($configfile, join(',', @logfile), $debug, $rebuild, $pid_dir, $pidfile, $timezone, $skip_history, $refresh_time);
 $sa->{no_year_stat} = $no_year_stat;
 $sa->{with_month_stat} = $with_month_stat;
 $sa->{no_week_stat} = $no_week_stat;
@@ -265,6 +267,8 @@ Usage: squid-analyzer [ -c squidanalyzer.conf ] [logfile(s)]
 				 Default /tmp/
     -r | --rebuild             : use this option to rebuild all html and graphs
 				 output from all data files.
+    -R | --refresh minutes     : add a html refresh tag into index.html file
+                                 with a refresh intervalle in minutes. 
     -s | --start HH:MM         : log lines before this time will not be parsed.
     -S | --stop  HH:MM         : log lines after this time will not be parsed.
     -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
