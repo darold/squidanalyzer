@@ -193,6 +193,8 @@ USAGE
                                      Default /tmp/
         -r | --rebuild             : use this option to rebuild all html and graphs
                                      output from all data files.
+        -R | --refresh minutes     : add a html refresh tag into index.html file
+                                     with a refresh intervalle in minutes. 
         -s | --start HH:MM         : log lines before this time will not be parsed.
         -S | --stop  HH:MM         : log lines after this time will not be parsed.
         -t | --timezone +/-HH      : set number of hours from GMT of the timezone.
@@ -550,6 +552,11 @@ CONFIGURATION
         The two following configuration directive allow you to specify a
         start and stop time. Log line out of this time range will not be
         parsed. The format of the value is HH:MM
+
+    RefreshTime
+        Insert a html Refresh tag into all index.html files. The value is
+        the refresh intervalle in minutes. Default to 5 minutes. Can be
+        overridden at command line with option -R | --refresh
 
 SUPPORT
   Release announcement
