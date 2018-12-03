@@ -536,7 +536,7 @@ sub look_for_timestamp
 	my ($self, $line) = @_;
 
 	my $time = 0;
-	my $tz = ((0-$self->{TimeZone})*3600);
+	my $tz = $self->{TimeZone}*3600;
 	# Squid native format
 	if ( $line =~ $native_format_regex1 ) {
 		$time = $1;
@@ -1208,7 +1208,7 @@ sub _parse_file_part
 	}
 
 	# Set timezone in seconds
-	my $tz = ((0-$self->{TimeZone})*3600);
+	my $tz = $self->{TimeZone}*3600;
 
 	# The log file format must be :
 	# 	time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost type
@@ -1605,13 +1605,22 @@ sub _init
 	$self->{child_count} = 0;
 	$self->{rebuild} = $rebuild || 0;
 	$self->{is_squidguard_log} = 0;
-	$self->{TimeZone} = $options{TimeZone} || $timezone || 0;
 	$self->{Syslog} = 0;
 	$self->{UseUrlPort} = 1;
 	$self->{TimeStart} = $options{TimeStart} || '';
 	$self->{TimeStop} = $options{TimeStop} || '';
 	$self->{SkipHistory} = $skip_history || 0;
 	$self->{OverrideHistory} = 0;
+
+	# Set default timezone
+	$self->{TimeZone} = $options{TimeZone} || $timezone || '';
+	if ($self->{TimeZone} eq '') {
+		my @lt = localtime();
+		my @gt = gmtime();
+		my $hour_diff = $lt[2]-$gt[2];
+		$hour_diff += $lt[8];
+		$self->{TimeZone} = $hour_diff;
+	}
 
 	# Cleanup old temporary files
 	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp') {
