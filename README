@@ -325,6 +325,10 @@ CONFIGURATION
         By default SquidAnalyzer will stop to lookup a DNS name after 0.0001
         second (100 ms).
 
+    StoreUserIp 0
+        Store and show user different ip addresses used along the time in
+        user statistics. Default: no extra storage
+
     NetworkAlias network-aliases_file
         Set path to the file containing network alias name. Network are show
         as Ip addresses so if you want to display name instead create a file
@@ -359,6 +363,16 @@ CONFIGURATION
 
         You can use regex to match and group some user login or ip
         addresses. See user-aliases file for examples.
+
+    UrlAlias url-aliases_file
+        Set path to the file containing url alias name. You may want to
+        group URL under a single alias to agregate statistics, in this case
+        create a file with this format :
+
+                URL_ALIAS     URL_REGEXP1,URL_REGEXP2,...
+
+        Separator must be a tabulation. See network-aliases file for
+        examples.
 
     AnonymizeLogin 0
         Set this to 1 if you want to anonymize all user login. The username

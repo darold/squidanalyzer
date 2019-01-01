@@ -1685,20 +1685,24 @@ sub _init
 	if ($self->{OrderMime} !~ /^(hits|bytes)$/) {
 		die "ERROR: OrderMime must be one of these values: hits or bytes\n";
 	}
+	%{$self->{UrlAliasName}} = ();
 	%{$self->{NetworkAlias}} = $self->parse_network_aliases($options{NetworkAlias} || '');
 	%{$self->{UserAlias}}    = $self->parse_user_aliases($options{UserAlias} || '');
 	%{$self->{Exclude}}      = $self->parse_exclusion($options{Exclude} || '');
 	%{$self->{Include}}      = $self->parse_inclusion($options{Include} || '');
+	%{$self->{UrlAlias}}     = $self->parse_url_aliases($options{UrlAlias} || '');
 	# Some caches to improve parsing speed
 	%{$self->{NetworkAliasCache}}  = ();
 	%{$self->{UserAliasCache}}     = ();
+	%{$self->{UrlAliasCache}}      = ();
 	@{$self->{UserExcludeCache}}   = ();
 	@{$self->{ClientExcludeCache}} = ();
 	@{$self->{UrlExcludeCache}}    = ();
 	@{$self->{UserIncludeCache}}   = ();
 	@{$self->{ClientIncludeCache}} = ();
-	$self->{has_nework_alias} = scalar keys %{$self->{NetworkAlias}};
-	$self->{has_user_alias} = scalar keys %{$self->{UserAlias}};
+	$self->{has_network_alias} = scalar keys %{$self->{NetworkAlias}};
+	$self->{has_user_alias}   = scalar keys %{$self->{UserAlias}};
+	$self->{has_url_alias}    = scalar keys %{$self->{UrlAlias}};
 
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
@@ -1974,6 +1978,25 @@ sub apply_user_alias
 	return $id;
 }
 
+sub apply_url_alias
+{
+	my ($self, $url) = @_;
+
+	return $self->{UrlAliasCache}{$url} if (exists $self->{UrlAliasCache}{$url});
+
+	foreach my $r (keys %{$self->{UrlAlias}})
+	{
+		if ($url =~ /^$r/)
+		{
+			$self->{UrlAliasCache}{$url} = $self->{UrlAlias}->{$r};
+			$url = $self->{UrlAlias}->{$r};
+			last;
+		}
+	}
+
+	return $url;
+}
+
 sub _parseData
 {
 	my ($self, $time, $elapsed, $client, $code, $bytes, $url, $id, $type, $acl, $method) = @_;
@@ -2023,7 +2046,7 @@ sub _parseData
 	}
 
 	# Replace network by his aliases if any
-	my $network = (!$self->{has_nework_alias}) ? '' : $self->apply_network_alias($client);
+	my $network = (!$self->{has_network_alias}) ? '' : $self->apply_network_alias($client);
 	if (!$network) {
 		# set network to a default class C
 		$client =~ /^(.*)([:\.]+)\d+$/;
@@ -2032,6 +2055,9 @@ sub _parseData
 
 	# Replace username by his alias if any
 	$id = (!$self->{has_user_alias}) ? $id : $self->apply_user_alias($id);
+
+	# Replace url by his alias if any
+	$dest = (!$self->{has_url_alias}) ? $dest : $self->apply_url_alias($dest);
 
 	# Stores last parsed date part
 	if (!$self->{last_year} || ("$year$month$day" gt "$self->{last_year}$self->{last_month}{$self->{last_year}}$self->{last_day}{$self->{last_year}}")) {
@@ -2905,7 +2931,7 @@ sub _read_stat
 				}
 				if ($self->{UpdateAlias}) {
 					# Replace network by his aliases if any
-					$net = (!$self->{has_nework_alias}) ? $net : $self->apply_network_alias($net)
+					$net = (!$self->{has_network_alias}) ? $net : $self->apply_network_alias($net)
 				}
 
 				if ($data =~ s/^hits_$type=([^;]+);bytes_$type=([^;]+);duration_$type=([^;]+);largest_file_size=([^;]*);largest_file_url=(.*)$//) {
@@ -2974,7 +3000,7 @@ sub _read_stat
 					}
 
 					# Replace network by his aliases if any
-					$net = (!$self->{has_nework_alias}) ? $net : $self->apply_network_alias($net);
+					$net = (!$self->{has_network_alias}) ? $net : $self->apply_network_alias($net);
 
 					# Anonymize all users
 					if ($self->{AnonymizeLogin} && ($id !~ /^Anon[a-zA-Z0-9]{16}$/)) {
@@ -4092,7 +4118,7 @@ sub _print_network_stat
 
 		if ($self->{UpdateAlias}) {
 			# Replace network by his aliases if any
-			$network = (!$self->{has_nework_alias}) ? $network : $self->apply_network_alias($network);
+			$network = (!$self->{has_network_alias}) ? $network : $self->apply_network_alias($network);
 		}
 
 		my $hits = $1 || '';
@@ -4200,7 +4226,7 @@ sub _print_network_stat
 		my $total_throughput = int($network_stat{$net}{bytes} / (($network_stat{$net}{duration}/1000) || 1) );
 		my $comma_throughput = $self->format_bytes($total_throughput);
 		$network_stat{$net}{duration} = &parse_duration(int($network_stat{$net}{duration}/1000));
-		my $show = (!$self->{has_nework_alias}) ? $net : $self->apply_network_alias($net);
+		my $show = (!$self->{has_network_alias}) ? $net : $self->apply_network_alias($net);
 		my $comma_bytes = $self->format_bytes($network_stat{$net}{bytes});
 		print $out qq{
 <tr>
@@ -4921,9 +4947,11 @@ sub _print_user_detail
 		foreach my $ip (@{$url_stat{$url}{user_ip}}) {
 			$all_ips{$ip}++;
 		}
+		my $show = "<a href=\"http://$url/\" target=\"_blank\" class=\"domainLink\">$url</a>";
+		$show = $url if (exists $self->{UrlAliasName}{$url});
 		print $$out qq{
 <tr>
-<td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
+<td>$show</td>
 <td>$url_stat{$url}{hits} <span class="italicPercent">($h_percent)</span></td>
 <td>$comma_bytes <span class="italicPercent">($b_percent)</span></td>
 <td>$url_stat{$url}{duration} <span class="italicPercent">($d_percent)</span></td>
@@ -5298,7 +5326,9 @@ sub _print_top_url_stat
 				} elsif ($tpe eq 'Hits') {
 					$label = 'Requests';
 				}
-				print $out "<div class=\"tooltipLink\"><span class=\"information\"><a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a></span><div class=\"tooltip\"><table><tr><th>$Translate{'User'}</th><th>$Translate{$label}</th></tr>\n";
+				my $show = "<a href=\"http://$u/\" target=\"_blank\" class=\"domainLink\">$u</a>";
+				$show = $u if (exists $self->{UrlAliasName}{$u});
+				print $out "<div class=\"tooltipLink\"><span class=\"information\">$u</span><div class=\"tooltip\"><table><tr><th>$Translate{'User'}</th><th>$Translate{$label}</th></tr>\n";
 				my $k = 1;
 				foreach my $user (sort { $url_stat{$u}{users}{$b}{lc($tpe)} <=> $url_stat{$u}{users}{$a}{lc($tpe)} } keys %{$url_stat{$u}{users}}) {
 					my $value = $url_stat{$u}{users}{$user}{lc($tpe)};
@@ -5703,22 +5733,31 @@ sub _print_top_domain_stat
 			}
 		}
 		if (!$done) {
-			$perdomain{'others'}{hits} += $hits;
-			$perdomain{'others'}{bytes} += $bytes;
-			$domain_stat{'unknown'}{hits} += $hits;
-			$domain_stat{'unknown'}{bytes} += $bytes;
-			$domain_stat{'unknown'}{duration} += $duration;
-			$domain_stat{'unknown'}{firsthit} = $first if (!$domain_stat{'unknown'}{firsthit} || ($first < $domain_stat{'unknown'}{firsthit}));
-			$domain_stat{'unknown'}{lasthit} = $last if (!$domain_stat{'unknown'}{lasthit} || ($last > $domain_stat{'unknown'}{lasthit}));
-			if ($self->{TopUrlUser} && $self->{UserReport}) {
-				$domain_stat{'unknown'}{users}{$user}{hits} += $hits;
-				$domain_stat{'unknown'}{users}{$user}{bytes}+= $bytes;
-				$domain_stat{'unknown'}{users}{$user}{duration}+= $duration;
+			my $unknown = 'unknown';
+			my $others = 'others';
+			foreach my $u (keys %{$self->{UrlAliasName}}) {
+				if ($u =~ m|^$url$|i) {
+					$unknown = $u;
+					$others = $u;
+					last;
+				}
 			}
-			$domain_stat{'unknown'}{cache_hit} += $cache_hit;
-			$domain_stat{'unknown'}{cache_bytes} += $cache_bytes;
-			$perdomain{'others'}{cache_hit} += $cache_hit;
-			$perdomain{'others'}{cache_bytes} += $cache_bytes;
+			$domain_stat{$unknown}{hits} += $hits;
+			$domain_stat{$unknown}{bytes} += $bytes;
+			$domain_stat{$unknown}{duration} += $duration;
+			$domain_stat{$unknown}{firsthit} = $first if (!$domain_stat{$unknown}{firsthit} || ($first < $domain_stat{$unknown}{firsthit}));
+			$domain_stat{$unknown}{lasthit} = $last if (!$domain_stat{$unknown}{lasthit} || ($last > $domain_stat{$unknown}{lasthit}));
+			if ($self->{TopUrlUser} && $self->{UserReport}) {
+				$domain_stat{$unknown}{users}{$user}{hits} += $hits;
+				$domain_stat{$unknown}{users}{$user}{bytes}+= $bytes;
+				$domain_stat{$unknown}{users}{$user}{duration}+= $duration;
+			}
+			$domain_stat{$unknown}{cache_hit} += $cache_hit;
+			$domain_stat{$unknown}{cache_bytes} += $cache_bytes;
+			$perdomain{$others}{hits} += $hits;
+			$perdomain{$others}{bytes} += $bytes;
+			$perdomain{$others}{cache_hit} += $cache_hit;
+			$perdomain{$others}{cache_bytes} += $cache_bytes;
 		}
 		$total_hits += $hits;
 		$total_bytes += $bytes;
@@ -5932,7 +5971,7 @@ $domain2_bytes
 			print $out "<tr><td>\n";
 			if (exists $domain_stat{$u}{users} && $self->{UserReport}) {
 				my $dname = "*.$u";
-				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown'));
+				$dname = $u if (grep(/^$u$/i, 'localhost', 'unknown') || exists $self->{UrlAliasName});
 				my $label = 'Duration';
 				if ($tpe eq 'Bytes') {
 					$label = 'Megabytes';
@@ -6269,6 +6308,38 @@ sub parse_user_aliases
 			}
 		} else {
 			$self->localdie("ERROR: wrong format in user aliases file $file, line $i\n");
+		}
+	}
+	close(ALIAS);
+
+	return %alias;
+}
+
+sub parse_url_aliases
+{
+	my ($self, $file) = @_;
+
+	return if (!$file || !-f $file);
+
+	my %alias = ();
+	open(ALIAS, $file) or $self->localdie("ERROR: can't open url aliases file $file, $!\n");
+	my $i = 0;
+	while (my $l = <ALIAS>) {
+		chomp($l);
+		$i++;
+		next if (!$l || ($l =~ /^\s*#/));
+		$l =~ s/\s*#.*//;
+		my @data = split(/\t+/, $l, 2);
+		if ($#data == 1) {
+			my @rg = split(/,/, $data[1]);
+			foreach my $r (@rg) {
+				$r =~ s/^\^//;
+				$self->check_regex($r, "$file at line $i");
+				$alias{"$r"} = $data[0];
+			}
+			$self->{UrlAliasName}{$data[0]} = 1;
+		} else {
+			$self->localdie("ERROR: wrong format in url aliases file $file, line $i\n");
 		}
 	}
 	close(ALIAS);

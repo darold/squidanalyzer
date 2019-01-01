@@ -1,0 +1,9 @@
+#-------------------------------------------------------------------------------
+# Squid Analyzer Url Alias configuration file
+# FORMAT : URL_ALIAS	URL_REGEXP1,URL_REGEXP2,...
+# Field separator must be one or more tabulation.
+# See example below
+#-------------------------------------------------------------------------------
+#VIDEO		.*\.googlevideo\.com.*,.*\.youtube\.com.*,.*\.viadeo.com.*
+#FACEBOOK	.*\.fbcdn\.net.*,.*\.facebook\.com.*
+#GOOGLE		.*\.google.*

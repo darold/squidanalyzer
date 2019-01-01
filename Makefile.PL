@@ -55,7 +55,7 @@ print INST qq{
 test ! -d "$DESTDIR$MANDIR" && mkdir -p $DESTDIR$MANDIR
 
 # Copy files that must not be overriden 
-for file in squidanalyzer.conf network-aliases user-aliases excluded included; do
+for file in squidanalyzer.conf network-aliases user-aliases url-aliases excluded included; do
 if [ -r $DESTDIR$ETCDIR/\$file ]; then
 	install -m 644 etc/\$file $DESTDIR$ETCDIR/\$file.sample
 else

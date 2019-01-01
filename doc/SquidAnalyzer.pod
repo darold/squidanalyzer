@@ -332,8 +332,13 @@ down the generation of reports.
 =item DNSLookupTimeout        0.0001
 
 If you have enabled UseClientDNSName and have lot of ip addresses that do not
-resolve you may want to increase the DNS lookup timeout. By default SquidAnalyzer
-will stop to lookup a DNS name after 0.0001 second (100 ms).
+resolve you may want to increase the DNS lookup timeout. By default
+SquidAnalyzer will stop to lookup a DNS name after 0.0001 second (100 ms).
+
+=item StoreUserIp             0
+
+Store and show user different ip addresses used along the time in user
+statistics. Default: no extra storage
 
 =item NetworkAlias network-aliases_file
 
@@ -369,6 +374,16 @@ in the user alias name.
 
 You can use regex to match and group some user login or ip addresses. See
 user-aliases file for examples.
+
+=item UrlAlias url-aliases_file
+
+Set path to the file containing url alias name. You may want to group
+URL under a single alias to agregate statistics, in this case create
+a file with this format :
+
+	URL_ALIAS     URL_REGEXP1,URL_REGEXP2,...
+
+Separator must be a tabulation. See network-aliases file for examples.
 
 =item AnonymizeLogin  0
 
