@@ -427,6 +427,10 @@ CONFIGURATION
         Used to set the number of top url and second level domain to show.
         Default is top 100.
 
+    TopDenied number
+        Used to set the number of top denied url to show. Default is top
+        100.
+
     TopStorage number
         Top number of url to preserve on each data file sorted by OrderUrl.
         On huge access log it will improve a lot the performances but you

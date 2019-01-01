@@ -1707,6 +1707,7 @@ sub _init
 	$self->{CostPrice} = $options{CostPrice} || 0;
 	$self->{Currency} = $options{Currency} || '&euro;';
 	$self->{TopNumber} = $options{TopNumber} || 10;
+	$self->{TopDenied} = $options{TopDenied} || 10;
 	$self->{TopStorage} = $options{TopStorage} || 0;
 	$self->{TransfertUnit} = $options{TransfertUnit} || 'BYTES';
 	if (!grep(/^$self->{TransfertUnit}$/i, 'BYTES', 'KB', 'MB', 'GB')) {
@@ -5102,7 +5103,6 @@ sub _print_user_denied_detail
 
 }
 
-
 sub _print_top_url_stat
 {
 	my ($self, $outdir, $year, $month, $day, $week) = @_;
@@ -5517,7 +5517,7 @@ sub _print_top_denied_stat
 	}
 
 	my $t1 = $Translate{"Url_Hits_title"};
-	$t1 =~ s/\%d/$self->{TopNumber}/;
+	$t1 =~ s/\%d/$self->{TopDenied}/;
 
 	print $out $self->_print_title($t1, $stat_date, $week);
 	print $out qq{
@@ -5599,7 +5599,7 @@ sub _print_top_denied_stat
 	<td>$bl</td>
 </tr>};
 		$i++;
-		last if ($i > $self->{TopNumber});
+		last if ($i > $self->{TopDenied});
 	}
 	print $out qq{</tbody></table>};
 
