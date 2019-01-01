@@ -117,3 +117,4 @@ Blocklist_acl_title		Utilizzo ACL Blocklist
 Throughput			Throughput
 Graph_throughput_title		%s throughput on
 Throughput_graph		Bytes/sec
+User_Ip				Utente Ip

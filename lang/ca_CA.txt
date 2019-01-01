@@ -107,7 +107,7 @@ Up_link				A dalt
 Click_year_stat			Feu clic a 'Estadístiques anuals' per a més detalls
 Mime_graph_hits_title		Estadístiques de mime-types en
 Mime_graph_bytes_title		Estadístiques de Mbytes en mime-types en
-User				Ususari
+User				Usuari
 Count				Contador
 WeekDay				Dg Dl Dt Dc Dj Dv Ds
 Week				Setmana
@@ -116,3 +116,4 @@ Blocklist_acl_title		Blocklist ACL use
 Throughput			Throughput
 Graph_throughput_title		%s throughput on
 Throughput_graph		Bytes/sec
+User_Ip				Usuari Ip

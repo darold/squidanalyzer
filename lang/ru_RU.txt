@@ -119,3 +119,4 @@ Blocklist_acl_title		Использованные блок-листы (ACL)
 Throughput			Пропускная способность
 Graph_throughput_title		%s пропускная способность на
 Throughput_graph		Байт/сек
+User_Ip				Пользователь Ip

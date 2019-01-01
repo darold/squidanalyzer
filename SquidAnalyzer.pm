@@ -160,6 +160,7 @@ my %Translate = (
 	'Throughput' => 'Throughput',
 	'Graph_throughput_title' => '%s throughput on',
 	'Throughput_graph' => 'Bytes/sec',
+	'User_Ip' => 'User Ip',
 );
 
 my @TLD1 = (
@@ -1611,6 +1612,7 @@ sub _init
 	$self->{TimeStop} = $options{TimeStop} || '';
 	$self->{SkipHistory} = $skip_history || 0;
 	$self->{OverrideHistory} = 0;
+	$self->{StoreUserIp} = $options{StoreUserIp} || 0;
 
 	# Set default timezone
 	$self->{TimeZone} = $options{TimeZone} || $timezone || '';
@@ -2154,6 +2156,12 @@ sub _parseData
 			push(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}, $time);
 			shift(@{$self->{stat_user_url_day}{$id}{$dest}{arr_last}}) if ($#{$self->{stat_user_url_day}{$id}{$dest}{arr_last}} > 9);
 		}
+		if ($self->{StoreUserIp} and $id and ($id ne $client)
+			and !grep(/^$client$/, @{$self->{stat_user_url_day}{$id}{$dest}{user_ip}}))
+		{
+			push(@{$self->{stat_user_url_hour}{$id}{$dest}{user_ip}}, $client);
+			push(@{$self->{stat_user_url_day}{$id}{$dest}{user_ip}}, $client);
+		}
 	}
 
 	#### Store user per networks statistics
@@ -2461,6 +2469,11 @@ sub _write_stat_data
 				my $u = $id;
 				$u = '-' if (!$self->{UserReport});
 				$i++;
+
+				my $user_ip = '';
+				if ($self->{StoreUserIp} && $#{$self->{"stat_user_url_$type"}{$id}{$dest}{user_ip}} >= 0) {
+					$user_ip = ";user_ip=" . join(',', @{$self->{"stat_user_url_$type"}{$id}{$dest}{user_ip}});
+				}
 				$fh->print(
 					"$id hits=" . $self->{"stat_user_url_$type"}{$id}{$dest}{hits} . ";" .
 					"bytes=" . $self->{"stat_user_url_$type"}{$id}{$dest}{bytes} . ";" .
@@ -2470,7 +2483,9 @@ sub _write_stat_data
 					"url=$dest;" .
 					"cache_hit=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_hit}||0) . ";" .
 					"cache_bytes=" . ($self->{"stat_user_url_$type"}{$id}{$dest}{cache_bytes}||0) . ";" .
-					"arr_last=" . join(',', @{$self->{"stat_user_url_$type"}{$id}{$dest}{arr_last}}) . "\n");
+					"arr_last=" . join(',', @{$self->{"stat_user_url_$type"}{$id}{$dest}{arr_last}}) .
+					$user_ip .
+					"\n");
 			}
 		}
 		$self->{"stat_user_url_$type"} = ();
@@ -2494,7 +2509,8 @@ sub _write_stat_data
 				$fh->print("$tmp:" . $self->{"stat_user_$type"}{$id}{$tmp}{duration} . ",");
 			}
 			$fh->print(";largest_file_size=" . $self->{"stat_usermax_$type"}{$id}{largest_file_size});
-			$fh->print(";largest_file_url=" . $self->{"stat_usermax_$type"}{$id}{largest_file_url} . "\n");
+			$fh->print(";largest_file_url=" . $self->{"stat_usermax_$type"}{$id}{largest_file_url});
+			$fh->print("\n");
 		}
 		$self->{"stat_user_$type"} = ();
 		$self->{"stat_usermax_$type"} = ();
@@ -2646,6 +2662,7 @@ sub _read_stat
 					my $duration = $4 || '';
 					my $lsize = $5 || 0;
 					my $lurl = $6 || 0;
+					my @user_ips = ();
 
 					if ($self->{rebuild}) {
 						next if (!$self->check_inclusions($id));
@@ -2682,6 +2699,7 @@ sub _read_stat
 						if ($key ne '') { $k = $key; } else { $k = $tmp; }
 						$self->{"stat_user_$sum_type"}{$id}{$k}{duration} += $duration_tmp{$tmp};
 					}
+
 				} else {
 					print STDERR "ERROR: bad format at line $i into $self->{Output}/$path/stat_user.dat:\n";
 					print STDERR "$l\n";
@@ -2741,6 +2759,12 @@ sub _read_stat
 								next;
 							}
 						}
+						if ($l =~ s/;user_ip=(.*)//) {
+							my @ips = split(/,/, $1);
+							foreach my $ip (@ips) {
+								push(@{$self->{"stat_user_url_$sum_type"}{$id}{$url}{user_ip}}, $ip) if (!grep(/^$ip$/, @{$self->{"stat_user_url_$sum_type"}{$id}{$url}{user_ip}}));
+							}
+						}
 						if ($l =~ s/^;arr_last=(.*)//) {
 							my $incr = 1800;
 							$incr = 300 if ($sum_type eq 'hour');
@@ -2752,6 +2776,7 @@ sub _read_stat
 								}
 							}
 						}
+
 					} elsif ($l =~ s/^([^\s]+)\s+hits=(\d+);bytes=(\d+);duration=([\-\d]+);first=([^;]*);last=([^;]*);url=(.*)$//) {
 						my $url = $7;
 						$self->{"stat_user_url_$sum_type"}{$id}{"$url"}{hits} += $2;
@@ -4418,6 +4443,9 @@ sub _print_user_stat
 	my $trfunit = $self->{TransfertUnit} || 'B';
 	$trfunit = 'B' if ($trfunit eq 'BYTE');
 
+	my $user_ip_title = '';
+	$user_ip_title = "<th>$Translate{'User_Ip'}</th>" if ($self->{StoreUserIp});
+
 	print $out qq{
 <table class="sortable stata" >
 <thead>
@@ -4434,6 +4462,7 @@ sub _print_user_stat
 	print $out qq{
 <th>$Translate{'Largest'}</th>
 <th style="text-align: left;">$Translate{'Url'}</th>
+$user_ip_title
 </tr>
 </thead>
 <tbody>
@@ -4483,7 +4512,7 @@ sub _print_user_stat
 	print $out qq{
 <td>$comma_largest</td>
 <td style="text-align: left;">$user_stat{$usr}{url}</td>
-</tr>};
+};
 
 		if (!-d "$outdir/users/$upath") {
 			mkdir("$outdir/users/$upath", 0755) || return;
@@ -4559,12 +4588,19 @@ $user_bytes
 		$user_bytes = '';
 
 		delete $user_stat{$usr};
+		my %user_ips = ();
 		if ($self->{UrlReport}) {
 			$self->_print_user_denied_detail(\$outusr, $outdir, $usr, $type);
-			$self->_print_user_detail(\$outusr, $outdir, $usr, $type);
+			%user_ips = $self->_print_user_detail(\$outusr, $outdir, $usr, $type);
 		}
 		$self->_print_footer(\$outusr);
 		$outusr->close();
+		if ($self->{StoreUserIp}) {
+			print $out "<td>", join(',', sort { $user_ips{$b} <=> $user_ips{$a} } keys %user_ips), "</td>\n";
+		}
+		print $out qq{
+</tr>
+};
 	}
 	$sortpos = 1;
 	$sortpos = 2 if ($self->{OrderUser} eq 'bytes');
@@ -4759,6 +4795,9 @@ sub _print_user_detail
 			$total_duration += $url_stat{$url}{duration} || 0;
 			$total_cache_hit += $url_stat{$url}{cache_hit} || 0;
 			$total_cache_bytes += $url_stat{$url}{cache_bytes} || 0;
+			if ($data =~ s/;user_ip=(.*)//) {
+				push(@{$url_stat{$url}{user_ip}}, split(/,/, $1));
+			}
 			if ($data =~ /;arr_last=(.*)/) {
 				push(@{$url_stat{$url}{arr_last}}, split(/,/, $1));
 				map { $_ = ucfirst(strftime("%b %d %T", CORE::localtime($_))); } @{$url_stat{$url}{arr_last}};
@@ -4806,6 +4845,8 @@ sub _print_user_detail
 	my $t1 = $Translate{"Url_title"};
 	$t1 =~ s/\%d/$self->{TopNumber}\/$nurl/;
 
+	my $ip_user_title = '';
+	$ip_user_title = "<th>$Translate{'User_Ip'}</th>" if ($self->{StoreUserIp});
 	print $$out qq{
 <h3>$t1</h3>
 <table class="sortable stata">
@@ -4824,13 +4865,14 @@ sub _print_user_detail
 	print $$out qq{
 <th>$Translate{'Cost'} $self->{Currency}</th>
 } if ($self->{CostPrice});
-	print $$out qq{
+	print $$out qq{$ip_user_title
 </tr>
 </thead>
 <tbody>
 };
 
 	$total_duration = abs($total_duration);
+	my %all_ips = ();
 	my $i = 0;
 	foreach my $url (sort { $url_stat{$b}{"$self->{OrderUrl}"} <=> $url_stat{$a}{"$self->{OrderUrl}"} } keys %url_stat) {
 		my $h_percent = '0.0';
@@ -4874,6 +4916,11 @@ sub _print_user_detail
 			}
 			$lasthit .= "</table>\n</div></div>\n";
 		}
+		my $ip_user = '<td>-</td>' if ($self->{StoreUserIp});
+		$ip_user = "<td>" . join(',', @{$url_stat{$url}{user_ip}}) . "</td>" if ($self->{StoreUserIp} && $#{$url_stat{$url}{user_ip}} >= 0);
+		foreach my $ip (@{$url_stat{$url}{user_ip}}) {
+			$all_ips{$ip}++;
+		}
 		print $$out qq{
 <tr>
 <td><a href="http://$url/" target="_blank" class="domainLink">$url</a></td>
@@ -4889,7 +4936,7 @@ sub _print_user_detail
 		print $$out qq{
 <td>$total_cost</td>
 } if ($self->{CostPrice});
-		print $$out qq{
+		print $$out qq{$ip_user
 </tr>};
 		$i++;
 		last if ($i > $self->{TopNumber});
@@ -4900,6 +4947,7 @@ sub _print_user_detail
 </table>
 };
 
+	return %all_ips;
 }
 
 sub _print_user_denied_detail
