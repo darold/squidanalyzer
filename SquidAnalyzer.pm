@@ -4314,6 +4314,9 @@ $network_bytes
 		$network_bytes = '';
 		my $retuser = $self->_print_netuser_stat($outdir, \$outnet, $net);
 		my $comma_largest = $self->format_bytes($network_stat{$net}{largest_file});
+		$retuser = '-' if ($retuser eq '');
+		$comma_largest = '-' if ($comma_largest eq '');
+		$network_stat{$net}{url} = '-' if ($network_stat{$net}{url} eq '');
 		print $out qq{
 <td>$retuser</td>
 } if ($self->{UserReport});
