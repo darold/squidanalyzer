@@ -1,0 +1,25 @@
+RPM/
+        Holds squidanalyzer.spec need to build an RPM package for RH/CentOs/Fedora.
+        It may also be usable for other RPM based distribution.
+
+        Copy the squidanalyzer source tarball under:
+
+                ~/rpmbuild/SOURCES/
+
+        Then create the RPM binary package as follow:
+
+                rpmbuild -bb squidanalyzer.spec
+
+        The binary package may be found here:
+
+                ~/rpmbuild/RPMS/noarch/squidanalyzer-6.6-1.noarch.rpm
+
+	To check which file will be installed and where:
+
+		rpm -qlp ~/rpmbuild/RPMS/noarch/squidanalyzer-6.6-1.el7.noarch.rpm
+
+        To install run:
+
+                rpm -i ~/rpmbuild/RPMS/noarch/squidanalyzer-6.6-1.noarch.rpm
+
+

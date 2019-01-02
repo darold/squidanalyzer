@@ -1,11 +1,11 @@
-%define contentdir /var/www
+%define webdir /var/www
 
 Summary:	Squid proxy log analyzer and report generator
 Name:		squidanalyzer
 Version:	6.6
 Release:	1%{?dist}
 License:	GPLv3+
-Group:		Monitoring
+Group:		Applications/Internet
 URL:		http://squidanalyzer.darold.net/
 Source:		http://prdownloads.sourceforge.net/squid-report/%{name}-%{version}.tar.gz
 BuildRequires:	perl
@@ -31,26 +31,32 @@ or more often with heavy proxy usage.
 %setup -q
 
 %build
-%{__perl} Makefile.PL DESTDIR=%{buildroot} LOGFILE=%{_logdir}/squid/access.log BINDIR=%{_bindir} HTMLDIR=%{contentdir}/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
-
+# Build Makefile for SquidAnalyzer
+%{__perl} Makefile.PL INSTALLDIRS=vendor DESTDIR=%{buildroot} LOGFILE=/var/log/squid/access.log BINDIR=%{_bindir} HTMLDIR=%{webdir}/%{name} BASEURL=/%{name} MANDIR=%{_mandir}/man3 QUIET=yes
+# Compile
 make
 
 %install
-%{__rm} -rf %{buildroot}
+# Clear buildroot from previous build
+%{__rm} -rf %{buildroot}/
 
-%{__make} install DESTDIR=%{buildroot}
-install etc/* %{buildroot}%{_sysconfdir}/%{name}/
-install -d %{buildroot}%{_sysconfdir}/cron.daily
-echo -e "#!/bin/sh\n%{_bindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron.daily/0%{name}
+# Make install distrib files
+%{__make} install
 
-# Remove unpackaged files.
+# Remove .packlist file (per rpmlint)
+%{__rm} -f %{buildroot}/%perl_vendorarch/auto/SquidAnalyzer/.packlist
 %{__rm} -f `find %{buildroot}/%{_libdir}/perl*/ -name .packlist -type f`
 %{__rm} -f `find %{buildroot}/%{_libdir}/perl*/ -name perllocal.pod -type f`
+
+# Install cron
+%{__install} -d %{buildroot}/%{_sysconfdir}/cron.daily
+echo -e "#!/bin/sh\n%{_bindir}/squid-analyzer" > %{buildroot}/%{_sysconfdir}/cron.daily/0%{name}
 
 %files
 %defattr(-, root, root, 0755)
 %doc README ChangeLog
-%{_mandir}/man3/*
+%{_mandir}/man3/squid-analyzer.3.gz
+%{_mandir}/man3/SquidAnalyzer.3pm.gz
 %{perl_vendorlib}/SquidAnalyzer.pm
 %attr(0755,root,root) %{_bindir}/squid-analyzer
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
@@ -59,15 +65,16 @@ echo -e "#!/bin/sh\n%{_bindir}/squid-analyzer" > %{buildroot}%{_sysconfdir}/cron
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/included
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/network-aliases
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/user-aliases
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/%{name}/url-aliases
 %config(noreplace) %attr(0754,root,root) %{_sysconfdir}/cron.daily/0%{name}
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}/lang
 %{_sysconfdir}/%{name}/lang/*
-%attr(0755,root,root) %dir %{contentdir}/%{name}
-%{contentdir}/%{name}/flotr2.js
-%{contentdir}/%{name}/sorttable.js
-%{contentdir}/%{name}/%{name}.css
-%attr(0755,root,root) %dir %{contentdir}/%{name}/images
-%{contentdir}/%{name}/images/*.png
+%attr(0755,root,root) %dir %{webdir}/%{name}
+%{webdir}/%{name}/flotr2.js
+%{webdir}/%{name}/sorttable.js
+%{webdir}/%{name}/%{name}.css
+%attr(0755,root,root) %dir %{webdir}/%{name}/images
+%{webdir}/%{name}/images/*.png
 
 %clean
 %{__rm} -rf %{buildroot}

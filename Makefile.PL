@@ -31,7 +31,7 @@ my $BASEURL = $ENV{BASEURL} || '/squidreport';
 my $DOCDIR = $ENV{DOCDIR} || '';
 my $MANDIR = $ENV{MANDIR} || '/usr/local/man/man3';
 my $DESTDIR = $ENV{DESTDIR} || '';
-$ENV{INSTALLDIRS} ||= 'site';
+my $INSTALLDIRS = $ENV{INSTALLDIRS} ||= 'site';
 
 unless(open(INST, ">install_all.sh")) {
         print "\nError: can't write post install file install_all.sh, $!\n";
@@ -156,8 +156,8 @@ WriteMakefile(
 	'ABSTRACT'     => 'Squid log analyzer',
 	'EXE_FILES'    => [ qw(squid-analyzer) ],
 	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/SquidAnalyzer.3pm' },
-	'DESTDIR'      => $ENV{DESTDIR},
-	'INSTALLDIRS'  => $ENV{INSTALLDIRS},
+	'DESTDIR'      => $DESTDIR,
+	'INSTALLDIRS'  => $INSTALLDIRS,
 	'clean'	       => { FILES => "install_all.sh lib/blib/ squid-analyzer.3" },
 	'META_MERGE'   => {
 		resources  => {
