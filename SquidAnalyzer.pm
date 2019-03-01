@@ -1056,7 +1056,7 @@ sub check_exclusions
 
 	# check for user exclusion
 	if (exists $self->{Exclude}{users} && $login) {
-		return 1 if (grep(/^$login$/i, @{ $self->{UserExcludeCache} }));
+		return 1 if (grep(/^\Q$login\E$/i, @{ $self->{UserExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{users}}) {
 			# look for users using the following format: user@domain.tld, domain\user and user 
 			if ( ($login =~ m#^$e$#i) || ($login =~ m#^$e\@#i) || ($login =~ m#\\$e$#i) ) {
@@ -1073,7 +1073,7 @@ sub check_exclusions
 
 	# check for client exclusion
 	if (exists $self->{Exclude}{clients} && $client_ip) {
-		return 1 if (grep(/^$client_ip$/i, @{ $self->{ClientExcludeCache} }));
+		return 1 if (grep(/^\Q$client_ip\E$/i, @{ $self->{ClientExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{clients}}) {
 			if ($client_ip =~ m#^$e$#i) {
 				push(@{ $self->{ClientExcludeCache} }, $client_ip);
@@ -1084,7 +1084,7 @@ sub check_exclusions
 
 	# check for Network exclusion
 	if (exists $self->{Exclude}{networks} && $client_ip) {
-		return 1 if (grep(/^$client_ip$/, @{ $self->{ClientExcludeCache} }));
+		return 1 if (grep(/^\Q$client_ip\E$/, @{ $self->{ClientExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{networks}}) {
 			if (&check_ip($client_ip, $e)) {
 				push(@{ $self->{ClientExcludeCache} }, $client_ip);
@@ -1095,7 +1095,7 @@ sub check_exclusions
 
 	# check for URL exclusion
 	if (exists $self->{Exclude}{uris} && $url) {
-		return 1 if (grep(/^$url$/i, @{ $self->{UrlExcludeCache} }));
+		return 1 if (grep(/^\Q$url\E$/i, @{ $self->{UrlExcludeCache} }));
 		foreach my $e (@{$self->{Exclude}{uris}}) {
 			if ($url =~ m#^$e$#i) {
 				push(@{ $self->{UrlExcludeCache} }, $url);
