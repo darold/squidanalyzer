@@ -1095,13 +1095,11 @@ sub check_exclusions
 
 	# check for URL exclusion
 	if (exists $self->{Exclude}{uris} && $url) {
-		return 1 if (grep(/^$url$/i, @{ $self->{UrlExcludeCache} }));
-		foreach my $e (@{$self->{Exclude}{uris}}) {
-			if ($url =~ m#^$e$#i) {
-				push(@{ $self->{UrlExcludeCache} }, $url);
-				return 1;
-			}
+		if (exists $self->{UrlExcludeCache}{$url}) {
+			%{ $self->{UrlExcludeCache} } = () if (scalar keys %{ $self->{UrlExcludeCache} } > 10000);
+			return 1;
 		}
+		map { return 1 if ($url =~ m#^\Q$_\E$#i); } @{$self->{Exclude}{uris}};
 	}
 
 	return 0;
@@ -1697,7 +1695,7 @@ sub _init
 	%{$self->{UrlAliasCache}}      = ();
 	@{$self->{UserExcludeCache}}   = ();
 	@{$self->{ClientExcludeCache}} = ();
-	@{$self->{UrlExcludeCache}}    = ();
+	%{$self->{UrlExcludeCache}}    = ();
 	@{$self->{UserIncludeCache}}   = ();
 	@{$self->{ClientIncludeCache}} = ();
 	$self->{has_network_alias} = scalar keys %{$self->{NetworkAlias}};
