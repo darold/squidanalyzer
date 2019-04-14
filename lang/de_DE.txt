@@ -111,7 +111,7 @@ User				Benutzer
 Count				Anzahl
 WeekDay				So Mo Di Mi Do Fr Sa
 Week				Woche
-Top_denied_link			Top Verboten
+Top_denied_link			Top Abgelehnt
 Blocklist_acl_title		Blocklisten ACL Nutzung 
 Throughput			Durchsatz
 Graph_throughput_title		%s Durchsatz bei
