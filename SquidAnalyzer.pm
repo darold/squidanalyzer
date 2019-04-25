@@ -537,7 +537,6 @@ sub look_for_timestamp
 	my ($self, $line) = @_;
 
 	my $time = 0;
-	my $tz = $self->{TimeZone}*3600;
 	# Squid native format
 	if ( $line =~ $native_format_regex1 ) {
 		$time = $1;
@@ -547,31 +546,19 @@ sub look_for_timestamp
 	} elsif ( $line =~ $common_format_regex1 ) {
 		$time = $4;
 		$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
-		if (!$self->{TimeZone}) {
-			$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
-		} else {
-			$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
-		}
+		$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $self->{TimeZone};
 		$self->{is_squidguard_log} = 0;
 		$self->{is_ufdbguard_log} = 0;
 	# SquidGuard log format
 	} elsif (( $line =~ $sg_format_regex1 ) || ( $line =~ $sg_format_regex2 )) {
 		$self->{is_squidguard_log} = 1;
 		$self->{is_ufdbguard_log} = 0;
-		if (!$self->{TimeZone}) {
-			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
-		} else {
-			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
-		}
+		$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $self->{TimeZone};
 	# ufdbGuard log format
 	} elsif ( $line =~ $ug_format_regex1 ) {
 		$self->{is_ufdbguard_log} = 1;
 		$self->{is_squidguard_log} = 0;
-		if (!$self->{TimeZone}) {
-			$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
-		} else {
-			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
-		}
+		$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $self->{TimeZone};
 	}
 
 	return $time;
@@ -1206,9 +1193,6 @@ sub _parse_file_part
 		}
 	}
 
-	# Set timezone in seconds
-	my $tz = $self->{TimeZone}*3600;
-
 	# The log file format must be :
 	# 	time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost type
 	# This is the default format of squid access log file.
@@ -1260,7 +1244,7 @@ sub _parse_file_part
 		my $format = 'native';
 		if ( !$self->{is_squidguard_log} && !$self->{is_ufdbguard_log} && ($line =~ $native_format_regex1) ) {
 			$time = $1;
-			$time += $tz;
+			$time += $self->{TimeZone};
 			$elapsed = abs($2);
 			$client_ip = $3;
 			$code = $4;
@@ -1288,11 +1272,7 @@ sub _parse_file_part
 			$time =~ /(\d+)\/(...)\/(\d+):(\d+):(\d+):(\d+)\s/;
 			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
 			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
-			if (!$self->{TimeZone}) {
-				$time = timelocal_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900);
-			} else {
-				$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $tz;
-			}
+			$time = timegm_nocheck($6, $5, $4, $1, $month_number{$2} - 1, $3 - 1900) + $self->{TimeZone};
 			# Some site has corrupted mime_type, try to remove nasty characters
 			if ($mime_type =~ s/[^\-\/\.\(\)\+\_,\=a-z0-9]+//igs) {
 				$mime_type = 'invalid/type';
@@ -1312,11 +1292,7 @@ sub _parse_file_part
                         $mime_type = '';
 			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
 			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
-			if (!$self->{TimeZone}) {
-				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
-			} else {
-				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
-			}
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $self->{TimeZone};
 		# Log format for ufdbGuard logs: timestamp [pid] BLOCK user clienthost aclname category url method
 		} elsif ($line =~ $ug_format_regex1) {
                         $format = 'ufdbguard';
@@ -1333,11 +1309,7 @@ sub _parse_file_part
                         $mime_type = '';
 			next if ($self->{TimeStart} && "$4:$5" lt $self->{TimeStart});
 			last if ($self->{TimeStop} && "$4:$5" gt $self->{TimeStop});
-			if (!$self->{TimeZone}) {
-				$time = timelocal_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900);
-			} else {
-				$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $tz;
-			}
+			$time = timegm_nocheck($6, $5, $4, $3, $2 - 1, $1 - 1900) + $self->{TimeZone};
 		} else {
 			next;
 		}
@@ -1613,13 +1585,14 @@ sub _init
 	$self->{StoreUserIp} = $options{StoreUserIp} || 0;
 
 	# Set default timezone
-	$self->{TimeZone} = $options{TimeZone} || $timezone || '';
-	if ($self->{TimeZone} eq '') {
+	$self->{TimeZone} = (0-($options{TimeZone} || $timezone || 0))*3600;
+	if (!$self->{TimeZone}) {
 		my @lt = localtime();
 		my @gt = gmtime();
-		my $hour_diff = $lt[2]-$gt[2];
+		my $hour_diff = $gt[2] - $lt[2];
+		my $min_diff  = $gt[1] - $lt[1];
 		$hour_diff += $lt[8];
-		$self->{TimeZone} = $hour_diff;
+		$self->{TimeZone} = ($hour_diff * 3600) + ($min_diff * 60);
 	}
 
 	# Cleanup old temporary files
