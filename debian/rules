@@ -5,6 +5,7 @@
 
 override_dh_auto_configure:
 	perl Makefile.PL \
+		INSTALLDIRS=vendor
 		LOGFILE=/var/log/squid3/access.log \
 		BINDIR=/usr/bin \
 		CONFDIR=/etc/squidanalyzer \
