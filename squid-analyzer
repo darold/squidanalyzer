@@ -8,6 +8,8 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 use Benchmark;
 use POSIX ":sys_wait_h";
 use Time::Local;
+use File::Spec qw/ tmpdir /;
+use File::Temp qw/ tempfile /;
 
 $| = 1;
 
@@ -22,7 +24,7 @@ my $preserve   = '';
 my $debug      = 0;
 my $version    = 0;
 my $build_date = '';
-my $pid_dir    = '/tmp';
+my $pid_dir    = File::Spec->tmpdir() || '/tmp';
 my $pidfile    = 'squid-analyzer.pid';
 my $queue_size = 0;
 my $timezone   = '';
@@ -191,9 +193,13 @@ sub terminate
         if (-e "$pid_dir/$pidfile") {
                 unlink("$pid_dir/$pidfile") or print("ERROR: Unable to remove pid file $pid_dir/$pidfile, $!\n");
 	}
-        if (-e "$pid_dir/last_parsed.tmp") {
-                unlink("$pid_dir/last_parsed.tmp") or print("ERROR: Unable to remove temp file $pid_dir/last_parsed.tmp, $!\n");
-        }
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'ug_last_parsed.tmp')
+	{
+		if (-e "$pid_dir/$tmp_file")
+		{
+			unlink("$pid_dir/$tmp_file") or print("ERROR: Unable to remove temp file $pid_dir/$tmp_file, $!\n");
+		}
+	}
 
         exit 0;
 }
