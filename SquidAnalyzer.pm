@@ -19,7 +19,7 @@ BEGIN {
 	use POSIX qw/ strftime sys_wait_h /;
 	use IO::File;
 	use Socket ();
-	use Time::HiRes qw/ualarm/;
+	use Time::HiRes qw/ualarm usleep/;
 	use Time::Local qw/timelocal_nocheck timegm_nocheck/;
 	use Fcntl qw(:flock);
 	use IO::Handle;
@@ -487,7 +487,7 @@ sub wait_all_childs
 		if ($kid > 0) {
 			delete $self->{running_pids}{$kid};
 		}
-		sleep(1);
+		usleep(50000);
 	}
 }
 
@@ -501,7 +501,7 @@ sub manage_queue_size
 			$child_count--;
 			delete $self->{running_pids}{$kid};
 		}
-		sleep(1);
+		usleep(50000);
 	}
 
 	return $child_count;
@@ -511,19 +511,19 @@ sub save_current_line
 {
 	my $self = shift;
 
-	if ($self->{end_time}) {
+	if ($self->{end_time} and (!$self->{history_time} or $self->{end_time} > $self->{history_time})) {
 		my $current = new IO::File;
 		$current->open(">$self->{Output}/SquidAnalyzer.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidAnalyzer.current, $!\n");
 		print $current "$self->{end_time}\t$self->{end_offset}";
 		$current->close;
 	}
-	if ($self->{sg_end_time}) {
+	if ($self->{sg_end_time} and (!$self->{sg_history_time} or $self->{sg_end_time} > $self->{sg_history_time})) {
 		my $current = new IO::File;
 		$current->open(">$self->{Output}/SquidGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/SquidGuard.current, $!\n");
 		print $current "$self->{sg_end_time}\t$self->{sg_end_offset}";
 		$current->close;
 	}
-	if ($self->{ug_end_time}) {
+	if ($self->{ug_end_time} and (!$self->{ug_history_time} or $self->{ug_end_time} > $self->{ug_history_time})) {
 		my $current = new IO::File;
 		$current->open(">$self->{Output}/ufdbGuard.current") or $self->localdie("FATAL: Can't write to file $self->{Output}/ufdbGuard.current, $!\n");
 		print $current "$self->{ug_end_time}\t$self->{ug_end_offset}";
@@ -789,13 +789,15 @@ sub parseFile
 				$child_count = $self->manage_queue_size(++$child_count);
 			}
 		}
+
 	}
 
 	# Wait for last child stop
 	$self->wait_all_childs() if ($self->{queue_size} > 1);
 
 	# Get the last information parsed in this file part
-	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'sg_last_parsed.tmp') {
+	foreach my $tmp_file ('last_parsed.tmp', 'sg_last_parsed.tmp', 'sg_last_parsed.tmp')
+	{
 
 		if (-e "$self->{pid_dir}/$tmp_file") {
 
@@ -804,7 +806,7 @@ sub parseFile
 				while (my $l = <IN>) {
 					chomp($l);
 					my @data = split(/\s/, $l);
-					$history_tmp{"$data[0]$data[1]$data[2]"}{$data[4]} = join(' ', @data);
+					$history_tmp{$data[3]}{$data[4]} = join(' ', @data);
 					$line_stored_count += $data[5];
 					$line_processed_count += $data[6];
 					$line_count += $data[7];
@@ -820,9 +822,9 @@ sub parseFile
 					}
 				}
 				close(IN);
-				foreach my $date (sort {$b <=> $a} keys %history_tmp) {
-					foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$date}}) {
-						my @data = split(/\s/, $history_tmp{$date}{$offset});
+				foreach my $ts (sort {$b <=> $a} keys %history_tmp) {
+					foreach my $offset (sort {$b <=> $a} keys %{$history_tmp{$ts}}) {
+						my @data = split(/\s/, $history_tmp{$ts}{$offset});
 						$self->{last_year} = $data[0];
 						$self->{last_month}{$data[0]} = $data[1];
 						$self->{last_day}{$data[0]} = $data[2];
@@ -1464,7 +1466,6 @@ sub _parse_file_part
 			print STDERR "ERROR: can't save last parsed line into $self->{pid_dir}/$tmp_file, $!\n";
 		}
 	}
-
 }
 
 sub _clear_stats
@@ -1510,6 +1511,38 @@ sub _clear_stats
 	$self->{stat_mime_type_day} = ();
 	$self->{stat_mime_type_month} = ();
 
+}
+
+sub get_history_time
+{
+	my ($self, $file, $type) = @_;
+
+	my $current = new IO::File;
+
+	unless($current->open($file)) {
+		print STDERR "ERROR: Can't read file $file, $!\n" if (!$self->{QuietMode});
+		print STDERR "Starting at the first line of ", ucfirst($type), " log file.\n" if (!$self->{QuietMode});
+	} else {
+		my $tmp = <$current>;
+		chomp($tmp);
+		my ($history_time, $end_offset) = split(/[\t]/, $tmp);
+		if ($history_time) {
+			if ($type eq 'SQUID') {
+				$self->{history_time} = $history_time;
+				$self->{end_offset} = $end_offset;
+				$self->{begin_time} = $history_time;
+			} elsif ($type eq 'SQUIDGUARD') {
+				$self->{sg_history_time} = $history_time;
+				$self->{sg_end_offset} = $end_offset;
+				$self->{sg_begin_time} = $history_time;
+			} elsif ($type eq 'UFDBGUARD') {
+				$self->{ug_history_time} = $history_time;
+				$self->{ug_end_offset} = $end_offset;
+				$self->{ug_begin_time} = $history_time;
+			}
+			print STDERR "$type LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
+		}
+	}
 }
 
 sub _init
@@ -1736,56 +1769,17 @@ sub _init
 
 	# Get the last parsing date for Squid log incremental parsing
 	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/SquidAnalyzer.current") {
-		my $current = new IO::File;
-		unless($current->open("$self->{Output}/SquidAnalyzer.current")) {
-			print STDERR "ERROR: Can't read file $self->{Output}/SquidAnalyzer.current, $!\n" if (!$self->{QuietMode});
-			print STDERR "Starting at the first line of Squid access log file.\n" if (!$self->{QuietMode});
-		} else {
-			my $tmp = <$current>;
-			chomp($tmp);
-			($self->{history_time}, $self->{end_offset}) = split(/[\t]/, $tmp);
-			$self->{begin_time} = $self->{history_time};
-			$current->close();
-			if ($self->{history_time}) {
-				print STDERR "SQUID LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{history_time})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
-			}
-		}
+		$self->get_history_time("$self->{Output}/SquidAnalyzer.current", 'SQUID');
 	}
 
 	# Get the last parsing date for SquidGuard log incremental parsing
 	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/SquidGuard.current") {
-		my $current = new IO::File;
-		unless($current->open("$self->{Output}/SquidGuard.current")) {
-			print STDERR "ERROR: Can't read file $self->{Output}/SquidGuard.current, $!\n" if (!$self->{QuietMode});
-			print STDERR "Starting at the first line of SquidGuard log file.\n" if (!$self->{QuietMode});
-		} else {
-			my $tmp = <$current>;
-			chomp($tmp);
-			($self->{sg_history_time}, $self->{sg_end_offset}) = split(/[\t]/, $tmp);
-			$self->{sg_begin_time} = $self->{sg_history_time};
-			$current->close();
-			if ($self->{sg_history_time}) {
-				print STDERR "SQUIDGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_history_time})), " - HISTORY OFFSET: $self->{sg_end_offset}\n" if (!$self->{QuietMode});
-			}
-		}
+		$self->get_history_time("$self->{Output}/SquidGuard.current", 'SQUIDGUARD');
 	}
 
 	# Get the last parsing date for ufdbGuard log incremental parsing
 	if (!$rebuild && !$self->{SkipHistory} && -e "$self->{Output}/ufdbGuard.current") {
-		my $current = new IO::File;
-		unless($current->open("$self->{Output}/ufdbGuard.current")) {
-			print STDERR "ERROR: Can't read file $self->{Output}/ufdbGuard.current, $!\n" if (!$self->{QuietMode});
-			print STDERR "Starting at the first line of ufdbGuard log file.\n" if (!$self->{QuietMode});
-		} else {
-			my $tmp = <$current>;
-			chomp($tmp);
-			($self->{ug_history_time}, $self->{ug_end_offset}) = split(/[\t]/, $tmp);
-			$self->{ug_begin_time} = $self->{ug_history_time};
-			$current->close();
-			if ($self->{ug_history_time}) {
-				print STDERR "UFDBGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_history_time})), " - HISTORY OFFSET: $self->{ug_end_offset}\n" if (!$self->{QuietMode});
-			}
-		}
+		$self->get_history_time("$self->{Output}/ufdbGuard.current", 'UFDBGUARD');
 	}
 
 	$self->{menu} = qq{
