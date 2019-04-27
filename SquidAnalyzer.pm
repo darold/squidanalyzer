@@ -1368,7 +1368,11 @@ sub _parse_file_part
 			} elsif ($code =~ m#(MISS|MODIFIED|TUNNEL)[:/]#) {
 				$code = 'MISS';
 			} elsif ($code =~ m#(DENIED|DENIED_REPLY|REDIRECT)[:/]#) {
-				$code = 'DENIED';
+				if ($code =~ m#DENIED[:/]407#) {
+					$code = 'DENIED_407';
+				} else {
+					$code = 'DENIED';
+				}
 			} else {
 				next;
 			}
@@ -1400,7 +1404,7 @@ sub _parse_file_part
 				if ($login ne '-') {
 					$id = $login;
 				}
-				next if (!$id || (!$bytes && ($code ne 'DENIED')));
+				next if (!$id || (!$bytes && ($code !~ /DENIED/)));
 
 				#####
 				# If there's some mandatory inclusion, check the entry against the definitions
@@ -1423,15 +1427,41 @@ sub _parse_file_part
 					$id = $self->{AnonymizedId}{$id};
 				}
 
-				# Now parse data and generate statistics
-				$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl, $method);
-				$line_stored_count++;
+				# With code TCP_DENIED/407 we need to store it until
+				# we are sure that no 200 response is found later
+				if ($code eq 'DENIED_407')
+				{
+					$code = 'DENIED';
+					push(@{ $self->{'Kerberos_Challenge'}{$client_ip}{$url}{$time} }, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl, $method);
+					$self->{has_407} = 1;
+				}
+				else
+				{
+					# Now parse data and generate statistics
+					$self->_parseData($time, $elapsed, $client_ip, $code, $bytes, $url, $id, $mime_type, $acl, $method);
+					$line_stored_count++;
+				}
 
 			}
 			$line_processed_count++;
 		}
 	}
 	$logfile->close();
+
+	foreach my $ip (keys %{ $self->{'Kerberos_Challenge'} })
+	{
+		foreach my $url (keys %{ $self->{'Kerberos_Challenge'}{$ip} })
+		{
+			foreach my $time (keys %{ $self->{'Kerberos_Challenge'}{$ip}{$url} })
+			{
+				# Now parse data and generate statistics
+				$self->_parseData($time, @{ $self->{'Kerberos_Challenge'}{$ip}{$url}{$time} });
+				$line_stored_count++;
+			}
+		}
+	}
+	$self->{'Kerberos_Challenge'} = ();
+	$self->{has_407} = 0;
 
 	if ($self->{cur_year}) {
 		# Save last parsed data
@@ -1755,6 +1785,8 @@ sub _init
 	$self->{sg_end_offset} = 0;
 	$self->{ug_end_time} = 0;
 	$self->{ug_end_offset} = 0;
+	$self->{'Kerberos_Challenge'} = ();
+	$self->{has_407} = 0;
 
 	# Override verbose mode
 	$self->{QuietMode} = 0 if ($debug);
@@ -2046,7 +2078,8 @@ sub _parseData
 	$hour = sprintf("%02d", $hour);
 
 	#### Store access denied statistics
-	if ($code eq 'DENIED') {
+	if ($code eq 'DENIED')
+	{
 		$self->{stat_code_hour}{$code}{$hour}{hits}++;
 		$self->{stat_code_hour}{$code}{$hour}{bytes} += $bytes;
 		$self->{stat_code_day}{$code}{$self->{last_day}}{hits}++;
@@ -2075,6 +2108,11 @@ sub _parseData
 			$self->{stat_user_day}{$id}{$self->{last_day}}{duration} += 0;
 		}
 		return;
+	}
+	elsif ($self->{has_407} && exists $self->{'Kerberos_Challenge'}{$client}{$url})
+	{
+		delete $self->{'Kerberos_Challenge'}{$client}{$url};
+		delete $self->{'Kerberos_Challenge'}{$client} if (scalar keys %{ $self->{'Kerberos_Challenge'}{$client} } == 0);
 	}
 	
 	#### Store client statistics
