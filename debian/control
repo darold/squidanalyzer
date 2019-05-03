@@ -1,6 +1,7 @@
 Source: squidanalyzer
 Section: admin
 Priority: extra
+Build-Depends: debhelper (>=7), apache2-dev
 Maintainer: Gilles Darold <gilles@darold.net> 
 
 Package: squidanalyzer
