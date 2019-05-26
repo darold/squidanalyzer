@@ -3262,11 +3262,14 @@ sub buildHTML
 	        # Set oldest stat to preserve based on history time, not current time
 		if ($self->{preserve} > 0) {
 			if (!$self->{is_squidguard_log} && !$self->{is_ufdbguard_log}) {
-				@ltime = CORE::localtime($self->{history_time}-($self->{preserve}*2592000));
+				my $histtime = $self->{history_time} || time();
+				@ltime = CORE::localtime($histtime-($self->{preserve}*2592000));
 			} elsif (!$self->{is_squidguard_log}) {
-				@ltime = CORE::localtime($self->{ug_history_time}-($self->{preserve}*2592000));
+				my $histtime = $self->{ug_history_time} || time();
+				@ltime = CORE::localtime($histtime-($self->{preserve}*2592000));
 			} else {
-				@ltime = CORE::localtime($self->{sg_history_time}-($self->{preserve}*2592000));
+				my $histtime = $self->{sg_history_time} || time();
+				@ltime = CORE::localtime($histtime-($self->{preserve}*2592000));
 			}
 			$p_year = $ltime[5]+1900;
 			$p_month = $ltime[4]+1;
