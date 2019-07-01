@@ -20,7 +20,7 @@ BEGIN {
 	use IO::File;
 	use Socket ();
 	use Time::HiRes qw/ualarm usleep/;
-	use Time::Local qw/timelocal_nocheck timegm_nocheck/;
+	use Time::Local qw/timelocal_nocheck timegm_nocheck timegm timelocal/;
 	use Fcntl qw(:flock);
 	use IO::Handle;
 	use FileHandle;
@@ -539,7 +539,7 @@ sub look_for_timestamp
 	my $time = 0;
 	# Squid native format
 	if ( $line =~ $native_format_regex1 ) {
-		$time = $1;
+		$time = gmtime($1) + $self->{TimeZone};
 		$self->{is_squidguard_log} = 0;
 		$self->{is_ufdbguard_log} = 0;
 	# Squid common HTTP format
@@ -855,8 +855,8 @@ sub parseFile
 	} else {
 
 		if (!$self->{QuietMode}) {
-			print STDERR "SQUID LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time})), "\n" if ($self->{end_time});
-			print STDERR "SQUIGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", localtime($self->{sg_end_time}+$self->{TimeZone})), "\n" if ($self->{sg_end_time});
+			print STDERR "SQUID LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{end_time}+$self->{TimeZone})), "\n" if ($self->{end_time});
+			print STDERR "SQUIGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{sg_end_time}+$self->{TimeZone})), "\n" if ($self->{sg_end_time});
 			print STDERR "UFDBGUARD LOG END TIME  : ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($self->{ug_end_time}+$self->{TimeZone})), "\n" if ($self->{ug_end_time});
 			print STDERR "Read $line_count lines, matched $line_processed_count and found $line_stored_count new lines\n";
 		}
@@ -1245,8 +1245,7 @@ sub _parse_file_part
 		# Parse log with format: time elapsed client code/status bytes method URL rfc931 peerstatus/peerhost mime_type
 		my $format = 'native';
 		if ( !$self->{is_squidguard_log} && !$self->{is_ufdbguard_log} && ($line =~ $native_format_regex1) ) {
-			$time = $1;
-			$time += $self->{TimeZone};
+			$time = gmtime($1) + $self->{TimeZone};
 			$elapsed = abs($2);
 			$client_ip = $3;
 			$code = $4;
@@ -1343,7 +1342,7 @@ sub _parse_file_part
 				# Register the first parsing time
 				if (!$self->{begin_time} || ($self->{begin_time} > $time)) {
 					$self->{begin_time} = $time;
-					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time)), "\n" if (!$self->{QuietMode});
+					print STDERR "SQUID LOG SET START TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($time+$self->{TimeZone})), "\n" if (!$self->{QuietMode});
 				}
 			} elsif (!$self->{is_squidguard_log}) {
 				$self->{ug_end_time} = $time if ($self->{ug_end_time} < $time);
@@ -1562,18 +1561,16 @@ sub get_history_time
 				$self->{history_time} = $history_time;
 				$self->{end_offset} = $end_offset;
 				$self->{begin_time} = $history_time;
-				print STDERR "SQUID LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($history_time)), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 			} elsif ($type eq 'SQUIDGUARD') {
 				$self->{sg_history_time} = $history_time;
 				$self->{sg_end_offset} = $end_offset;
 				$self->{sg_begin_time} = $history_time;
-				print STDERR "SQUIDGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($history_time+$self->{TimeZone})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 			} elsif ($type eq 'UFDBGUARD') {
 				$self->{ug_history_time} = $history_time;
 				$self->{ug_end_offset} = $end_offset;
 				$self->{ug_begin_time} = $history_time;
-				print STDERR "UFDBGUARD LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($history_time+$self->{TimeZone})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 			}
+			print STDERR "$type LOG HISTORY TIME: ", strftime("%a %b %e %H:%M:%S %Y", CORE::localtime($history_time+$self->{TimeZone})), " - HISTORY OFFSET: $self->{end_offset}\n" if (!$self->{QuietMode});
 		}
 	}
 }
@@ -1654,11 +1651,8 @@ sub _init
 	$self->{TimeZone} = (0-($options{TimeZone} || $timezone || 0))*3600;
 	if (!$self->{TimeZone}) {
 		my @lt = localtime();
-		my @gt = gmtime();
-		my $hour_diff = $gt[2] - $lt[2];
-		my $min_diff  = $gt[1] - $lt[1];
-		$hour_diff += $lt[8];
-		$self->{TimeZone} = ($hour_diff * 3600) + ($min_diff * 60);
+		# count TimeZone and Daylight Saving Time
+		$self->{TimeZone} = timelocal(@lt) - timegm(@lt);
 	}
 
 	# Cleanup old temporary files
