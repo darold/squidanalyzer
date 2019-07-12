@@ -1649,10 +1649,13 @@ sub _init
 
 	# Set default timezone
 	$self->{TimeZone} = (0-($options{TimeZone} || $timezone || 0))*3600;
-	if (!$self->{TimeZone}) {
+	if (!$self->{TimeZone} && $options{TimeZone} eq '') {
 		my @lt = localtime();
 		# count TimeZone and Daylight Saving Time
 		$self->{TimeZone} = timelocal(@lt) - timegm(@lt);
+		print STDERR "DEBUG: using autodetected timezone $self->{TimeZone}\n" if ($debug); 
+	} else {
+		print STDERR "DEBUG: using timezone $self->{TimeZone}\n" if ($debug); 
 	}
 
 	# Cleanup old temporary files
@@ -6248,7 +6251,7 @@ sub parse_config
 		$self->localdie("ERROR: unknown image format. See option: ImgFormat\n");
 	}
 
-	if ($opt{TimeZone} && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
+	if (defined $opt{TimeZone} && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
 		$self->localdie("ERROR: timezone format: +/-HH, ex: +01. See option: TimeZone\n");
 	}
 
