@@ -40,8 +40,8 @@ BEGIN {
 
 }
 
-$ZCAT_PROG = "/bin/zcat";
-$BZCAT_PROG = "/bin/bzcat";
+$ZCAT_PROG = "/usr/bin/zcat";
+$BZCAT_PROG = "/usr/bin/bzcat";
 $RM_PROG    = "/bin/rm";
 $XZCAT_PROG = "/usr/bin/xzcat";
 
@@ -1648,13 +1648,14 @@ sub _init
 	$self->{StoreUserIp} = $options{StoreUserIp} || 0;
 
 	# Set default timezone
-	$self->{TimeZone} = (0-($options{TimeZone} || $timezone || 0))*3600;
-	if (!$self->{TimeZone} && $options{TimeZone} eq '') {
+	$self->{TimeZone} = 0;
+	if ($options{TimeZone} eq 'auto') {
 		my @lt = localtime();
 		# count TimeZone and Daylight Saving Time
 		$self->{TimeZone} = timelocal(@lt) - timegm(@lt);
 		print STDERR "DEBUG: using autodetected timezone $self->{TimeZone}\n" if ($debug); 
-	} else {
+	} elsif ($options{TimeZone} || $timezone) {
+		$self->{TimeZone} = (0-($options{TimeZone} || $timezone || 0))*3600;
 		print STDERR "DEBUG: using timezone $self->{TimeZone}\n" if ($debug); 
 	}
 
@@ -6251,8 +6252,8 @@ sub parse_config
 		$self->localdie("ERROR: unknown image format. See option: ImgFormat\n");
 	}
 
-	if (defined $opt{TimeZone} && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
-		$self->localdie("ERROR: timezone format: +/-HH, ex: +01. See option: TimeZone\n");
+	if (defined $opt{TimeZone} && $opt{TimeZone} ne 'auto' && $opt{TimeZone} !~ /^[+\-]\d{1,2}$/) {
+		$self->localdie("ERROR: timezone format: +/-HH, ex: +01. See configuration directive: TimeZone\n");
 	}
 
 	return %opt;

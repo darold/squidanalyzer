@@ -581,13 +581,22 @@ can be useful if you have special characters in some fields like mime type.
 
 Adjust timezone to use when SquidAnalyzer reports different time than graphs
 in your browser. The value must follow format: +/-HH. Default is to use local
-time. This must be considered as real timezone but the number of hours to add
-remove from log timestamp to adjust graphs times. For example:
+time. This must not be considered as real timezone but the number of hours to
+add or remove from log timestamp to have the right hours reported in graphs.
+The value can also be set to: auto, in this case SquidAnalyzer will autodetect
+the timezone and apply it.
 
+For example:
 
 	TimeZone       +01
 
-will append one hour to all graphs time series to match squid server timestamp.
+will append one hour to all timestamp.
+
+Additionaly TimeZone can be set to auto:
+
+	TimeZone	auto
+
+to let SquidAnalyzer auto detect the timezone to use.
 
 =item UseUrlPort
 
