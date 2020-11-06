@@ -340,11 +340,12 @@ the client ip address, this allow you to use the DNS name instead.
 Note that you must have a working DNS resolution and that it can really slow
 down the generation of reports.
 
-=item DNSLookupTimeout        0.0001
+=item DNSLookupTimeout       100
 
 If you have enabled UseClientDNSName and have lot of ip addresses that do not
 resolve you may want to increase the DNS lookup timeout. By default
-SquidAnalyzer will stop to lookup a DNS name after 0.0001 second (100 ms).
+SquidAnalyzer will stop to lookup a DNS name after 100 ms. The value must
+be set in millisecond.
 
 =item StoreUserIp             0
 

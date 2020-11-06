@@ -1630,8 +1630,8 @@ sub _init
 	$self->{with_month_stat} = 0;
 	$self->{no_week_stat} = 0;
 	$self->{UseClientDNSName} = $options{UseClientDNSName} || 0;
-	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 0.0001;
-	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000000);
+	$self->{DNSLookupTimeout} = $options{DNSLookupTimeout} || 100;
+	$self->{DNSLookupTimeout} = int($self->{DNSLookupTimeout} * 1000);
 	$self->{LogFile} = ();
 	$self->{queue_size} = 1;
 	$self->{running_pids} = ();
