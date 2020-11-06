@@ -127,20 +127,31 @@ INSTALLATION
     If your squid logfiles are rotated then cron isn't going to give the
     expected result as there exists a time between when the cron is run and
     the logfiles are rotated. It would be better to call squid-analyzer from
-    logrotate, eg:
+    logrotate, create file /etc/logrotate.d/squid with the following
+    content:
 
-            /var/log/proxy/squid-access.log {
-                daily
-                compress
-                rotate 730
-                missingok
-                nocreate
-                sharedscripts
-                postrotate
-                    test ! -e /var/run/squid.pid || /usr/sbin/squid -k rotate
-                    /usr/bin/squid-analyzer -d -l /var/log/proxy/squid-access.log.1
-                endscript
+            /var/log/squid/*.log {
+                    daily
+                    compress
+                    delaycompress
+                    rotate 5
+                    missingok
+                    nocreate
+                    sharedscripts
+                    postrotate
+                            test ! -e /var/run/squid.pid || test ! -x /usr/sbin/squid || /usr/sbin/squid -k rotate
+                            /usr/local/bin/squid-analyzer -d -l /var/log/squid/access.log.1
+                    endscript
             }
+
+    Be sure that the paths used in this script correspond to your system.
+
+    5. Adjust the configuration
+
+    Make sure that the LogFile path is correct in your squidanalyzer.conf
+    file. For instance:
+
+            LogFile /var/log/squid/access.log
 
     You can also use network name instead of network ip addresses by using
     the network-aliases file. Also if you don't have authentication enable
@@ -319,11 +330,11 @@ CONFIGURATION
         DNS name instead. Note that you must have a working DNS resolution
         and that it can really slow down the generation of reports.
 
-    DNSLookupTimeout 0.0001
+    DNSLookupTimeout 100
         If you have enabled UseClientDNSName and have lot of ip addresses
         that do not resolve you may want to increase the DNS lookup timeout.
-        By default SquidAnalyzer will stop to lookup a DNS name after 0.0001
-        second (100 ms).
+        By default SquidAnalyzer will stop to lookup a DNS name after 100
+        ms. The value must be set in millisecond.
 
     StoreUserIp 0
         Store and show user different ip addresses used along the time in
