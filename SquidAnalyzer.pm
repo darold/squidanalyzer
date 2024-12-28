@@ -1142,6 +1142,25 @@ sub check_inclusions
 	return 0;
 }
 
+sub _open_file_read_compressed
+{
+	my ($self, $file, $filename) = @_;
+	print STDERR "DEBUG: _open_file_read_compressed($filename).\n" if (!$self->{QuietMode});
+	if (-e $filename.'.gz') {
+		# Open a pipe to zcat program for compressed log
+		$file->open("$ZCAT_PROG $filename.gz |") || return 0;
+	} elsif (-e $filename.'.bz2') {
+		# Open a pipe to bzcat program for compressed log
+		$file->open("$BZCAT_PROG $filename.bz2 |") || return 0;
+	} elsif (-e $filename.'.xz') {
+		# Open a pipe to xzcat program for compressed log
+		$file->open("$XZCAT_PROG $filename.xz |") || return 0;
+	} else {
+		$file->open($filename) || return 0;
+	}
+	return 1;
+}
+
 sub _parse_file_part
 {
 	my ($self, $file, $start_offset, $stop_offset) = @_;
@@ -6079,7 +6098,7 @@ sub _gen_summary
 	foreach my $d (@dirs) {
 		# Load code statistics
 		my $infile = new IO::File;
-		$infile->open("$outdir/$d/stat_code.dat") || return;
+		$self->_open_file_read_compressed($infile, "$outdir/$d/stat_code.dat") || return;
 		while (my $l = <$infile>) {
 			chomp($l);
 			my ($code, $data) = split(/\s/, $l);
