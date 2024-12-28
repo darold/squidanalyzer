@@ -21,8 +21,11 @@ REQUIREMENT
     browser side without extra installation required.
 
 CHANGES from https://github.com/darold/squidanalyzer
-    SquidAnalyzer.pm can read compressed 'stat_code.dat', so you can compress previous years .dat files (e.g.: find 2023 -iname '*.dat' | xargs xz -9).
-    You can install SquidAnalyzer.pm into custom LIB directory, so you can keep all files together (e.g. /opt/squidanalyzer)
+    SquidAnalyzer.pm can read compressed 'stat_code.dat', so you can compress
+    previous years .dat files (e.g.: find 2023 -iname '*.dat' | xargs xz -9).
+    You can install SquidAnalyzer.pm into custom LIB directory, so you can
+    keep all files together (e.g. /opt/squidanalyzer)
+    Hungarian translation
 
 INSTALLATION
   Generic install
