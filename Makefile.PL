@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 
 use strict;
 
-my @ALLOWED_ARGS = ('LOGFILE','BINDIR','ETCDIR', 'CONFDIR','HTMLDIR','BASEURL','DOCDIR','MANDIR','QUIET','INSTALLDIRS','DESTDIR');
+my @ALLOWED_ARGS = ('LOGFILE','BINDIR','ETCDIR', 'CONFDIR','HTMLDIR','BASEURL','DOCDIR','MANDIR','QUIET','INSTALLDIRS','DESTDIR', 'LIB');
 
 # Parse command line arguments and store them as environment variables
 while ($_ = shift) {
@@ -32,6 +32,7 @@ my $DOCDIR = $ENV{DOCDIR} || '';
 my $MANDIR = $ENV{MANDIR} || '/usr/local/man/man3';
 my $DESTDIR = $ENV{DESTDIR} || '';
 my $INSTALLDIRS = $ENV{INSTALLDIRS} ||= 'site';
+my $LIB = $ENV{LIB} || '';
 
 unless(open(INST, ">install_all.sh")) {
         print "\nError: can't write post install file install_all.sh, $!\n";
@@ -130,6 +131,8 @@ close(INST);
 `perl -p -i -e 's#^Exclude.*#Exclude	$ETCDIR/excluded#' etc/squidanalyzer.conf`;
 `perl -p -i -e 's#^Include.*#Include	$ETCDIR/included#' etc/squidanalyzer.conf`;
 `perl -p -i -e 's#Lang.*\.txt#Lang	$ETCDIR/lang/en_US.txt#' etc/squidanalyzer.conf`;
+`perl -p -i -e 's|^use lib .*|#use lib "PERL5LIB"|' squid-analyzer`;
+`perl -p -i -e 's|^\#use lib .*|use lib "$LIB"|' squid-analyzer` if $LIB ne '';
 
 my $zcat = `which zcat`;
 chomp($zcat);
@@ -158,6 +161,7 @@ WriteMakefile(
 	'MAN3PODS'     => { 'doc/SquidAnalyzer.pod' => 'blib/man3/SquidAnalyzer.3pm' },
 	'DESTDIR'      => $DESTDIR,
 	'INSTALLDIRS'  => $INSTALLDIRS,
+	'LIB'          => $LIB,
 	'clean'	       => { FILES => "install_all.sh lib/blib/ squid-analyzer.3" },
 	'META_MERGE'   => {
 		resources  => {
