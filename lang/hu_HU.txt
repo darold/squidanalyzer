@@ -1,0 +1,119 @@
+#------------------------------------------------------------------------------
+# This is the translation file of SquidAnalyzer program. The first column
+# represente the program access key to translated string and the second
+# column is the translated string itself.
+# Keys should not be modified and are case sensitive. The column separator
+# is the tabulation character.
+#
+# Specials tags %s and %d in the translated string are uses by the program to
+# replace dynamics values. Following the language their place in the string
+# may vary.
+#
+# Author: Gilles Darold
+#------------------------------------------------------------------------------
+CharSet				utf-8
+01				Jan
+02				Febr
+03				Márc
+04				Ápr
+05				Máj
+06				Jún
+07				Júl
+08				Aug
+09				Szept
+10				Okt
+11				Nov
+12				Dec
+KB				Kilobytes
+MB				Megabytes
+GB				Gigabytes
+Requests			Kérés
+Bytes				Bytes
+Megabytes			Megabytes
+Total				Összesen
+Years				Évek
+Months				Hónapok
+Days				Napok
+Hit				Találat
+Miss				Letöltött
+Denied				Visszautasított
+Cost				Érték
+Users				Felhasználók
+Sites				Oldalak
+Domains				Domain nevek
+Requests_graph			Kérések
+Megabytes_graph			Megabyte-ok
+Months_graph			Hónapok
+Days_graph			Napok
+Hit_graph			Találat
+Miss_graph			Letöltött
+Denied_graph			Visszautasított
+Total_graph			Mindösszesen
+Domains_graph			Domain nevek
+Users_help			Felhasználók teljes száma erre az időszakra
+Sites_help			Meglátogatott oldalak teljes száma erre az időszakra
+Domains_help			Meglátogatott második szintű domain nevek teljes száma erre az időszakra
+Hit_help			Oldalak, képek, stb. amit megtalált a gyorsítótárban
+Miss_help			Oldalak, képek, stb. amit nem talált meg a gyorsítótárban
+Denied_help			Oldalak, képek, stb. amit visszautasított
+Cost_help			1 Megabyte =
+Generation			A kimutatás -
+Main_cache_title		Cache statisztika
+Cache_title			Cache statisztika -
+Stat_label			Stat
+Mime_link			Mime típusok
+Network_link			Hálózatok
+User_link			Felhasználók
+Top_url_link			Leggyakoribb url-ek
+Top_domain_link			Leggyakoribb domain nevek
+Back_link			Vissza
+Graph_cache_hit_title		%s kérés statisztika -
+Graph_cache_byte_title		%s Megabyte-ok statisztika -
+Hourly				Óránként
+Hours				Órák
+Daily				Napi
+Days				Napok
+Monthly				Havi
+Months				Hónapok
+Mime_title			Mime típusok statisztika -
+Mime_number			Mime típusok száma
+Network_title			Hálózatok statisztikája -
+Network_number			Hálózatok száma
+Duration			Időtartam
+Time				Idő
+Largest				Legnagyobb
+Url				Url
+User_title			Felhasználói statisztika -
+User_number			Felhasználók száma
+Url_title			Első %d oldal
+Url_Hits_title			Első %d url találat -
+Url_Bytes_title			Első %d url byte-ok -
+Url_Duration_title		Első %d url időtartam -
+Url_number			Url-ek száma
+Domain_Hits_title		Első %d domain találat -
+Domain_Bytes_title		Első %d Domain byte-ok -
+Domain_Duration_title		Első %d Domain időtartam on
+Domain_number			Domain-ek száma
+Domain_graph_hits_title		Domain találatok statisztika -
+Domain_graph_bytes_title	Domain byte-ok statisztika -
+Second_domain_graph_hits_title	Második szintű találatok statisztika -
+Second_domain_graph_bytes_title	Második szintű byte statisztika -
+First_visit			Első látogatás
+Last_visit			utolsó látogatás
+Globals_Statistics		Mindösszesen statisztikák
+Legend				Magyarázat
+File_Generated			File készült
+Up_link				Fel
+Click_year_stat			Kattintson az éves statisztikák link-re a részletekért
+Mime_graph_hits_title		Mime típusok találat statisztika -
+Mime_graph_bytes_title		Mime típusok MByte-ok statisztika -
+User				Felhasználó
+Count				Darabszám
+WeekDay				Va Hé Ke Sze Csü Pé Szo
+Week				Hét
+Top_denied_link			Legtöbbet visszautasított
+Blocklist_acl_title		Használt tiltólisták (ACL)
+Throughput			Átviteli sebesség
+Graph_throughput_title		%s átviteli sebesség -
+Throughput_graph		Bytes/sec
+User_Ip				Felhasználó IP címe
