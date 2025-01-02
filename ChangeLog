@@ -1,5 +1,10 @@
 Revision history for SquidAnalyzer
 
+szaszg
+    * SquidAnalyzer.pm can read compressed 'stat_code.dat', so you can compress previous years .dat files (e.g.: find 2023 -iname '*.dat' | xargs xz -9).
+    * You can install SquidAnalyzer.pm into custom LIB directory, so you can keep all files together (e.g. /opt/squidanalyzer)
+    * Hungarian translation added (hu_HU.txt)
+
 6.6 - Sun May  7 16:38:14 CEST 2017
 
 This is a maintenance release that fix one year of issues reported by users.

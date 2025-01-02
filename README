@@ -20,6 +20,13 @@ REQUIREMENT
     are based on the Flotr2 Javascript library so they are drawn at your
     browser side without extra installation required.
 
+CHANGES from https://github.com/darold/squidanalyzer
+    SquidAnalyzer.pm can read compressed 'stat_code.dat', so you can compress
+    previous years .dat files (e.g.: find 2023 -iname '*.dat' | xargs xz -9).
+    You can install SquidAnalyzer.pm into custom LIB directory, so you can
+    keep all files together (e.g. /opt/squidanalyzer)
+    Hungarian translation
+
 INSTALLATION
   Generic install
     If you want the package to be installed into the Perl distribution just
@@ -70,13 +77,25 @@ INSTALLATION
                     MANDIR=/usr/share/man/man3 \
                     DOCDIR=/usr/share/doc/squidanalyzer
 
+    Or you can install everything into one directory (e.g.: /opt/squidanalyzer)
+
+            perl Makefile.PL \
+                    LOGFILE=/var/log/squid/access.log \
+                    BINDIR=/opt/squidanalyzer/bin \
+                    CONFDIR=/opt/squidanalyzer/etc \
+                    HTMLDIR=/var/www/squidreport \
+                    BASEURL=/squidreport \
+                    MANDIR=/opt/squidanalyzer/share/man/man3 \
+                    DOCDIR=/opt/squidanalyzer/share/doc/squidanalyzer
+                    LIB=/opt/squidanalyzer/lib
+
     If you want to build a distro package, there are two other options that
     you may use. The QUIET option is to tell to Makefile.PL to not show the
     default post install README. The DESTDIR is to create and install all
     files in a package build base directory. For example for Fedora RPM,
     thing may look like that:
 
-            # Make Perl and SendmailAnalyzer distrib files
+            # Make Perl and SquidAnalyzer distrib files
             %{__perl} Makefile.PL \
                 INSTALLDIRS=vendor \
                 QUIET=1 \
